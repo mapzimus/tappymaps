@@ -1517,14 +1517,30 @@
 
     function exportPNG() {
       showMessage('Exporting PNG...', 'info');
+
+      // Hide stats bar for export
+      const statsBar = document.getElementById('statsBar');
+      statsBar.style.display = 'none';
+
+      // Temporarily force map container to show full content
       const mapContainer = document.getElementById('mapContainer');
+      const svg = document.getElementById('mapSVG');
+      const origOverflow = mapContainer.style.overflow;
+      const origSvgFlex = svg.style.flex;
+      const origSvgMinH = svg.style.minHeight;
+
+      mapContainer.style.overflow = 'visible';
+      svg.style.flex = 'none';
+      svg.style.minHeight = 'auto';
+      svg.style.height = 'auto';
+
       const bgColor = appState.darkMode ? '#1a1a2e' : '#f5f5f5';
+
       html2canvas(mapContainer, {
         backgroundColor: bgColor,
         scrollX: 0,
-        scrollY: 0,
-        windowWidth: mapContainer.scrollWidth,
-        windowHeight: mapContainer.scrollHeight,
+        scrollY: -window.scrollY,
+        scale: 2,
         useCORS: true
       }).then(canvas => {
         const link = document.createElement('a');
@@ -1535,6 +1551,13 @@
       }).catch(err => {
         console.error('Export failed:', err);
         showMessage('Export failed', 'error');
+      }).finally(() => {
+        // Restore stats bar and layout
+        statsBar.style.display = '';
+        mapContainer.style.overflow = origOverflow;
+        svg.style.flex = origSvgFlex;
+        svg.style.minHeight = origSvgMinH;
+        svg.style.height = '';
       });
     }
 

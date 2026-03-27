@@ -811,6 +811,12 @@
             <input type="checkbox" id="toggleLabels" checked style="accent-color: #667eea; cursor: pointer;">
             Show state labels
           </label>
+          <div style="margin-top: 10px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+              <input type="color" id="titleColorPicker" value="#667eea" style="width: 24px; height: 24px; border: none; background: none; cursor: pointer; padding: 0;">
+              Title color
+            </label>
+          </div>
         </div>
       </div>
 
@@ -878,8 +884,23 @@
       <div class="map-container" id="mapContainer">
         <div class="map-title" id="mapTitle" contenteditable="true">My US Map</div>
         <div class="map-subtitle" id="mapSubtitle" contenteditable="true" data-placeholder="Click to add subtitle"></div>
-        <svg id="mapSVG" viewBox="0 0 960 600" preserveAspectRatio="xMidYMid meet">
+        <svg id="mapSVG" viewBox="-10 -5 980 630" preserveAspectRatio="xMidYMid meet">
           <g id="statesGroup"></g>
+
+          <!-- North Arrow (top-right, subtle) -->
+          <g id="northArrow" transform="translate(945, 40)" opacity="0.3">
+            <line x1="0" y1="0" x2="0" y2="-20" stroke="currentColor" stroke-width="1.2"/>
+            <polygon points="0,-20 -3.5,-14.5 0,-16.5 3.5,-14.5" fill="currentColor"/>
+            <text x="0" y="-23" text-anchor="middle" font-size="7" font-weight="600" fill="currentColor" font-family="sans-serif">N</text>
+          </g>
+
+          <!-- Scale Bar (bottom-right, subtle) -->
+          <g id="scaleBar" transform="translate(880, 610)" opacity="0.3">
+            <line x1="0" y1="0" x2="55" y2="0" stroke="currentColor" stroke-width="1.2"/>
+            <line x1="0" y1="-2.5" x2="0" y2="2.5" stroke="currentColor" stroke-width="0.8"/>
+            <line x1="55" y1="-2.5" x2="55" y2="2.5" stroke="currentColor" stroke-width="0.8"/>
+            <text x="27.5" y="-4" text-anchor="middle" font-size="6.5" fill="currentColor" font-family="sans-serif">~200 mi</text>
+          </g>
         </svg>
         <div class="legend-group" id="legendDisplay" style="display: none;"></div>
         <div class="stats-bar" id="statsBar">
@@ -944,6 +965,7 @@
       legendEntries: [],
       mapTitle: 'My US Map',
       mapSubtitle: '',
+      titleColor: '#667eea',
       history: [],
       darkMode: true,
       showLabels: true,
@@ -1050,27 +1072,41 @@
         return pathData;
       };
 
-      // Render each state
+      // Manual label offsets for states where bbox center is misleading
+      const labelOffsets = {
+        'Florida': { dx: 30, dy: 28 },
+        'Michigan': { dx: 20, dy: 20 },
+        'Louisiana': { dx: -5, dy: 5 },
+        'Hawaii': { dx: 20, dy: 5 },
+        'Alaska': { dx: 0, dy: 10 },
+        'Idaho': { dx: 0, dy: 10 },
+        'California': { dx: 0, dy: 20 },
+        'New York': { dx: 10, dy: 5 },
+        'Virginia': { dx: 10, dy: 2 },
+        'Maryland': { dx: 15, dy: -8 },
+        'New Jersey': { dx: 5, dy: 5 },
+        'Minnesota': { dx: 0, dy: 10 },
+        'Kentucky': { dx: 10, dy: 0 }
+      };
+
+      // Pass 1: Render all state paths first
+      const labelData = [];
       states.forEach((feature, index) => {
-        // us-atlas@3 uses FIPS codes as feature.id, not feature.properties.name
         const fipsCode = String(feature.id).padStart(2, '0');
         const stateName = fipsToState[fipsCode] || feature.properties?.name || `Unknown (${feature.id})`;
         const geometry = feature.geometry;
         const pathData = pathGenerator(geometry);
 
-        // Create path element
         const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         pathEl.setAttribute('d', pathData);
         pathEl.setAttribute('class', 'state-path');
         pathEl.setAttribute('data-state', stateName);
         pathEl.setAttribute('data-index', index);
 
-        // Apply stored color if exists (use style.fill to override CSS)
         if (appState.stateColors[stateName]) {
           pathEl.style.fill = appState.stateColors[stateName];
         }
 
-        // Event listeners
         pathEl.addEventListener('click', (e) => onStateClick(e, stateName));
         pathEl.addEventListener('mouseenter', (e) => showTooltip(e, stateName));
         pathEl.addEventListener('mousemove', (e) => moveTooltip(e));
@@ -1078,30 +1114,19 @@
 
         statesGroup.appendChild(pathEl);
 
-        // Add state label (abbreviation) with manual offsets for tricky states
+        // Collect label info for pass 2
         const bbox = pathEl.getBBox();
         let labelX = bbox.x + bbox.width / 2;
         let labelY = bbox.y + bbox.height / 2;
-
-        // Manual label offsets for states where bbox center is misleading
-        const labelOffsets = {
-          'Florida': { dx: 30, dy: 28 },
-          'Michigan': { dx: 20, dy: 20 },
-          'Louisiana': { dx: 8, dy: -8 },
-          'Hawaii': { dx: 20, dy: 5 },
-          'Alaska': { dx: 0, dy: 10 },
-          'Idaho': { dx: 0, dy: 10 },
-          'California': { dx: 0, dy: 20 },
-          'New York': { dx: 10, dy: 5 },
-          'Virginia': { dx: 10, dy: 2 },
-          'Maryland': { dx: -5, dy: -5 }
-        };
-
         if (labelOffsets[stateName]) {
           labelX += labelOffsets[stateName].dx;
           labelY += labelOffsets[stateName].dy;
         }
+        labelData.push({ stateName, labelX, labelY });
+      });
 
+      // Pass 2: Render all labels on top of all paths
+      labelData.forEach(({ stateName, labelX, labelY }) => {
         const abbr = appState.stateAbbreviations[stateName];
         if (abbr) {
           const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -1543,6 +1568,16 @@
         scale: 2,
         useCORS: true
       }).then(canvas => {
+        // Add watermark
+        const ctx = canvas.getContext('2d');
+        ctx.save();
+        ctx.font = `${12 * 2}px -apple-system, BlinkMacSystemFont, sans-serif`;
+        ctx.fillStyle = appState.darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText('Made with Cakemapper', canvas.width - 20, canvas.height - 12);
+        ctx.restore();
+
         const link = document.createElement('a');
         link.href = canvas.toDataURL('image/png');
         link.download = 'cakemapper.png';
@@ -1770,6 +1805,14 @@
         document.querySelectorAll('.state-label').forEach(label => {
           label.style.display = appState.showLabels ? '' : 'none';
         });
+      });
+
+      // Title color picker
+      document.getElementById('titleColorPicker').addEventListener('input', (e) => {
+        appState.titleColor = e.target.value;
+        document.getElementById('mapTitle').style.color = e.target.value;
+        document.getElementById('mapSubtitle').style.color = e.target.value;
+        updateURL();
       });
     }
 

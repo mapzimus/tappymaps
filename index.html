@@ -902,23 +902,23 @@
         <svg id="mapSVG" viewBox="-20 -30 1010 680" preserveAspectRatio="xMidYMid meet">
           <g id="statesGroup" transform="translate(5, -20) scale(0.95)"></g>
 
-          <!-- North Arrow (top-right, clean compass style) -->
-          <g id="northArrow" transform="translate(950, 20)" opacity="0.3">
-            <circle cx="0" cy="0" r="12" fill="none" stroke="currentColor" stroke-width="0.6"/>
-            <polygon points="0,-10 -3,0 0,-3 3,0" fill="currentColor"/>
-            <line x1="0" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1"/>
-            <text x="0" y="-14" text-anchor="middle" font-size="7" font-weight="700" fill="currentColor" font-family="sans-serif">N</text>
+          <!-- North Arrow (top-right, compass style) -->
+          <g id="northArrow" transform="translate(940, 30)" opacity="0.4">
+            <circle cx="0" cy="0" r="18" fill="none" stroke="currentColor" stroke-width="0.8"/>
+            <polygon points="0,-15 -5,2 0,-4 5,2" fill="currentColor"/>
+            <line x1="0" y1="2" x2="0" y2="15" stroke="currentColor" stroke-width="1.5"/>
+            <text x="0" y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="sans-serif">N</text>
           </g>
 
-          <!-- Scale Bar (bottom-right, larger) -->
-          <g id="scaleBar" transform="translate(780, 630)" opacity="0.3">
-            <line x1="0" y1="0" x2="120" y2="0" stroke="currentColor" stroke-width="1.5"/>
-            <line x1="0" y1="-4" x2="0" y2="4" stroke="currentColor" stroke-width="1"/>
-            <line x1="60" y1="-3" x2="60" y2="3" stroke="currentColor" stroke-width="0.8"/>
-            <line x1="120" y1="-4" x2="120" y2="4" stroke="currentColor" stroke-width="1"/>
-            <text x="0" y="10" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif">0</text>
-            <text x="60" y="10" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif">200</text>
-            <text x="120" y="10" text-anchor="middle" font-size="7" fill="currentColor" font-family="sans-serif">400 mi</text>
+          <!-- Scale Bar (bottom-right) -->
+          <g id="scaleBar" transform="translate(700, 625)" opacity="0.4">
+            <line x1="0" y1="0" x2="180" y2="0" stroke="currentColor" stroke-width="2"/>
+            <line x1="0" y1="-5" x2="0" y2="5" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="90" y1="-4" x2="90" y2="4" stroke="currentColor" stroke-width="1"/>
+            <line x1="180" y1="-5" x2="180" y2="5" stroke="currentColor" stroke-width="1.5"/>
+            <text x="0" y="14" text-anchor="middle" font-size="10" fill="currentColor" font-family="sans-serif">0</text>
+            <text x="90" y="14" text-anchor="middle" font-size="10" fill="currentColor" font-family="sans-serif">200</text>
+            <text x="180" y="14" text-anchor="middle" font-size="10" fill="currentColor" font-family="sans-serif">400 mi</text>
           </g>
         </svg>
         <div class="legend-group" id="legendDisplay" style="display: none;"></div>
@@ -1093,7 +1093,7 @@
 
       // Manual label offsets for states where bbox center is misleading
       const labelOffsets = {
-        'Florida': { dx: 15, dy: 10 },
+        'Florida': { dx: 45, dy: 20 },
         'Michigan': { dx: 20, dy: 20 },
         'Louisiana': { dx: -5, dy: 5 },
         'Hawaii': { dx: 20, dy: 5 },

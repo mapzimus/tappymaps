@@ -1025,7 +1025,7 @@
         </svg>
         <div class="legend-group" id="legendDisplay" style="display: none;"></div>
         <div class="stats-bar" id="statsBar">
-          <div class="stats-text" id="statsText">0 of 52 states & territories colored</div>
+          <div class="stats-text" id="statsText">0 of 51 states & territories colored</div>
           <div class="stats-progress">
             <div class="stats-progress-bar">
               <div class="stats-progress-fill" id="statsProgressFill" style="width: 0%"></div>
@@ -1223,6 +1223,9 @@
       }
     }
 
+    // States/territories that should not be colorable
+    const nonColorable = new Set(['District of Columbia']);
+
     // FIPS code to state name lookup (us-atlas@3 uses FIPS as feature.id)
     const fipsToState = {
       '01': 'Alabama', '02': 'Alaska', '04': 'Arizona', '05': 'Arkansas',
@@ -1309,8 +1312,11 @@
           pathEl.style.fill = appState.stateColors[stateName];
         }
 
-        pathEl.addEventListener('click', (e) => onStateClick(e, stateName));
-        pathEl.addEventListener('contextmenu', (e) => onStateRightClick(e, stateName));
+        // Non-colorable areas (e.g. DC) get no click listeners
+        if (!nonColorable.has(stateName)) {
+          pathEl.addEventListener('click', (e) => onStateClick(e, stateName));
+          pathEl.addEventListener('contextmenu', (e) => onStateRightClick(e, stateName));
+        }
         pathEl.addEventListener('mouseenter', (e) => showTooltip(e, stateName));
         pathEl.addEventListener('mousemove', (e) => moveTooltip(e));
         pathEl.addEventListener('mouseleave', hideTooltip);
@@ -1445,8 +1451,8 @@
     // ============================================================================
 
     function updateStatsBar() {
-      const colored = Object.keys(appState.stateColors).length;
-      const total = Object.keys(appState.stateAbbreviations).length;
+      const colored = Object.keys(appState.stateColors).filter(s => !nonColorable.has(s)).length;
+      const total = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s)).length;
       const percentage = Math.min((colored / total) * 100, 100);
 
       document.getElementById('statsText').textContent = `${colored} of ${total} states & territories colored`;
@@ -1679,7 +1685,7 @@
 
     function selectAll() {
       saveHistory();
-      const all50States = Object.keys(appState.stateAbbreviations);
+      const all50States = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
       all50States.forEach(state => {
         appState.stateColors[state] = appState.selectedColor;
       });
@@ -1692,7 +1698,7 @@
 
     function colorRegion(region) {
       saveHistory();
-      const states = appState.regions[region] || [];
+      const states = (appState.regions[region] || []).filter(s => !nonColorable.has(s));
       states.forEach(state => {
         appState.stateColors[state] = appState.selectedColor;
       });
@@ -1718,7 +1724,7 @@
 
     function invertSelection() {
       saveHistory();
-      const all50States = Object.keys(appState.stateAbbreviations);
+      const all50States = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
       const newColors = {};
       all50States.forEach(state => {
         if (appState.stateColors[state]) {

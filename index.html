@@ -936,27 +936,43 @@
             <input type="checkbox" id="toggleNorthArrow" checked style="accent-color: #2B7A8C; cursor: pointer;">
             North arrow
           </label>
-          <div style="margin-left: 24px; margin-bottom: 6px;">
-            <select id="arrowPositionSelect" class="region-select" style="font-size: 11px; padding: 3px 6px; width: 100%;">
-              <option value="top-right">Top Right</option>
-              <option value="top-left">Top Left</option>
-              <option value="bottom-right">Bottom Right</option>
-              <option value="bottom-left">Bottom Left</option>
+          <div style="margin-left: 24px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; gap: 6px;">
+              <select id="arrowPositionSelect" class="region-select" style="font-size: 11px; padding: 3px 6px; flex: 1;">
+                <option value="top-right">Top Right</option>
+                <option value="top-left">Top Left</option>
+                <option value="bottom-right">Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+              </select>
+              <input type="color" id="arrowColorPicker" value="#333333" style="width: 28px; height: 24px; border: none; padding: 0; cursor: pointer; background: none;">
+            </div>
+            <select id="arrowStyleSelect" class="region-select" style="font-size: 11px; padding: 3px 6px; width: 100%;">
+              <option value="classic">Classic</option>
+              <option value="minimal">Minimal</option>
+              <option value="ornate">Ornate</option>
             </select>
           </div>
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
             <input type="checkbox" id="toggleScaleBar" checked style="accent-color: #2B7A8C; cursor: pointer;">
             Scale bar
           </label>
-          <div style="margin-left: 24px; margin-bottom: 6px; display: flex; gap: 6px;">
-            <select id="scalePositionSelect" class="region-select" style="font-size: 11px; padding: 3px 6px; flex: 1;">
-              <option value="bottom-right">Bottom Right</option>
-              <option value="bottom-left">Bottom Left</option>
-              <option value="bottom-center">Bottom Center</option>
-            </select>
-            <select id="scaleUnitSelect" class="region-select" style="font-size: 11px; padding: 3px 6px; width: 65px;">
-              <option value="imperial">mi</option>
-              <option value="metric">km</option>
+          <div style="margin-left: 24px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; gap: 6px;">
+              <select id="scalePositionSelect" class="region-select" style="font-size: 11px; padding: 3px 6px; flex: 1;">
+                <option value="bottom-right">Bottom Right</option>
+                <option value="bottom-left">Bottom Left</option>
+                <option value="bottom-center">Bottom Center</option>
+              </select>
+              <select id="scaleUnitSelect" class="region-select" style="font-size: 11px; padding: 3px 6px; width: 65px;">
+                <option value="imperial">mi</option>
+                <option value="metric">km</option>
+              </select>
+              <input type="color" id="scaleColorPicker" value="#333333" style="width: 28px; height: 24px; border: none; padding: 0; cursor: pointer; background: none;">
+            </div>
+            <select id="scaleStyleSelect" class="region-select" style="font-size: 11px; padding: 3px 6px; width: 100%;">
+              <option value="classic">Classic</option>
+              <option value="minimal">Minimal</option>
+              <option value="ornate">Ornate</option>
             </select>
           </div>
           <div style="margin-top: 6px; margin-bottom: 6px;">
@@ -1170,7 +1186,11 @@
       scaleUnit: 'imperial',
       legendPosition: 'bottom-right',
       arrowPosition: 'top-right',
+      arrowColor: '#333333',
+      arrowStyle: 'classic',
       scalePosition: 'bottom-right',
+      scaleColor: '#333333',
+      scaleStyle: 'classic',
       showBasemap: true,
       history: [],
       darkMode: true,
@@ -1220,6 +1240,8 @@
       await loadUSMap();
       loadStateFromURL();
       attachEventListeners();
+      renderNorthArrow();
+      renderScaleBar();
       updateStatsBar();
     }
 
@@ -2164,14 +2186,110 @@
     }
 
     function updateScaleBarUnits() {
-      const midEl = document.getElementById('scaleMid');
-      const endEl = document.getElementById('scaleEnd');
-      if (appState.scaleUnit === 'metric') {
-        midEl.textContent = '320';
-        endEl.textContent = '640 km';
+      // Re-render the entire scale bar (handles all styles)
+      renderScaleBar();
+    }
+
+    function renderNorthArrow() {
+      const g = document.getElementById('northArrow');
+      if (!g) return;
+      const color = appState.arrowColor || '#333333';
+      const style = appState.arrowStyle || 'classic';
+      const pos = g.getAttribute('transform');
+      const display = g.style.display;
+      // Clear existing content
+      g.innerHTML = '';
+      g.setAttribute('transform', pos);
+      g.style.display = display;
+      g.style.color = color;
+
+      if (style === 'minimal') {
+        // Minimal: simple thin arrow, no circle
+        g.setAttribute('opacity', '0.6');
+        g.innerHTML = `
+          <line x1="0" y1="12" x2="0" y2="-14" stroke="${color}" stroke-width="1.5"/>
+          <polygon points="0,-16 -4,-8 0,-10 4,-8" fill="${color}"/>
+          <text x="0" y="-20" text-anchor="middle" font-size="9" font-weight="600" fill="${color}" font-family="sans-serif">N</text>
+        `;
+      } else if (style === 'ornate') {
+        // Ornate: compass rose with cardinal directions
+        g.setAttribute('opacity', '0.5');
+        g.innerHTML = `
+          <circle cx="0" cy="0" r="22" fill="none" stroke="${color}" stroke-width="0.6"/>
+          <circle cx="0" cy="0" r="20" fill="none" stroke="${color}" stroke-width="1.2"/>
+          <polygon points="0,-17 -3,-2 0,-6 3,-2" fill="${color}"/>
+          <polygon points="0,17 -3,2 0,6 3,2" fill="${color}" opacity="0.3"/>
+          <polygon points="-17,0 -2,-3 -6,0 -2,3" fill="${color}" opacity="0.3"/>
+          <polygon points="17,0 2,-3 6,0 2,3" fill="${color}" opacity="0.3"/>
+          <line x1="-14" y1="-14" x2="14" y2="14" stroke="${color}" stroke-width="0.4" opacity="0.4"/>
+          <line x1="14" y1="-14" x2="-14" y2="14" stroke="${color}" stroke-width="0.4" opacity="0.4"/>
+          <text x="0" y="-24" text-anchor="middle" font-size="10" font-weight="700" fill="${color}" font-family="serif">N</text>
+          <text x="0" y="30" text-anchor="middle" font-size="7" fill="${color}" font-family="serif" opacity="0.6">S</text>
+          <text x="28" y="3" text-anchor="middle" font-size="7" fill="${color}" font-family="serif" opacity="0.6">E</text>
+          <text x="-28" y="3" text-anchor="middle" font-size="7" fill="${color}" font-family="serif" opacity="0.6">W</text>
+        `;
       } else {
-        midEl.textContent = '200';
-        endEl.textContent = '400 mi';
+        // Classic (default): circle with arrow
+        g.setAttribute('opacity', '0.4');
+        g.innerHTML = `
+          <circle cx="0" cy="0" r="18" fill="none" stroke="${color}" stroke-width="0.8"/>
+          <polygon points="0,-15 -5,2 0,-4 5,2" fill="${color}"/>
+          <line x1="0" y1="2" x2="0" y2="15" stroke="${color}" stroke-width="1.5"/>
+          <text x="0" y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="${color}" font-family="sans-serif">N</text>
+        `;
+      }
+    }
+
+    function renderScaleBar() {
+      const g = document.getElementById('scaleBar');
+      if (!g) return;
+      const color = appState.scaleColor || '#333333';
+      const style = appState.scaleStyle || 'classic';
+      const pos = g.getAttribute('transform');
+      const display = g.style.display;
+      // Clear existing content
+      g.innerHTML = '';
+      g.setAttribute('transform', pos);
+      g.style.display = display;
+      g.style.color = color;
+
+      const midVal = appState.scaleUnit === 'metric' ? '320' : '200';
+      const endVal = appState.scaleUnit === 'metric' ? '640 km' : '400 mi';
+
+      if (style === 'minimal') {
+        // Minimal: thin line, small ticks, lighter feel
+        g.setAttribute('opacity', '0.5');
+        g.innerHTML = `
+          <line x1="0" y1="0" x2="180" y2="0" stroke="${color}" stroke-width="1"/>
+          <line x1="0" y1="-3" x2="0" y2="3" stroke="${color}" stroke-width="1"/>
+          <line x1="180" y1="-3" x2="180" y2="3" stroke="${color}" stroke-width="1"/>
+          <text x="0" y="12" text-anchor="middle" font-size="8" fill="${color}" font-family="sans-serif">0</text>
+          <text x="180" y="12" text-anchor="middle" font-size="8" fill="${color}" font-family="sans-serif" id="scaleEnd">${endVal}</text>
+        `;
+      } else if (style === 'ornate') {
+        // Ornate: alternating black/white blocks like a traditional map scale
+        g.setAttribute('opacity', '0.5');
+        g.innerHTML = `
+          <rect x="0" y="-4" width="45" height="8" fill="${color}"/>
+          <rect x="45" y="-4" width="45" height="8" fill="none" stroke="${color}" stroke-width="0.8"/>
+          <rect x="90" y="-4" width="45" height="8" fill="${color}"/>
+          <rect x="135" y="-4" width="45" height="8" fill="none" stroke="${color}" stroke-width="0.8"/>
+          <text x="0" y="14" text-anchor="middle" font-size="9" fill="${color}" font-family="serif">0</text>
+          <text x="90" y="14" text-anchor="middle" font-size="9" fill="${color}" font-family="serif" id="scaleMid">${midVal}</text>
+          <text x="180" y="14" text-anchor="middle" font-size="9" fill="${color}" font-family="serif" id="scaleEnd">${endVal}</text>
+        `;
+      } else {
+        // Classic (default): line with tick marks
+        g.setAttribute('opacity', '0.4');
+        g.innerHTML = `
+          <line x1="0" y1="0" x2="180" y2="0" stroke="${color}" stroke-width="2"/>
+          <line x1="0" y1="-5" x2="0" y2="5" stroke="${color}" stroke-width="1.5"/>
+          <line x1="90" y1="-4" x2="90" y2="4" stroke="${color}" stroke-width="1"/>
+          <line x1="180" y1="-5" x2="180" y2="5" stroke="${color}" stroke-width="1.5"/>
+          <text x="0" y="14" text-anchor="middle" font-size="10" fill="${color}" font-family="sans-serif">0</text>
+          <text x="90" y="14" text-anchor="middle" font-size="10" fill="${color}" font-family="sans-serif" id="scaleMid">${midVal}</text>
+          <text x="180" y="14" text-anchor="middle" font-size="10" fill="${color}" font-family="sans-serif" id="scaleEnd">${endVal}</text>
+        `;
       }
     }
 
@@ -2596,7 +2714,7 @@
         document.getElementById('mapContainer').classList.toggle('ocean-on', e.target.checked);
       });
 
-      // North arrow toggle & position
+      // North arrow toggle, position, color & style
       document.getElementById('toggleNorthArrow').addEventListener('change', (e) => {
         document.getElementById('northArrow').style.display = e.target.checked ? '' : 'none';
       });
@@ -2604,8 +2722,16 @@
         appState.arrowPosition = e.target.value;
         updateElementPositions();
       });
+      document.getElementById('arrowColorPicker').addEventListener('input', (e) => {
+        appState.arrowColor = e.target.value;
+        renderNorthArrow();
+      });
+      document.getElementById('arrowStyleSelect').addEventListener('change', (e) => {
+        appState.arrowStyle = e.target.value;
+        renderNorthArrow();
+      });
 
-      // Scale bar toggle, position & units
+      // Scale bar toggle, position, units, color & style
       document.getElementById('toggleScaleBar').addEventListener('change', (e) => {
         document.getElementById('scaleBar').style.display = e.target.checked ? '' : 'none';
       });
@@ -2616,6 +2742,14 @@
       document.getElementById('scaleUnitSelect').addEventListener('change', (e) => {
         appState.scaleUnit = e.target.value;
         updateScaleBarUnits();
+      });
+      document.getElementById('scaleColorPicker').addEventListener('input', (e) => {
+        appState.scaleColor = e.target.value;
+        renderScaleBar();
+      });
+      document.getElementById('scaleStyleSelect').addEventListener('change', (e) => {
+        appState.scaleStyle = e.target.value;
+        renderScaleBar();
       });
 
       // Legend position

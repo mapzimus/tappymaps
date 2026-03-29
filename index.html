@@ -1018,7 +1018,7 @@
           </g>
 
           <!-- Scale Bar -->
-          <g id="scaleBar" transform="translate(700, 655)" opacity="0.4">
+          <g id="scaleBar" transform="translate(700, 645)" opacity="0.4">
             <line x1="0" y1="0" x2="180" y2="0" stroke="currentColor" stroke-width="2"/>
             <line x1="0" y1="-5" x2="0" y2="5" stroke="currentColor" stroke-width="1.5"/>
             <line x1="90" y1="-4" x2="90" y2="4" stroke="currentColor" stroke-width="1"/>
@@ -1340,7 +1340,7 @@
       newPr.addEventListener('mousemove', (e) => moveTooltip(e));
       newPr.addEventListener('mouseleave', hideTooltip);
 
-      // PR label
+      // PR label (scaled up since parent group is 0.45x)
       const prGroup = newPr.closest('g');
       let prLabel = prGroup.querySelector('.state-label');
       if (!prLabel) {
@@ -1349,6 +1349,7 @@
         prLabel.setAttribute('x', '88');
         prLabel.setAttribute('y', '28');
         prLabel.setAttribute('data-state', 'Puerto Rico');
+        prLabel.setAttribute('font-size', '22');
         prLabel.textContent = 'PR';
         prGroup.appendChild(prLabel);
       }
@@ -2049,21 +2050,21 @@
     // ============================================================================
 
     function updateElementPositions() {
-      // North arrow positions
+      // North arrow positions (keep within viewBox: -20,-30 to 990,680)
       const arrowPositions = {
         'top-right': 'translate(940, 30)',
         'top-left': 'translate(40, 30)',
-        'bottom-right': 'translate(940, 640)',
-        'bottom-left': 'translate(40, 640)'
+        'bottom-right': 'translate(940, 620)',
+        'bottom-left': 'translate(40, 620)'
       };
       const arrow = document.getElementById('northArrow');
       if (arrow) arrow.setAttribute('transform', arrowPositions[appState.arrowPosition] || arrowPositions['top-right']);
 
-      // Scale bar positions
+      // Scale bar positions (text extends +14px below, so max y ~645)
       const scalePositions = {
-        'bottom-right': 'translate(700, 670)',
-        'bottom-left': 'translate(30, 670)',
-        'bottom-center': 'translate(380, 670)'
+        'bottom-right': 'translate(700, 645)',
+        'bottom-left': 'translate(30, 645)',
+        'bottom-center': 'translate(380, 645)'
       };
       const scale = document.getElementById('scaleBar');
       if (scale) scale.setAttribute('transform', scalePositions[appState.scalePosition] || scalePositions['bottom-right']);
@@ -2257,13 +2258,22 @@
         // Update title
         document.getElementById('mapTitle').textContent = `${countyStateName} Counties`;
 
-        // Calculate bounding box of all county paths to zoom in
+        // Reset statesGroup transform for county mode (remove the scale/translate that distorts bbox)
         const statesGroup = document.getElementById('statesGroup');
+        statesGroup.setAttribute('transform', '');
         statesGroup.innerHTML = '';
 
-        // Hide PR group in county mode
+        // Hide PR group, basemap, north arrow, scale bar in county mode
         const prGroup = document.getElementById('puertoRicoGroup');
         if (prGroup) prGroup.style.display = 'none';
+        const basemapGroup = document.getElementById('basemapGroup');
+        if (basemapGroup) basemapGroup.style.display = 'none';
+        const oceanBg = document.getElementById('oceanBg');
+        if (oceanBg) oceanBg.style.display = 'none';
+        const northArrow = document.getElementById('northArrow');
+        if (northArrow) northArrow.style.display = 'none';
+        const scaleBarEl = document.getElementById('scaleBar');
+        if (scaleBarEl) scaleBarEl.style.display = 'none';
 
         const pathGenerator = d => {
           let pathData = '';
@@ -2338,11 +2348,13 @@
           maxY = Math.max(maxY, bbox.y + bbox.height);
         });
 
-        // Zoom SVG viewBox to state bounds with padding
-        const padding = 30;
+        // Zoom SVG viewBox to state bounds with generous padding
+        const padding = 50;
+        const stateW = maxX - minX;
+        const stateH = maxY - minY;
         const svg = document.getElementById('mapSVG');
         svg.setAttribute('viewBox',
-          `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`
+          `${minX - padding} ${minY - padding} ${stateW + padding * 2} ${stateH + padding * 2}`
         );
 
         // Show back button
@@ -2366,9 +2378,23 @@
       const svg = document.getElementById('mapSVG');
       svg.setAttribute('viewBox', '-20 -30 1010 710');
 
+      // Restore statesGroup transform
+      const statesGroup = document.getElementById('statesGroup');
+      statesGroup.setAttribute('transform', 'translate(5, -20) scale(0.95)');
+
       // Restore PR group
       const prGroup = document.getElementById('puertoRicoGroup');
       if (prGroup) prGroup.style.display = '';
+
+      // Restore basemap, north arrow, scale bar
+      const basemapGroup = document.getElementById('basemapGroup');
+      if (basemapGroup) basemapGroup.style.display = appState.showBasemap ? '' : 'none';
+      const oceanBg = document.getElementById('oceanBg');
+      if (oceanBg) oceanBg.style.display = appState.showBasemap ? '' : 'none';
+      const northArrow = document.getElementById('northArrow');
+      if (northArrow) northArrow.style.display = document.getElementById('toggleNorthArrow').checked ? '' : 'none';
+      const scaleBarEl = document.getElementById('scaleBar');
+      if (scaleBarEl) scaleBarEl.style.display = document.getElementById('toggleScaleBar').checked ? '' : 'none';
 
       // Restore title
       document.getElementById('mapTitle').textContent = appState.mapTitle;

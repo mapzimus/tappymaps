@@ -266,6 +266,42 @@ Everything lives in one HTML file. No build tools, no framework.
 6. **Git on Windows CMD**: Commit messages with spaces break. Write message to file, use `git commit -F filename`, then delete.
 7. **GitHub Pages caching**: Hard refresh (Ctrl+Shift+R) after deploy. Deploys take ~15-30 seconds.
 8. **Scale bar**: Text extends +14px below bar's y position. Max y for bottom positions is 645.
+9. **SVG namespace for dynamic content**: `innerHTML` on SVG `<g>` elements creates children in the HTML namespace, breaking rendering and export. Use the `setSVGContent()` helper which creates a temp `<svg>` element for proper namespace parsing.
+10. **Label positioning**: Labels use bbox center (`getBBox()`) with manual offsets in `labelOffsets`. Do NOT change these values — they are hand-tuned and locked in.
+
+### Label Offsets (LOCKED — do not modify without visual verification)
+These offsets are applied to the bbox center of each state path. Values are in SVG coordinate units.
+```javascript
+const labelOffsets = {
+  'District of Columbia': { hide: true },
+  // Leader line states (small NE states — label placed outside with connecting line)
+  'Delaware': { dx: 30, dy: 4, leader: true },
+  'New Jersey': { dx: 0, dy: 0 },
+  'Connecticut': { dx: 24, dy: 6, leader: true },
+  'Rhode Island': { dx: 28, dy: 0, leader: true },
+  'Maryland': { dx: 28, dy: 10, leader: true },
+  // Irregular shapes that need nudging from bbox center
+  'Michigan': { dx: 18, dy: 30 },
+  'Florida': { dx: 46, dy: -5 },
+  'Louisiana': { dx: -10, dy: 0 },
+  'Virginia': { dx: 5, dy: 0 },
+  'Massachusetts': { dx: 5, dy: -2 },
+  'New York': { dx: 5, dy: 0 },
+  'Oklahoma': { dx: 5, dy: 2 },
+  'Idaho': { dx: 0, dy: 14 },
+  'New Hampshire': { dx: 0, dy: 6 },
+  'Alaska': { dx: 16, dy: -12 },
+  'Hawaii': { dx: 5, dy: 0 },
+  'Arizona': { dx: 18, dy: 0 },
+  'Oregon': { dx: 0, dy: 8 },
+  'Indiana': { dx: 0, dy: -15 },
+  'Mississippi': { dx: 12, dy: 0 },
+  'Missouri': { dx: -10, dy: 0 },
+  'Minnesota': { dx: -8, dy: 0 },
+  'Montana': { dx: 15, dy: 0 },
+  'California': { dx: -8, dy: 0 },
+};
+```
 
 ### Key Code Sections (line numbers approximate — may shift with edits)
 | Section | Description |

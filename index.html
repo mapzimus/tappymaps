@@ -1101,7 +1101,7 @@
         </svg>
         <div class="legend-group" id="legendDisplay" style="display: none;"></div>
         <div class="stats-bar" id="statsBar">
-          <div class="stats-text" id="statsText">0 of 51 states & territories colored</div>
+          <div class="stats-text" id="statsText">0 of 50 states colored</div>
           <div class="stats-progress">
             <div class="stats-progress-bar">
               <div class="stats-progress-fill" id="statsProgressFill" style="width: 0%"></div>
@@ -1261,7 +1261,7 @@
       }
     }
 
-    // States/territories that should not be colorable
+    // States that should not be colorable
     const nonColorable = new Set(['District of Columbia']);
 
     // FIPS code to state name lookup (us-atlas@3 uses FIPS as feature.id)
@@ -1305,62 +1305,36 @@
         return pathData;
       };
 
-      // Compute centroid of the largest polygon in a geometry
-      // Much more accurate than bounding box center for irregular states
-      function computeLabelPosition(geometry) {
-        let bestCentroid = null;
-        let bestArea = 0;
-
-        const getArea = (ring) => {
-          let area = 0;
-          for (let i = 0; i < ring.length - 1; i++) {
-            area += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
-          }
-          return Math.abs(area / 2);
-        };
-
-        const getCentroid = (ring) => {
-          let cx = 0, cy = 0;
-          for (let i = 0; i < ring.length; i++) {
-            cx += ring[i][0];
-            cy += ring[i][1];
-          }
-          return { x: cx / ring.length, y: cy / ring.length };
-        };
-
-        const processPolygon = (rings) => {
-          const area = getArea(rings[0]);
-          if (area > bestArea) {
-            bestArea = area;
-            bestCentroid = getCentroid(rings[0]);
-          }
-        };
-
-        if (geometry.type === 'Polygon') {
-          processPolygon(geometry.coordinates);
-        } else if (geometry.type === 'MultiPolygon') {
-          geometry.coordinates.forEach(polygon => processPolygon(polygon));
-        }
-        return bestCentroid;
-      }
-
-      // Fine-tune offsets (applied AFTER centroid calculation, so much smaller adjustments needed)
+      // Label offsets from bbox center. Most states use bbox center directly
+      // (accurate for rectangular states). Offsets only needed for irregular shapes.
       const labelOffsets = {
-        'Washington': { dx: 12, dy: 8 },
-        'Florida': { dx: 18, dy: 10 },
-        'Louisiana': { dx: -5, dy: 5 },
-        'Hawaii': { dx: 0, dy: -5 },
-        'California': { dx: 0, dy: 10 },
         'District of Columbia': { hide: true },
+        // Leader line states (small NE states — label placed outside with connecting line)
         'Delaware': { dx: 30, dy: 4, leader: true },
-        'New Jersey': { dx: 22, dy: 0, leader: true },
-        'Connecticut': { dx: 24, dy: 0, leader: true },
+        'New Jersey': { dx: 0, dy: 0 },
+        'Connecticut': { dx: 24, dy: 6, leader: true },
         'Rhode Island': { dx: 28, dy: 0, leader: true },
-        'Massachusetts': { dx: 5, dy: -3 },
         'Maryland': { dx: 28, dy: 10, leader: true },
-        'New Hampshire': { dx: 3, dy: 3 },
+        // Irregular shapes that need nudging from bbox center
+        'Michigan': { dx: 18, dy: 30 },        // Into lower peninsula (bbox spans both)
+        'Florida': { dx: 46, dy: -5 },         // Into peninsula (panhandle extends bbox west)
+        'Louisiana': { dx: -10, dy: 0 },
         'Virginia': { dx: 5, dy: 0 },
-        'Idaho': { dx: 0, dy: 8 }
+        'Massachusetts': { dx: 5, dy: -2 },
+        'New York': { dx: 5, dy: 0 },
+        'Oklahoma': { dx: 5, dy: 2 },          // Panhandle shifts bbox center west
+        'Idaho': { dx: 0, dy: 14 },            // Narrow top shifts center up
+        'New Hampshire': { dx: 0, dy: 6 },
+        'Alaska': { dx: 16, dy: -12 },         // Islands extend bbox
+        'Hawaii': { dx: 5, dy: 0 },            // Islands extend bbox
+        'Arizona': { dx: 18, dy: 0 },
+        'Oregon': { dx: 0, dy: 8 },
+        'Indiana': { dx: 0, dy: -15 },
+        'Mississippi': { dx: 12, dy: 0 },
+        'Missouri': { dx: -10, dy: 0 },
+        'Minnesota': { dx: -8, dy: 0 },
+        'Montana': { dx: 15, dy: 0 },
+        'California': { dx: -8, dy: 0 },
       };
 
       // Pass 1: Render all state paths first
@@ -1392,11 +1366,10 @@
 
         statesGroup.appendChild(pathEl);
 
-        // Compute label position using geometric centroid (not bbox center)
-        const centroid = computeLabelPosition(geometry);
+        // Use bbox center for label position — reliable and consistent
         const bbox = pathEl.getBBox();
-        let labelX = centroid ? centroid.x : bbox.x + bbox.width / 2;
-        let labelY = centroid ? centroid.y : bbox.y + bbox.height / 2;
+        let labelX = bbox.x + bbox.width / 2;
+        let labelY = bbox.y + bbox.height / 2;
         const offset = labelOffsets[stateName];
         if (offset && offset.hide) {
           // Skip label for this state (e.g. DC — too small)
@@ -1497,7 +1470,7 @@
       const total = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s)).length;
       const percentage = Math.min((colored / total) * 100, 100);
 
-      document.getElementById('statsText').textContent = `${colored} of ${total} states & territories colored`;
+      document.getElementById('statsText').textContent = `${colored} of ${total} states colored`;
       document.getElementById('statsProgressFill').style.width = percentage + '%';
 
       // Build breakdown by legend category
@@ -2190,31 +2163,31 @@
       renderScaleBar();
     }
 
+    // Helper: set SVG content on a <g> element using proper SVG namespace parsing
+    function setSVGContent(el, svgMarkup) {
+      while (el.firstChild) el.removeChild(el.firstChild);
+      const tmp = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      tmp.innerHTML = svgMarkup;
+      while (tmp.firstChild) el.appendChild(tmp.firstChild);
+    }
+
     function renderNorthArrow() {
       const g = document.getElementById('northArrow');
       if (!g) return;
       const color = appState.arrowColor || '#333333';
       const style = appState.arrowStyle || 'classic';
-      const pos = g.getAttribute('transform');
-      const display = g.style.display;
-      // Clear existing content
-      g.innerHTML = '';
-      g.setAttribute('transform', pos);
-      g.style.display = display;
-      g.style.color = color;
 
+      let markup = '';
       if (style === 'minimal') {
-        // Minimal: simple thin arrow, no circle
         g.setAttribute('opacity', '0.6');
-        g.innerHTML = `
+        markup = `
           <line x1="0" y1="12" x2="0" y2="-14" stroke="${color}" stroke-width="1.5"/>
           <polygon points="0,-16 -4,-8 0,-10 4,-8" fill="${color}"/>
           <text x="0" y="-20" text-anchor="middle" font-size="9" font-weight="600" fill="${color}" font-family="sans-serif">N</text>
         `;
       } else if (style === 'ornate') {
-        // Ornate: compass rose with cardinal directions
         g.setAttribute('opacity', '0.5');
-        g.innerHTML = `
+        markup = `
           <circle cx="0" cy="0" r="22" fill="none" stroke="${color}" stroke-width="0.6"/>
           <circle cx="0" cy="0" r="20" fill="none" stroke="${color}" stroke-width="1.2"/>
           <polygon points="0,-17 -3,-2 0,-6 3,-2" fill="${color}"/>
@@ -2229,15 +2202,15 @@
           <text x="-28" y="3" text-anchor="middle" font-size="7" fill="${color}" font-family="serif" opacity="0.6">W</text>
         `;
       } else {
-        // Classic (default): circle with arrow
         g.setAttribute('opacity', '0.4');
-        g.innerHTML = `
+        markup = `
           <circle cx="0" cy="0" r="18" fill="none" stroke="${color}" stroke-width="0.8"/>
           <polygon points="0,-15 -5,2 0,-4 5,2" fill="${color}"/>
           <line x1="0" y1="2" x2="0" y2="15" stroke="${color}" stroke-width="1.5"/>
           <text x="0" y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="${color}" font-family="sans-serif">N</text>
         `;
       }
+      setSVGContent(g, markup);
     }
 
     function renderScaleBar() {
@@ -2245,52 +2218,44 @@
       if (!g) return;
       const color = appState.scaleColor || '#333333';
       const style = appState.scaleStyle || 'classic';
-      const pos = g.getAttribute('transform');
-      const display = g.style.display;
-      // Clear existing content
-      g.innerHTML = '';
-      g.setAttribute('transform', pos);
-      g.style.display = display;
-      g.style.color = color;
 
       const midVal = appState.scaleUnit === 'metric' ? '320' : '200';
       const endVal = appState.scaleUnit === 'metric' ? '640 km' : '400 mi';
 
+      let markup = '';
       if (style === 'minimal') {
-        // Minimal: thin line, small ticks, lighter feel
         g.setAttribute('opacity', '0.5');
-        g.innerHTML = `
+        markup = `
           <line x1="0" y1="0" x2="180" y2="0" stroke="${color}" stroke-width="1"/>
           <line x1="0" y1="-3" x2="0" y2="3" stroke="${color}" stroke-width="1"/>
           <line x1="180" y1="-3" x2="180" y2="3" stroke="${color}" stroke-width="1"/>
           <text x="0" y="12" text-anchor="middle" font-size="8" fill="${color}" font-family="sans-serif">0</text>
-          <text x="180" y="12" text-anchor="middle" font-size="8" fill="${color}" font-family="sans-serif" id="scaleEnd">${endVal}</text>
+          <text x="180" y="12" text-anchor="middle" font-size="8" fill="${color}" font-family="sans-serif">${endVal}</text>
         `;
       } else if (style === 'ornate') {
-        // Ornate: alternating black/white blocks like a traditional map scale
         g.setAttribute('opacity', '0.5');
-        g.innerHTML = `
+        markup = `
           <rect x="0" y="-4" width="45" height="8" fill="${color}"/>
           <rect x="45" y="-4" width="45" height="8" fill="none" stroke="${color}" stroke-width="0.8"/>
           <rect x="90" y="-4" width="45" height="8" fill="${color}"/>
           <rect x="135" y="-4" width="45" height="8" fill="none" stroke="${color}" stroke-width="0.8"/>
           <text x="0" y="14" text-anchor="middle" font-size="9" fill="${color}" font-family="serif">0</text>
-          <text x="90" y="14" text-anchor="middle" font-size="9" fill="${color}" font-family="serif" id="scaleMid">${midVal}</text>
-          <text x="180" y="14" text-anchor="middle" font-size="9" fill="${color}" font-family="serif" id="scaleEnd">${endVal}</text>
+          <text x="90" y="14" text-anchor="middle" font-size="9" fill="${color}" font-family="serif">${midVal}</text>
+          <text x="180" y="14" text-anchor="middle" font-size="9" fill="${color}" font-family="serif">${endVal}</text>
         `;
       } else {
-        // Classic (default): line with tick marks
         g.setAttribute('opacity', '0.4');
-        g.innerHTML = `
+        markup = `
           <line x1="0" y1="0" x2="180" y2="0" stroke="${color}" stroke-width="2"/>
           <line x1="0" y1="-5" x2="0" y2="5" stroke="${color}" stroke-width="1.5"/>
           <line x1="90" y1="-4" x2="90" y2="4" stroke="${color}" stroke-width="1"/>
           <line x1="180" y1="-5" x2="180" y2="5" stroke="${color}" stroke-width="1.5"/>
           <text x="0" y="14" text-anchor="middle" font-size="10" fill="${color}" font-family="sans-serif">0</text>
-          <text x="90" y="14" text-anchor="middle" font-size="10" fill="${color}" font-family="sans-serif" id="scaleMid">${midVal}</text>
-          <text x="180" y="14" text-anchor="middle" font-size="10" fill="${color}" font-family="sans-serif" id="scaleEnd">${endVal}</text>
+          <text x="90" y="14" text-anchor="middle" font-size="10" fill="${color}" font-family="sans-serif">${midVal}</text>
+          <text x="180" y="14" text-anchor="middle" font-size="10" fill="${color}" font-family="sans-serif">${endVal}</text>
         `;
       }
+      setSVGContent(g, markup);
     }
 
     function updateLegendPosition() {

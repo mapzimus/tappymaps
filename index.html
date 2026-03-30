@@ -3114,72 +3114,29 @@
           maxY = Math.max(maxY, bbox.y + bbox.height);
         });
 
-        // Rotate state upright using PCA on county centroids
-        const centroids = countyPaths.map(p => {
-          const b = p.getBBox();
-          return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
-        });
-        const cx = (minX + maxX) / 2;
-        const cy = (minY + maxY) / 2;
-        let mxx = 0, myy = 0, mxy = 0;
-        centroids.forEach(c => {
-          const dx = c.x - cx, dy = c.y - cy;
-          mxx += dx * dx;
-          myy += dy * dy;
-          mxy += dx * dy;
-        });
-        // Angle of the principal (longest) axis from horizontal, in [-90°, 90°]
-        let angleDeg = 0.5 * Math.atan2(2 * mxy, mxx - myy) * (180 / Math.PI);
+        // Zoom SVG viewBox to state bounds, matching container aspect ratio
         const stateW = maxX - minX;
         const stateH = maxY - minY;
-        let rotateDeg = 0;
-        if (stateW >= stateH) {
-          // Wide state — principal axis should be horizontal (0°)
-          rotateDeg = -angleDeg;
-        } else {
-          // Tall state — principal axis should be vertical (90°)
-          // angleDeg is measured from horizontal, so deviation from vertical = 90 - angleDeg
-          rotateDeg = -(angleDeg - 90);
-          // If that gives a huge rotation, try the other direction
-          if (Math.abs(rotateDeg) > 45) {
-            rotateDeg = -(angleDeg + 90);
-          }
-        }
-        // Clamp to avoid wild rotations (max ±25°)
-        rotateDeg = Math.max(-25, Math.min(25, rotateDeg));
-        if (Math.abs(rotateDeg) > 1) {
-          statesGroup.setAttribute('transform', `rotate(${rotateDeg}, ${cx}, ${cy})`);
-        } else {
-          statesGroup.setAttribute('transform', '');
-        }
-
-        // Scale stroke width relative to viewBox (thinner when zoomed in)
-        const strokeScale = Math.min(viewW, viewH) / 1010;
-        countyPaths.forEach(p => {
-          p.style.strokeWidth = Math.max(0.05, 0.8 * strokeScale) + '';
-        });
-
-        // Recalculate bounds after rotation
-        const groupBBox = statesGroup.getBBox();
-        const rMinX = groupBBox.x, rMinY = groupBBox.y;
-        const rW = groupBBox.width, rH = groupBBox.height;
-
-        // Zoom SVG viewBox to rotated state bounds, matching container aspect ratio
-        const padding = Math.max(10, Math.min(rW, rH) * 0.12);
+        const padding = Math.max(10, Math.min(stateW, stateH) * 0.12);
         const svg = document.getElementById('mapSVG');
         const svgRect = svg.getBoundingClientRect();
         const containerAspect = svgRect.width / svgRect.height;
-        let viewW = rW + padding * 2;
-        let viewH = rH + padding * 2;
-        const stateAspect = viewW / viewH;
-        if (stateAspect < containerAspect) {
+        let viewW = stateW + padding * 2;
+        let viewH = stateH + padding * 2;
+        if ((viewW / viewH) < containerAspect) {
           viewW = viewH * containerAspect;
         } else {
           viewH = viewW / containerAspect;
         }
-        const viewX = (rMinX + rW / 2) - viewW / 2;
-        const viewY = (rMinY + rH / 2) - viewH / 2;
+        const viewX = (minX + stateW / 2) - viewW / 2;
+        const viewY = (minY + stateH / 2) - viewH / 2;
         svg.setAttribute('viewBox', `${viewX} ${viewY} ${viewW} ${viewH}`);
+
+        // Scale stroke width relative to zoom level
+        const strokeScale = Math.min(viewW, viewH) / 1010;
+        countyPaths.forEach(p => {
+          p.style.strokeWidth = Math.max(0.05, 0.8 * strokeScale) + '';
+        });
 
         // Add county name labels scaled to viewBox
         const labelScale = Math.min(viewW, viewH) / 400;

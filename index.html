@@ -1181,7 +1181,7 @@
         <div class="section-content">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
             <input type="checkbox" id="toggleLabels" checked style="accent-color: #2B7A8C; cursor: pointer;">
-            Show state labels
+            Show labels
           </label>
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
             <input type="checkbox" id="toggleBasemap" checked style="accent-color: #2B7A8C; cursor: pointer;">
@@ -3114,28 +3114,58 @@
           maxY = Math.max(maxY, bbox.y + bbox.height);
         });
 
-        // Zoom SVG viewBox to state bounds, matching container aspect ratio
+        // Rotate state upright: use PCA-like approach on county centroids to find tilt
+        const centroids = countyPaths.map(p => {
+          const b = p.getBBox();
+          return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+        });
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        // Find principal axis angle using second moments
+        let mxx = 0, myy = 0, mxy = 0;
+        centroids.forEach(c => {
+          const dx = c.x - cx, dy = c.y - cy;
+          mxx += dx * dx;
+          myy += dy * dy;
+          mxy += dx * dy;
+        });
+        // Angle of principal axis
+        let angle = 0.5 * Math.atan2(2 * mxy, mxx - myy);
+        // Convert to degrees; we want the long axis to be vertical
+        let angleDeg = angle * (180 / Math.PI);
+        // Only correct if tilt is moderate (< 30 deg) — avoid flipping wide states
         const stateW = maxX - minX;
         const stateH = maxY - minY;
-        const padding = Math.max(10, Math.min(stateW, stateH) * 0.12);
+        if (stateH > stateW && Math.abs(angleDeg) < 30) {
+          // Tall state tilted — rotate to upright
+          statesGroup.setAttribute('transform', `rotate(${-angleDeg}, ${cx}, ${cy})`);
+        } else if (stateW > stateH && Math.abs(angleDeg) > 60 && Math.abs(angleDeg) < 120) {
+          // Wide state — no rotation needed
+          statesGroup.setAttribute('transform', '');
+        } else {
+          statesGroup.setAttribute('transform', '');
+        }
+
+        // Recalculate bounds after rotation
+        const groupBBox = statesGroup.getBBox();
+        const rMinX = groupBBox.x, rMinY = groupBBox.y;
+        const rW = groupBBox.width, rH = groupBBox.height;
+
+        // Zoom SVG viewBox to rotated state bounds, matching container aspect ratio
+        const padding = Math.max(10, Math.min(rW, rH) * 0.12);
         const svg = document.getElementById('mapSVG');
-        // Get the SVG container's actual aspect ratio
         const svgRect = svg.getBoundingClientRect();
         const containerAspect = svgRect.width / svgRect.height;
-        // Calculate padded state bounds
-        let viewW = stateW + padding * 2;
-        let viewH = stateH + padding * 2;
+        let viewW = rW + padding * 2;
+        let viewH = rH + padding * 2;
         const stateAspect = viewW / viewH;
-        // Expand viewBox to match container aspect ratio (prevents letterboxing)
         if (stateAspect < containerAspect) {
-          // State is taller than container — expand width
           viewW = viewH * containerAspect;
         } else {
-          // State is wider than container — expand height
           viewH = viewW / containerAspect;
         }
-        const viewX = (minX + stateW / 2) - viewW / 2;
-        const viewY = (minY + stateH / 2) - viewH / 2;
+        const viewX = (rMinX + rW / 2) - viewW / 2;
+        const viewY = (rMinY + rH / 2) - viewH / 2;
         svg.setAttribute('viewBox', `${viewX} ${viewY} ${viewW} ${viewH}`);
 
         // Add county name labels scaled to viewBox

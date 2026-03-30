@@ -1103,7 +1103,7 @@
             Show ocean
           </label>
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
-            <input type="checkbox" id="toggleNorthArrow" checked style="accent-color: #2B7A8C; cursor: pointer;">
+            <input type="checkbox" id="toggleNorthArrow" style="accent-color: #2B7A8C; cursor: pointer;">
             North arrow
           </label>
           <div style="margin-left: 24px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px;">
@@ -1123,7 +1123,7 @@
             </select>
           </div>
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
-            <input type="checkbox" id="toggleScaleBar" checked style="accent-color: #2B7A8C; cursor: pointer;">
+            <input type="checkbox" id="toggleScaleBar" style="accent-color: #2B7A8C; cursor: pointer;">
             Scale bar
           </label>
           <div style="margin-left: 24px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px;">
@@ -1248,7 +1248,7 @@
           <g id="statesGroup" transform="translate(5, -20) scale(0.95)"></g>
 
           <!-- North Arrow -->
-          <g id="northArrow" transform="translate(940, 30)" opacity="0.7">
+          <g id="northArrow" transform="translate(940, 30)" opacity="0.7" style="display: none;">
             <circle cx="0" cy="0" r="18" fill="none" stroke="currentColor" stroke-width="0.8"/>
             <polygon points="0,-15 -5,2 0,-4 5,2" fill="currentColor"/>
             <line x1="0" y1="2" x2="0" y2="15" stroke="currentColor" stroke-width="1.5"/>
@@ -1272,7 +1272,7 @@
           </g>
 
           <!-- Scale Bar -->
-          <g id="scaleBar" transform="translate(30, 645)" opacity="0.7">
+          <g id="scaleBar" transform="translate(30, 645)" opacity="0.7" style="display: none;">
             <line x1="0" y1="0" x2="180" y2="0" stroke="currentColor" stroke-width="2"/>
             <line x1="0" y1="-5" x2="0" y2="5" stroke="currentColor" stroke-width="1.5"/>
             <line x1="90" y1="-4" x2="90" y2="4" stroke="currentColor" stroke-width="1"/>

@@ -3128,19 +3128,22 @@
           myy += dy * dy;
           mxy += dx * dy;
         });
-        // Angle of the principal (longest) axis
+        // Angle of the principal (longest) axis from horizontal, in [-90°, 90°]
         let angleDeg = 0.5 * Math.atan2(2 * mxy, mxx - myy) * (180 / Math.PI);
         const stateW = maxX - minX;
         const stateH = maxY - minY;
-        // For wide states: rotate so principal axis is horizontal (angle → 0)
-        // For tall states: rotate so principal axis is vertical (angle → 0 after adjusting)
         let rotateDeg = 0;
         if (stateW >= stateH) {
-          // Wide state — straighten horizontally
+          // Wide state — principal axis should be horizontal (0°)
           rotateDeg = -angleDeg;
         } else {
-          // Tall state — straighten vertically (principal axis is ~90°, bring to 90°)
-          rotateDeg = -angleDeg;
+          // Tall state — principal axis should be vertical (90°)
+          // angleDeg is measured from horizontal, so deviation from vertical = 90 - angleDeg
+          rotateDeg = -(angleDeg - 90);
+          // If that gives a huge rotation, try the other direction
+          if (Math.abs(rotateDeg) > 45) {
+            rotateDeg = -(angleDeg + 90);
+          }
         }
         // Clamp to avoid wild rotations (max ±25°)
         rotateDeg = Math.max(-25, Math.min(25, rotateDeg));

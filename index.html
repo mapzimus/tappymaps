@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mapparatus - US State Mapping</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -1456,12 +1457,35 @@
             <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">No watermark</div>
           </div>
         </div>
-        <div style="text-align: center; margin-bottom: 12px;">
-          <div style="font-size: 28px; font-weight: 800; color: #4ecdc4;">$5<span style="font-size: 14px; font-weight: 400; color: #8a9bb0;">/month</span></div>
-          <div style="font-size: 10px; color: #8a9bb0;">or $48/year (save 20%)</div>
+
+        <!-- Auth section (shown when not logged in) -->
+        <div id="upgradeAuthSection" style="display: none; margin-bottom: 12px;">
+          <div style="font-size: 11px; color: #8a9bb0; text-align: center; margin-bottom: 8px;">Sign in or create an account to subscribe</div>
+          <input type="email" id="authEmail" placeholder="Email address" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #3a3a5a; background: #1a1a2e; color: #e0e0e0; font-size: 12px; margin-bottom: 6px; box-sizing: border-box;">
+          <input type="password" id="authPassword" placeholder="Password (min 6 characters)" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #3a3a5a; background: #1a1a2e; color: #e0e0e0; font-size: 12px; margin-bottom: 8px; box-sizing: border-box;">
+          <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <button class="btn" id="authSignUpBtn" style="flex: 1; padding: 10px; font-size: 12px; background: linear-gradient(135deg, #2B7A8C, #3A9BB0);">Sign Up</button>
+            <button class="btn secondary" id="authSignInBtn" style="flex: 1; padding: 10px; font-size: 12px;">Sign In</button>
+          </div>
+          <div id="authMessage" style="font-size: 11px; text-align: center; min-height: 16px;"></div>
         </div>
-        <button class="btn" id="proSubscribeBtn" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 700; background: linear-gradient(135deg, #2B7A8C, #3A9BB0); margin-bottom: 8px;">Start Free Trial — Coming Soon</button>
-        <div style="text-align: center; margin-top: 8px;">
+
+        <!-- Pricing section (shown when logged in) -->
+        <div id="upgradePricingSection" style="display: none;">
+          <div style="font-size: 11px; color: #8a9bb0; text-align: center; margin-bottom: 8px;">Logged in as <span id="upgradeUserEmail"></span></div>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <button class="btn" id="upgradeMonthlyBtn" style="flex: 1; padding: 12px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #2B7A8C, #3A9BB0);">
+              $5/month
+            </button>
+            <button class="btn" id="upgradeAnnualBtn" style="flex: 1; padding: 12px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #1D5A6A, #2B7A8C);">
+              $48/year<br><span style="font-size: 9px; font-weight: 400; opacity: 0.8;">save 20%</span>
+            </button>
+          </div>
+          <button class="btn secondary" id="authSignOutBtn" style="width: 100%; font-size: 10px; padding: 6px;">Sign Out</button>
+        </div>
+
+        <!-- Legacy access code (always visible) -->
+        <div style="text-align: center; margin-top: 12px; border-top: 1px solid rgba(43,122,140,0.2); padding-top: 10px;">
           <div style="font-size: 10px; color: #666; margin-bottom: 8px;">Have an access code?</div>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="proCodeInput" placeholder="Enter access code" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #3a3a5a; background: #1a1a2e; color: #e0e0e0; font-size: 12px;">
@@ -1568,6 +1592,8 @@
       showLabels: true,
       showLogo: true,
       proUnlocked: false,
+      currentUser: null,
+      subscription: null,
       topologyData: null,
       urlUpdateTimeout: null,
       stateAbbreviations: {
@@ -1618,6 +1644,8 @@
       updateStatsBar();
       showOnboarding();
       updateProGates();
+      await initializeAuth();
+      handleCheckoutReturn();
     }
 
     // ============================================================================
@@ -2501,16 +2529,204 @@
     // EXPORT & IMPORT
     // ============================================================================
 
+    // ============================================================================
+    // SUPABASE AUTH & SUBSCRIPTION
+    // ============================================================================
+
+    const SUPABASE_URL = 'https://tylnxovujbhdmagugjew.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_wRYolYcDWeiUzobTmaCnrQ__J0quzOq';
+    const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
     function isPro() {
       return appState.proUnlocked;
     }
 
     function showUpgradeModal() {
+      updateUpgradeModalUI();
       document.getElementById('upgradeModal').classList.add('active');
     }
 
     function closeUpgradeModal() {
       document.getElementById('upgradeModal').classList.remove('active');
+    }
+
+    function updateUpgradeModalUI() {
+      const authSection = document.getElementById('upgradeAuthSection');
+      const pricingSection = document.getElementById('upgradePricingSection');
+      if (appState.currentUser) {
+        authSection.style.display = 'none';
+        pricingSection.style.display = '';
+        document.getElementById('upgradeUserEmail').textContent = appState.currentUser.email;
+      } else {
+        authSection.style.display = '';
+        pricingSection.style.display = 'none';
+      }
+    }
+
+    async function initializeAuth() {
+      if (!supabaseClient) return;
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          appState.currentUser = { id: session.user.id, email: session.user.email };
+          await checkSubscriptionStatus(session.access_token);
+          updateAuthHeaderUI();
+        }
+        // Listen for auth changes
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
+          if (session) {
+            appState.currentUser = { id: session.user.id, email: session.user.email };
+            await checkSubscriptionStatus(session.access_token);
+          } else {
+            appState.currentUser = null;
+            appState.proUnlocked = false;
+            appState.subscription = null;
+          }
+          updateAuthHeaderUI();
+          updateProGates();
+        });
+      } catch (err) {
+        console.error('Auth init error:', err);
+      }
+    }
+
+    async function checkSubscriptionStatus(token) {
+      if (!token) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (!session) return;
+        token = session.access_token;
+      }
+      try {
+        const res = await fetch('/api/stripe/verify-subscription', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          const { isPro: pro, subscription } = await res.json();
+          appState.proUnlocked = pro;
+          appState.subscription = subscription;
+          updateProGates();
+        }
+      } catch (err) {
+        console.error('Subscription check error:', err);
+      }
+    }
+
+    async function authSignUp() {
+      if (!supabaseClient) { showMessage('Auth not available', 'error'); return; }
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const msgEl = document.getElementById('authMessage');
+      if (!email || !password) { msgEl.textContent = 'Please enter email and password'; msgEl.style.color = '#ff6b6b'; return; }
+      if (password.length < 6) { msgEl.textContent = 'Password must be at least 6 characters'; msgEl.style.color = '#ff6b6b'; return; }
+      msgEl.textContent = 'Creating account...'; msgEl.style.color = '#4ecdc4';
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) { msgEl.textContent = error.message; msgEl.style.color = '#ff6b6b'; return; }
+      if (data.user && !data.session) {
+        msgEl.textContent = 'Check your email to confirm your account!'; msgEl.style.color = '#4ecdc4';
+      } else if (data.session) {
+        appState.currentUser = { id: data.user.id, email: data.user.email };
+        updateUpgradeModalUI();
+        updateAuthHeaderUI();
+        showMessage('Account created! Choose a plan below.', 'success');
+      }
+    }
+
+    async function authSignIn() {
+      if (!supabaseClient) { showMessage('Auth not available', 'error'); return; }
+      const email = document.getElementById('authEmail').value.trim();
+      const password = document.getElementById('authPassword').value;
+      const msgEl = document.getElementById('authMessage');
+      if (!email || !password) { msgEl.textContent = 'Please enter email and password'; msgEl.style.color = '#ff6b6b'; return; }
+      msgEl.textContent = 'Signing in...'; msgEl.style.color = '#4ecdc4';
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) { msgEl.textContent = error.message; msgEl.style.color = '#ff6b6b'; return; }
+      appState.currentUser = { id: data.user.id, email: data.user.email };
+      await checkSubscriptionStatus(data.session.access_token);
+      updateUpgradeModalUI();
+      updateAuthHeaderUI();
+      if (appState.proUnlocked) {
+        closeUpgradeModal();
+        showMessage('Welcome back! Pro features active.', 'success');
+      } else {
+        showMessage('Signed in! Choose a plan below.', 'success');
+      }
+    }
+
+    async function authSignOut() {
+      if (!supabaseClient) return;
+      await supabaseClient.auth.signOut();
+      appState.currentUser = null;
+      appState.proUnlocked = false;
+      appState.subscription = null;
+      updateUpgradeModalUI();
+      updateAuthHeaderUI();
+      updateProGates();
+      showMessage('Signed out', 'info');
+    }
+
+    async function startStripeCheckout(priceId) {
+      if (!appState.currentUser) { showUpgradeModal(); return; }
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session) { showMessage('Please sign in first', 'error'); return; }
+      try {
+        showMessage('Redirecting to checkout...', 'info');
+        const res = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + session.access_token
+          },
+          body: JSON.stringify({
+            priceId: priceId,
+            successUrl: window.location.origin + '?checkout=success',
+            cancelUrl: window.location.origin + '?checkout=cancel'
+          })
+        });
+        const result = await res.json();
+        if (result.url) {
+          window.location.href = result.url;
+        } else {
+          showMessage('Checkout error: ' + (result.error || 'Unknown error'), 'error');
+        }
+      } catch (err) {
+        showMessage('Checkout error: ' + err.message, 'error');
+      }
+    }
+
+    function updateAuthHeaderUI() {
+      // Update sidebar header to show auth status
+      let authIndicator = document.getElementById('authIndicator');
+      if (!authIndicator) {
+        const header = document.querySelector('.sidebar-title');
+        if (header) {
+          authIndicator = document.createElement('div');
+          authIndicator.id = 'authIndicator';
+          authIndicator.style.cssText = 'font-size: 9px; opacity: 0.6; margin-top: 2px;';
+          header.parentNode.insertBefore(authIndicator, header.nextSibling);
+        }
+      }
+      if (authIndicator) {
+        if (appState.currentUser) {
+          authIndicator.textContent = appState.currentUser.email + (appState.proUnlocked ? ' (Pro)' : '');
+          authIndicator.style.color = appState.proUnlocked ? '#4ecdc4' : '#8a9bb0';
+        } else {
+          authIndicator.textContent = '';
+        }
+      }
+    }
+
+    function handleCheckoutReturn() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('checkout') === 'success') {
+        showMessage('Payment successful! Pro features are now active.', 'success');
+        window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+        // Re-check subscription after a short delay (webhook might take a moment)
+        setTimeout(() => checkSubscriptionStatus(), 2000);
+        setTimeout(() => checkSubscriptionStatus(), 5000);
+      } else if (params.get('checkout') === 'cancel') {
+        showMessage('Checkout cancelled.', 'info');
+        window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+      }
     }
 
     // --- Export Counter (free tier: 3/month) ---
@@ -3632,6 +3848,18 @@
         const fips = document.getElementById('countyStateSelect').value;
         if (fips) loadCountyView(fips);
       });
+
+      // Auth buttons
+      const signUpBtn = document.getElementById('authSignUpBtn');
+      if (signUpBtn) signUpBtn.addEventListener('click', authSignUp);
+      const signInBtn = document.getElementById('authSignInBtn');
+      if (signInBtn) signInBtn.addEventListener('click', authSignIn);
+      const signOutBtn = document.getElementById('authSignOutBtn');
+      if (signOutBtn) signOutBtn.addEventListener('click', authSignOut);
+      const monthlyBtn = document.getElementById('upgradeMonthlyBtn');
+      if (monthlyBtn) monthlyBtn.addEventListener('click', () => startStripeCheckout('price_1THabF6MmI5fTYyY4WNuFwHe'));
+      const annualBtn = document.getElementById('upgradeAnnualBtn');
+      if (annualBtn) annualBtn.addEventListener('click', () => startStripeCheckout('price_1THabF6MmI5fTYyYwzIwTNKF'));
 
       // Pro code
       document.getElementById('proCodeSubmit').addEventListener('click', () => {

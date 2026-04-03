@@ -2909,29 +2909,90 @@
       }
     }
 
-    // --- Export Counter (free tier: 3/month) ---
-    function getExportCount() {
-      const data = JSON.parse(localStorage.getItem('mapparatus_exports') || '{}');
-      const now = new Date();
-      const monthKey = `${now.getFullYear()}-${now.getMonth()}`;
-      if (data.month !== monthKey) {
-        return { month: monthKey, count: 0 };
-      }
-      return data;
+    // ── Export tracking (server-side enforced) ──────────────────────
+
+    // Anonymous first-export check (localStorage, for users who haven't signed up yet)
+    function getAnonymousExportUsed() {
+      return localStorage.getItem('mapparatus_anon_export') === 'true';
+    }
+    function setAnonymousExportUsed() {
+      localStorage.setItem('mapparatus_anon_export', 'true');
     }
 
-    function incrementExportCount() {
-      const data = getExportCount();
-      data.count++;
-      localStorage.setItem('mapparatus_exports', JSON.stringify(data));
+    // Server-side export permission check
+    async function checkExportPermission() {
+      // Pro users always allowed
+      if (isPro()) return { allowed: true, isPro: true, remaining: Infinity };
+
+      // Not signed in — allow one anonymous export
+      if (!appState.currentUser) {
+        if (!getAnonymousExportUsed()) {
+          return { allowed: true, isPro: false, remaining: 0, anonymous: true };
+        } else {
+          return { allowed: false, isPro: false, remaining: 0, needsSignUp: true };
+        }
+      }
+
+      // Signed-in free user — check server
+      try {
+        const session = await window._supabase.auth.getSession();
+        const token = session?.data?.session?.access_token;
+        if (!token) {
+          return { allowed: false, isPro: false, remaining: 0, needsSignUp: true };
+        }
+
+        const resp = await fetch('/api/stripe/track-export', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ action: 'check' })
+        });
+
+        if (!resp.ok) {
+          console.error('Export check failed:', resp.status);
+          if (resp.status >= 500) return { allowed: true, isPro: false, remaining: 1 };
+          return { allowed: false, isPro: false, remaining: 0 };
+        }
+
+        return await resp.json();
+      } catch (err) {
+        console.error('Export permission check error:', err);
+        return { allowed: true, isPro: false, remaining: 1 };
+      }
+    }
+
+    // Server-side export increment
+    async function recordExport() {
+      if (isPro()) return;
+
+      if (!appState.currentUser) {
+        setAnonymousExportUsed();
+        updateExportCounter();
+        return;
+      }
+
+      try {
+        const session = await window._supabase.auth.getSession();
+        const token = session?.data?.session?.access_token;
+        if (!token) return;
+
+        await fetch('/api/stripe/track-export', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ action: 'increment' })
+        });
+      } catch (err) {
+        console.error('Export record error:', err);
+      }
       updateExportCounter();
     }
 
-    function canExport() {
-      if (isPro()) return true;
-      return getExportCount().count < 3;
-    }
-
+    // Update the export counter display
     function updateExportCounter() {
       const counter = document.getElementById('exportCounter');
       if (!counter) return;
@@ -2940,12 +3001,135 @@
         return;
       }
       counter.style.display = '';
-      const remaining = Math.max(0, 3 - getExportCount().count);
-      counter.innerHTML =
-        remaining === 0
-          ? '<strong id="exportCountNum" style="color: #ff6b6b;">0</strong> free exports remaining — <a href="#" onclick="showUpgradeModal(); return false;" style="color: #4ecdc4; text-decoration: underline;">upgrade to Pro</a>'
-          : `<strong id="exportCountNum">${remaining}</strong> free export${remaining !== 1 ? 's' : ''} remaining this month`;
+
+      if (!appState.currentUser) {
+        if (!getAnonymousExportUsed()) {
+          counter.innerHTML = '<strong id="exportCountNum">1</strong> free export available — <a href="#" onclick="showUpgradeModal(); return false;" style="color: #4ecdc4; text-decoration: underline;">sign up for more</a>';
+        } else {
+          counter.innerHTML = '<strong id="exportCountNum" style="color: #ff6b6b;">0</strong> free exports remaining — <a href="#" onclick="showUpgradeModal(); return false;" style="color: #4ecdc4; text-decoration: underline;">sign up to continue</a>';
+          counter.classList.add('low');
+        }
+        return;
+      }
+
+      const remaining = appState._cachedRemaining ?? 2;
+      counter.innerHTML = remaining === 0
+        ? '<strong id="exportCountNum" style="color: #ff6b6b;">0</strong> free exports remaining — <a href="#" onclick="showUpgradeModal(); return false;" style="color: #4ecdc4; text-decoration: underline;">upgrade to Pro</a>'
+        : `<strong id="exportCountNum">${remaining}</strong> free export${remaining !== 1 ? 's' : ''} remaining this month`;
       counter.classList.toggle('low', remaining <= 1);
+    }
+
+    // ── Export: PNG ──────────────────────────────────────────────
+
+    async function exportPNG() {
+      const perm = await checkExportPermission();
+
+      if (perm.needsSignUp) {
+        showUpgradeModal();
+        showMessage('Sign up for a free account to continue exporting', 'info');
+        return;
+      }
+
+      if (!perm.allowed) {
+        showUpgradeModal();
+        showMessage('Free export limit reached this month', 'error');
+        return;
+      }
+
+      showMessage('Exporting PNG...', 'info');
+
+      if (!isPro()) {
+        await recordExport();
+        if (perm.remaining !== undefined && perm.remaining !== Infinity) {
+          appState._cachedRemaining = Math.max(0, (perm.anonymous ? 0 : perm.remaining - 1));
+        }
+      }
+
+      const statsBar = document.getElementById('statsBar');
+      statsBar.style.display = 'none';
+      const subtitleEl = document.getElementById('mapSubtitle');
+      const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
+      if (subtitleWasEmpty) subtitleEl.style.display = 'none';
+      const mapContainer = document.getElementById('mapContainer');
+      const svg = document.getElementById('mapSVG');
+      const origOverflow = mapContainer.style.overflow;
+      const origSvgFlex = svg.style.flex;
+      const origSvgMinH = svg.style.minHeight;
+      mapContainer.style.overflow = 'visible';
+      svg.style.flex = 'none';
+      svg.style.minHeight = 'auto';
+      svg.style.height = 'auto';
+
+      const legendEl = document.getElementById('legendDisplay');
+      const origLegendStyle = legendEl ? legendEl.style.cssText : '';
+      if (legendEl && legendEl.style.display !== 'none') {
+        const isMobileExport = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobileExport) {
+          legendEl.style.maxWidth = '160px';
+          legendEl.style.padding = '8px 10px';
+          legendEl.querySelectorAll('.legend-title').forEach(t => t.style.fontSize = '11px');
+          legendEl.querySelectorAll('.legend-item').forEach(i => { i.style.fontSize = '11px'; i.style.gap = '6px'; i.style.marginBottom = '4px'; });
+          legendEl.querySelectorAll('.legend-item-color').forEach(c => { c.style.width = '14px'; c.style.height = '14px'; });
+        }
+      }
+
+      const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
+      html2canvas(mapContainer, {
+        backgroundColor: bgColor,
+        scrollX: 0,
+        scrollY: -window.scrollY,
+        scale: 3,
+        useCORS: true
+      }).then(canvas => {
+        const ctx = canvas.getContext('2d');
+        ctx.save();
+        if (!isPro()) {
+          const scaleFactor = 3;
+          ctx.font = `${11 * scaleFactor}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+          ctx.fillStyle = appState.darkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)';
+          ctx.textAlign = 'right';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText('mapparatus.org', canvas.width - (16 * scaleFactor), canvas.height - (8 * scaleFactor));
+        }
+        ctx.restore();
+        const slug = (appState.mapTitle || 'mapparatus').toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mapparatus';
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          canvas.toBlob(blob => {
+            const url = URL.createObjectURL(blob);
+            const win = window.open(url, '_blank');
+            if (!win) {
+              const img = document.createElement('img');
+              img.src = url;
+              img.style.cssText = 'max-width:100%;position:fixed;top:0;left:0;z-index:99999;background:#000;width:100vw;height:100vh;object-fit:contain;';
+              img.onclick = () => { img.remove(); URL.revokeObjectURL(url); };
+              document.body.appendChild(img);
+            }
+            showMessage('Long-press the image to save to your camera roll', 'success');
+          }, 'image/png');
+        } else {
+          const link = document.createElement('a');
+          link.href = canvas.toDataURL('image/png');
+          link.download = `${slug}.png`;
+          link.click();
+          showMessage('PNG exported successfully', 'success');
+        }
+      }).catch(err => {
+        console.error('Export failed:', err);
+        showMessage('Export failed', 'error');
+      }).finally(() => {
+        statsBar.style.display = '';
+        if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
+        mapContainer.style.overflow = origOverflow;
+        svg.style.flex = origSvgFlex;
+        svg.style.minHeight = origSvgMinH;
+        svg.style.height = '';
+        if (legendEl) {
+          legendEl.style.cssText = origLegendStyle;
+          updateLegendDisplay();
+        }
+      });
     }
 
     // --- Pro Gate Helpers ---
@@ -2975,132 +3159,39 @@
       return false;
     }
 
-    function exportPNG() {
-      if (!canExport()) {
+
+
+    // ── Export: SVG ──────────────────────────────────────────────
+
+    async function exportSVG() {
+      const perm = await checkExportPermission();
+
+      if (perm.needsSignUp) {
+        showUpgradeModal();
+        showMessage('Sign up for a free account to continue exporting', 'info');
+        return;
+      }
+
+      if (!perm.allowed) {
         showUpgradeModal();
         showMessage('Free export limit reached this month', 'error');
         return;
       }
-      showMessage('Exporting PNG...', 'info');
 
-      // Track export for free users
-      if (!isPro()) incrementExportCount();
+      showMessage('Exporting SVG...', 'info');
 
-      // Hide stats bar for export
-      const statsBar = document.getElementById('statsBar');
-      statsBar.style.display = 'none';
-
-      // Hide empty subtitle placeholder text during export
-      const subtitleEl = document.getElementById('mapSubtitle');
-      const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
-      if (subtitleWasEmpty) subtitleEl.style.display = 'none';
-
-      // Temporarily force map container to show full content
-      const mapContainer = document.getElementById('mapContainer');
-      const svg = document.getElementById('mapSVG');
-      const origOverflow = mapContainer.style.overflow;
-      const origSvgFlex = svg.style.flex;
-      const origSvgMinH = svg.style.minHeight;
-
-      mapContainer.style.overflow = 'visible';
-      svg.style.flex = 'none';
-      svg.style.minHeight = 'auto';
-      svg.style.height = 'auto';
-
-      // Scale legend down for export so it doesn't dominate the image
-      const legendEl = document.getElementById('legendDisplay');
-      const origLegendStyle = legendEl ? legendEl.style.cssText : '';
-      if (legendEl && legendEl.style.display !== 'none') {
-        const isMobileExport = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobileExport) {
-          legendEl.style.maxWidth = '160px';
-          legendEl.style.padding = '8px 10px';
-          legendEl.querySelectorAll('.legend-title').forEach(t => t.style.fontSize = '11px');
-          legendEl.querySelectorAll('.legend-item').forEach(i => { i.style.fontSize = '11px'; i.style.gap = '6px'; i.style.marginBottom = '4px'; });
-          legendEl.querySelectorAll('.legend-item-color').forEach(c => { c.style.width = '14px'; c.style.height = '14px'; });
+      if (!isPro()) {
+        await recordExport();
+        if (perm.remaining !== undefined && perm.remaining !== Infinity) {
+          appState._cachedRemaining = Math.max(0, (perm.anonymous ? 0 : perm.remaining - 1));
         }
       }
 
-      const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
-
-      html2canvas(mapContainer, {
-        backgroundColor: bgColor,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-        scale: 3,
-        useCORS: true
-      }).then(canvas => {
-        // Add watermark
-        const ctx = canvas.getContext('2d');
-        ctx.save();
-        ctx.font = `${12 * 2}px -apple-system, BlinkMacSystemFont, sans-serif`;
-        ctx.fillStyle = appState.darkMode ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)';
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'bottom';
-        // Source line for free users
-        if (!isPro()) {
-          const scaleFactor = 3;
-          ctx.font = `${11 * scaleFactor}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-          ctx.fillStyle = appState.darkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)';
-          ctx.textAlign = 'right';
-          ctx.textBaseline = 'bottom';
-          ctx.fillText('mapparatus.org', canvas.width - (16 * scaleFactor), canvas.height - (8 * scaleFactor));
-        }
-        ctx.restore();
-
-        const slug = (appState.mapTitle || 'mapparatus').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mapparatus';
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-          // Mobile: open image in new tab so user can long-press to save to camera roll
-          canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const win = window.open(url, '_blank');
-            if (!win) {
-              // Popup blocked — fall back to showing inline
-              const img = document.createElement('img');
-              img.src = url;
-              img.style.cssText = 'max-width:100%;position:fixed;top:0;left:0;z-index:99999;background:#000;width:100vw;height:100vh;object-fit:contain;';
-              img.onclick = () => { img.remove(); URL.revokeObjectURL(url); };
-              document.body.appendChild(img);
-            }
-            showMessage('Long-press the image to save to your camera roll', 'success');
-          }, 'image/png');
-        } else {
-          const link = document.createElement('a');
-          link.href = canvas.toDataURL('image/png');
-          link.download = `${slug}.png`;
-          link.click();
-          showMessage('PNG exported successfully', 'success');
-        }
-      }).catch(err => {
-        console.error('Export failed:', err);
-        showMessage('Export failed', 'error');
-      }).finally(() => {
-        // Restore stats bar and layout
-        statsBar.style.display = '';
-        if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
-        mapContainer.style.overflow = origOverflow;
-        svg.style.flex = origSvgFlex;
-        svg.style.minHeight = origSvgMinH;
-        svg.style.height = '';
-        // Restore legend
-        if (legendEl) {
-          legendEl.style.cssText = origLegendStyle;
-          updateLegendDisplay();
-        }
-      });
-    }
-
-    function exportSVG() {
       const svg = document.getElementById('mapSVG');
       const clone = svg.cloneNode(true);
-
-      // Set explicit dimensions
       clone.setAttribute('width', '1200');
       clone.setAttribute('height', '850');
       clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-
-      // Add background color
       const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
       const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
       bgRect.setAttribute('width', '100%');
@@ -3108,25 +3199,18 @@
       bgRect.setAttribute('fill', bgColor);
       clone.insertBefore(bgRect, clone.firstChild);
 
-      // Add inline styles for state paths
       clone.querySelectorAll('.state-path').forEach(p => {
-        if (!p.style.fill) {
-          p.style.fill = appState.darkMode ? '#2a2a4a' : '#e8e8e8';
-        }
+        if (!p.style.fill) p.style.fill = appState.darkMode ? '#2a2a4a' : '#e8e8e8';
         p.style.stroke = appState.darkMode ? '#3a3a5a' : '#d0d0d0';
         p.style.strokeWidth = '1';
       });
-
       clone.querySelectorAll('.state-label').forEach(l => {
-        if (!l.style.fill) {
-          l.style.fill = appState.darkMode ? '#b8b8b8' : '#666';
-        }
+        if (!l.style.fill) l.style.fill = appState.darkMode ? '#b8b8b8' : '#666';
         l.style.fontSize = '10px';
         l.style.fontWeight = '600';
         l.style.fontFamily = 'sans-serif';
       });
 
-      // Source line for free users
       if (!isPro()) {
         const srcText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         srcText.setAttribute('x', '970');
@@ -3143,7 +3227,8 @@
       const svgStr = serializer.serializeToString(clone);
       const blob = new Blob([svgStr], { type: 'image/svg+xml' });
       const link = document.createElement('a');
-      const slug = (appState.mapTitle || 'mapparatus').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mapparatus';
+      const slug = (appState.mapTitle || 'mapparatus').toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mapparatus';
       link.href = URL.createObjectURL(blob);
       link.download = `${slug}.svg`;
       link.click();

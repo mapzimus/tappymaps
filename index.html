@@ -1974,11 +1974,19 @@
     // ============================================================================
 
     function updateStatsBar() {
-      const colored = Object.keys(appState.stateColors).filter(s => !nonColorable.has(s)).length;
-      const total = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s)).length;
+      let colored, total, label;
+      if (countyMode && countyTotal > 0) {
+        colored = Object.keys(countyColors).length;
+        total = countyTotal;
+        label = 'counties';
+      } else {
+        colored = Object.keys(appState.stateColors).filter(s => !nonColorable.has(s)).length;
+        total = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s)).length;
+        label = 'states';
+      }
       const percentage = Math.min((colored / total) * 100, 100);
 
-      document.getElementById('statsText').textContent = `${colored} of ${total} states colored`;
+      document.getElementById('statsText').textContent = `${colored} of ${total} ${label} colored`;
       document.getElementById('statsProgressFill').style.width = percentage + '%';
 
       // Build breakdown by legend category
@@ -3050,6 +3058,9 @@
 
       const statsBar = document.getElementById('statsBar');
       statsBar.style.display = 'none';
+      // Hide watermark during export so the exported image is clean
+      const watermarkEl = document.getElementById('freeWatermark');
+      if (watermarkEl) watermarkEl.style.display = 'none';
       const subtitleEl = document.getElementById('mapSubtitle');
       const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
       if (subtitleWasEmpty) subtitleEl.style.display = 'none';
@@ -3123,6 +3134,7 @@
         showMessage('Export failed', 'error');
       }).finally(() => {
         statsBar.style.display = '';
+        if (watermarkEl && !isPro()) watermarkEl.style.display = '';
         if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
         mapContainer.style.overflow = origOverflow;
         svg.style.flex = origSvgFlex;
@@ -3204,6 +3216,9 @@
 
       const svg = document.getElementById('mapSVG');
       const clone = svg.cloneNode(true);
+      // Remove watermark from export clone
+      const cloneWatermark = clone.querySelector('#freeWatermark');
+      if (cloneWatermark) cloneWatermark.remove();
       clone.setAttribute('width', '1200');
       clone.setAttribute('height', '850');
       clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -3678,6 +3693,7 @@
 
     let countyMode = false;
     let countyStateName = null;
+    let countyTotal = 0;
     let countyTopology = null;
     const countyColors = {};
 
@@ -3850,7 +3866,9 @@
         document.getElementById('backToStatesBtn').style.display = '';
         document.getElementById('countySelectModal').classList.remove('active');
 
+        countyTotal = stateCounties.length;
         const colored = Object.keys(countyColors).filter(k => k.startsWith(stateFips)).length;
+        updateStatsBar();
         showMessage(`Loaded ${stateCounties.length} counties for ${countyStateName}`, 'success');
 
       } catch (error) {
@@ -3862,6 +3880,7 @@
     function backToStateView() {
       countyMode = false;
       countyStateName = null;
+      countyTotal = 0;
 
       // Restore viewBox
       const svg = document.getElementById('mapSVG');

@@ -2884,11 +2884,25 @@
     function handleCheckoutReturn() {
       const params = new URLSearchParams(window.location.search);
       if (params.get('checkout') === 'success') {
-        showMessage('Payment successful! Pro features are now active.', 'success');
+        showMessage('Payment successful! Activating Pro features...', 'success');
         window.history.replaceState({}, '', window.location.pathname + window.location.hash);
-        // Re-check subscription after a short delay (webhook might take a moment)
-        setTimeout(() => checkSubscriptionStatus(), 2000);
-        setTimeout(() => checkSubscriptionStatus(), 5000);
+        // Poll for subscription status with exponential backoff
+        let attempts = 0;
+        const maxAttempts = 8;
+        function pollSubscription() {
+          attempts++;
+          checkSubscriptionStatus().then(() => {
+            if (appState.proUnlocked) {
+              showMessage('Pro features are now active!', 'success');
+            } else if (attempts < maxAttempts) {
+              const delay = Math.min(1000 * Math.pow(1.5, attempts), 10000);
+              setTimeout(pollSubscription, delay);
+            } else {
+              showMessage('Pro activation is taking longer than expected. Please refresh the page.', 'info');
+            }
+          });
+        }
+        setTimeout(pollSubscription, 1500);
       } else if (params.get('checkout') === 'cancel') {
         showMessage('Checkout cancelled.', 'info');
         window.history.replaceState({}, '', window.location.pathname + window.location.hash);
@@ -4038,22 +4052,22 @@
       const signOutBtn = document.getElementById('authSignOutBtn');
       if (signOutBtn) signOutBtn.addEventListener('click', authSignOut);
       const monthlyBtn = document.getElementById('upgradeMonthlyBtn');
-      if (monthlyBtn) monthlyBtn.addEventListener('click', () => startStripeCheckout('price_1THabF6MmI5fTYyY4WNuFwHe'));
+      if (monthlyBtn) monthlyBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('price_1THabF6MmI5fTYyY4WNuFwHe'); });
       const annualBtn = document.getElementById('upgradeAnnualBtn');
-      if (annualBtn) annualBtn.addEventListener('click', () => startStripeCheckout('price_1THabF6MmI5fTYyYwzIwTNKF'));
+      if (annualBtn) annualBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('price_1THabF6MmI5fTYyYwzIwTNKF'); });
 
-      // Pro code
+      // Close upgrade modal on overlay background click
+      const upgradeOverlay = document.getElementById('upgradeModal');
+      if (upgradeOverlay) upgradeOverlay.addEventListener('click', (e) => {
+        if (e.target === upgradeOverlay) closeUpgradeModal();
+      });
+
+      // Pro code — validate server-side in future; for now codes are disabled
       const proCodeSubmit = document.getElementById('proCodeSubmit');
       if (proCodeSubmit) proCodeSubmit.addEventListener('click', () => {
         const code = document.getElementById('proCodeInput').value.trim();
-        if (code === 'MAPPRO2026' || code === 'mapparatus') {
-          appState.proUnlocked = true;
-          closeUpgradeModal();
-          updateProGates();
-          showMessage('Pro features unlocked! All features are now available.', 'success');
-        } else {
-          showMessage('Invalid access code', 'error');
-        }
+        if (!code) return;
+        showMessage('Access codes are no longer accepted. Please subscribe to unlock Pro.', 'info');
       });
 
       // Keyboard shortcuts

@@ -7,16 +7,29 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://mapparatus.org',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+// CORS headers — allow production and localhost dev
+const allowedOrigins = [
+  'https://mapparatus.org',
+  'http://localhost:3000',
+  'http://localhost:8000',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:8000',
+];
+
+function getCorsHeaders(req) {
+  const origin = req.headers.origin;
+  const allowed = allowedOrigins.includes(origin) ? origin : 'https://mapparatus.org';
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+}
 
 // Handle preflight
 export default async function handler(req, res) {
   // Set CORS headers
+  const corsHeaders = getCorsHeaders(req);
   Object.entries(corsHeaders).forEach(([key, value]) => {
     res.setHeader(key, value);
   });

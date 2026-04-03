@@ -95,6 +95,8 @@ export default async function handler(req, res) {
 
         if (upsertError) {
           console.error('Failed to upsert subscription:', upsertError);
+          res.status(500).json({ error: 'Database error during subscription creation' });
+          return;
         }
         break;
       }
@@ -120,6 +122,8 @@ export default async function handler(req, res) {
 
         if (updateError) {
           console.error('Failed to update subscription:', updateError);
+          res.status(500).json({ error: 'Database error during subscription update' });
+          return;
         }
         break;
       }
@@ -138,7 +142,36 @@ export default async function handler(req, res) {
 
         if (deleteError) {
           console.error('Failed to delete subscription:', deleteError);
+          res.status(500).json({ error: 'Database error during subscription deletion' });
+          return;
         }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
+        if (subscriptionId) {
+          const { error } = await supabase
+            .from('user_subscriptions')
+            .update({
+              status: 'past_due',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('stripe_subscription_id', subscriptionId);
+          if (error) {
+            console.error('Failed to mark subscription past_due:', error);
+            res.status(500).json({ error: 'Database error during payment failure handling' });
+            return;
+          }
+        }
+        break;
+      }
+
+      case 'charge.refunded': {
+        // Log refund; subscription status will be updated by subscription.updated/deleted events
+        const charge = event.data.object;
+        console.log(`Refund processed for charge ${charge.id}, amount: ${charge.amount_refunded}`);
         break;
       }
 

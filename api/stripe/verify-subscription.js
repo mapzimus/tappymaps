@@ -7,7 +7,7 @@ const supabase = createClient(
 
 // CORS headers — allow production and localhost dev
 const allowedOrigins = [
-  'https://mapparatus.org',
+  'https://tappymaps.com',
   'http://localhost:3000',
   'http://localhost:8000',
   'http://127.0.0.1:3000',
@@ -16,7 +16,7 @@ const allowedOrigins = [
 
 function getCorsHeaders(req) {
   const origin = req.headers.origin;
-  const allowed = allowedOrigins.includes(origin) ? origin : 'https://mapparatus.org';
+  const allowed = allowedOrigins.includes(origin) ? origin : 'https://tappymaps.com';
   return {
     'Access-Control-Allow-Origin': allowed,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',

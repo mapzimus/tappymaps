@@ -13,8 +13,8 @@ const FREE_MONTHLY_LIMIT = 3;
 // CORS helper
 function getAllowedOrigin(req) {
   const origin = req.headers?.origin || '';
-  const allowed = ['https://mapparatus.org', 'http://localhost:8000', 'http://localhost:3000'];
-  return allowed.includes(origin) ? origin : 'https://mapparatus.org';
+  const allowed = ['https://tappymaps.com', 'http://localhost:8000', 'http://localhost:3000'];
+  return allowed.includes(origin) ? origin : 'https://tappymaps.com';
 }
 
 function corsHeaders(req) {

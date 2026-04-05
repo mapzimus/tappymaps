@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mapparatus - US State Mapping</title>
+  <title>Tappymaps - US State Mapping</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.4/dist/umd/supabase.min.js"></script>
   <style>
     * {
@@ -1185,7 +1185,7 @@
     <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <div class="sidebar-title">Mapparatus</div>
+        <div class="sidebar-title">Tappymaps</div>
         <div style="display: flex; gap: 4px; align-items: center;">
           <button class="theme-toggle" id="helpBtn" title="How to use" style="font-size: 15px;">?</button>
           <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
@@ -1401,7 +1401,7 @@
 
       <!-- Upgrade Banner (free users only) -->
       <div class="upgrade-banner" id="upgradeBanner" onclick="showUpgradeModal()">
-        <div class="upgrade-banner-title">Unlock Mapparatus Pro</div>
+        <div class="upgrade-banner-title">Unlock Tappymaps Pro</div>
         <div class="upgrade-banner-text">Legend builder, subtitles, region fill, unlimited exports, no watermark, and more. <strong style="color: #4ecdc4;">$5/mo</strong></div>
       </div>
     </div>
@@ -1573,7 +1573,7 @@
   <div class="onboarding-overlay" id="onboardingOverlay">
     <div class="onboarding-card">
       <div class="onboarding-icon">🗺</div>
-      <div class="onboarding-title">Welcome to Mapparatus</div>
+      <div class="onboarding-title">Welcome to Tappymaps</div>
       <div class="onboarding-desc">Create beautiful colored maps of the US in seconds. Here's how it works:</div>
       <div class="onboarding-steps">
         <div class="onboarding-step">
@@ -1694,7 +1694,7 @@
 
     function showOnboarding() {
       // Only show on first visit (no states colored and no URL hash)
-      const hasVisited = localStorage.getItem('mapparatus_visited');
+      const hasVisited = localStorage.getItem('tappymaps_visited');
       const hasHash = window.location.hash && window.location.hash.length > 1;
       const hasColors = Object.keys(appState.stateColors).length > 0;
 
@@ -1721,7 +1721,7 @@
     function dismissOnboarding() {
       const overlay = document.getElementById('onboardingOverlay');
       overlay.classList.remove('active');
-      localStorage.setItem('mapparatus_visited', 'true');
+      localStorage.setItem('tappymaps_visited', 'true');
     }
 
     function startGuidedHints() {
@@ -2935,10 +2935,10 @@
       try {
         const entry = { event, ts: new Date().toISOString(), ...meta };
         // Append to localStorage log (capped at 500 entries)
-        const log = JSON.parse(localStorage.getItem('mapparatus_events') || '[]');
+        const log = JSON.parse(localStorage.getItem('tappymaps_events') || '[]');
         log.push(entry);
         if (log.length > 500) log.splice(0, log.length - 500);
-        localStorage.setItem('mapparatus_events', JSON.stringify(log));
+        localStorage.setItem('tappymaps_events', JSON.stringify(log));
         // Fire-and-forget to Supabase if table exists
         if (supabaseClient) {
           supabaseClient.from('analytics').insert([{
@@ -2953,10 +2953,10 @@
 
     // Anonymous first-export check (localStorage, for users who haven't signed up yet)
     function getAnonymousExportUsed() {
-      return localStorage.getItem('mapparatus_anon_export') === 'true';
+      return localStorage.getItem('tappymaps_anon_export') === 'true';
     }
     function setAnonymousExportUsed() {
-      localStorage.setItem('mapparatus_anon_export', 'true');
+      localStorage.setItem('tappymaps_anon_export', 'true');
     }
 
     // Server-side export permission check
@@ -3138,11 +3138,11 @@
           ctx.fillStyle = appState.darkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)';
           ctx.textAlign = 'right';
           ctx.textBaseline = 'bottom';
-          ctx.fillText('mapparatus.org', canvas.width - (16 * scaleFactor), canvas.height - (8 * scaleFactor));
+          ctx.fillText('tappymaps.com', canvas.width - (16 * scaleFactor), canvas.height - (8 * scaleFactor));
         }
         ctx.restore();
-        const slug = (appState.mapTitle || 'mapparatus').toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mapparatus';
+        const slug = (appState.mapTitle || 'tappymaps').toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tappymaps';
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (isMobile) {
           canvas.toBlob(blob => {
@@ -3233,7 +3233,7 @@
           ctx.fillStyle = appState.darkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)';
           ctx.textAlign = 'right';
           ctx.textBaseline = 'bottom';
-          ctx.fillText('mapparatus.org', canvas.width - 48, canvas.height - 24);
+          ctx.fillText('tappymaps.com', canvas.width - 48, canvas.height - 24);
         }
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -3277,7 +3277,7 @@
         } else {
           watermark.style.display = '';
           const fillColor = appState.darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
-          watermark.innerHTML = `<text x="485" y="340" text-anchor="middle" font-size="72" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="${fillColor}" letter-spacing="8" transform="rotate(-30, 485, 340)">mapparatus.org</text>`;
+          watermark.innerHTML = `<text x="485" y="340" text-anchor="middle" font-size="72" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="${fillColor}" letter-spacing="8" transform="rotate(-30, 485, 340)">tappymaps.com</text>`;
         }
       }
       // Update export counter
@@ -3362,7 +3362,7 @@
         srcText.setAttribute('font-size', '11');
         srcText.setAttribute('font-family', '-apple-system, BlinkMacSystemFont, sans-serif');
         srcText.setAttribute('fill', appState.darkMode ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.3)');
-        srcText.textContent = 'mapparatus.org';
+        srcText.textContent = 'tappymaps.com';
         clone.appendChild(srcText);
       }
 
@@ -3370,8 +3370,8 @@
       const svgStr = serializer.serializeToString(clone);
       const blob = new Blob([svgStr], { type: 'image/svg+xml' });
       const link = document.createElement('a');
-      const slug = (appState.mapTitle || 'mapparatus').toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mapparatus';
+      const slug = (appState.mapTitle || 'tappymaps').toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tappymaps';
       link.href = URL.createObjectURL(blob);
       link.download = `${slug}.svg`;
       link.click();
@@ -3390,7 +3390,7 @@
       const csvContent = rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv' });
       const link = document.createElement('a');
-      const slug = (appState.mapTitle || 'mapparatus').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'mapparatus';
+      const slug = (appState.mapTitle || 'tappymaps').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tappymaps';
       link.href = URL.createObjectURL(blob);
       link.download = `${slug}.csv`;
       link.click();
@@ -3422,7 +3422,7 @@
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(dataBlob);
-      link.download = 'mapparatus.geojson';
+      link.download = 'tappymaps.geojson';
       link.click();
       showMessage('GeoJSON exported successfully', 'success');
     }
@@ -3439,7 +3439,7 @@
       const dataBlob = new Blob([dataStr], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(dataBlob);
-      link.download = `mapparatus-${Date.now()}.json`;
+      link.download = `tappymaps-${Date.now()}.json`;
       link.click();
       showMessage('Config saved', 'success');
     }
@@ -3483,7 +3483,7 @@
     // ============================================================================
 
     function loadThemePreference() {
-      const stored = localStorage.getItem('mapparatus-theme');
+      const stored = localStorage.getItem('tappymaps-theme');
       if (stored === 'light') {
         appState.darkMode = false;
         document.body.classList.add('light-mode');
@@ -3495,7 +3495,7 @@
       appState.darkMode = !appState.darkMode;
       document.body.classList.toggle('light-mode');
       document.getElementById('themeToggle').textContent = appState.darkMode ? '🌙' : '☀️';
-      localStorage.setItem('mapparatus-theme', appState.darkMode ? 'dark' : 'light');
+      localStorage.setItem('tappymaps-theme', appState.darkMode ? 'dark' : 'light');
       updateProGates();
     }
 

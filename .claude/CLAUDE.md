@@ -60,8 +60,8 @@ All work is tracked in Notion under the Tappymaps project page.
 
 ## Logo & Watermark
 SVG `<g>` element inside the map SVG. Current transform: `translate(480, 586) scale(0.52)`.
-NOTE: Logo is from the old Mapparatus brand and needs to be replaced with new Tappymaps branding.
-Current slogan text: `"paint the nation"` -- to be updated with new Tappymaps slogan.
+Logo uses the Tappymaps brand: blue map pin + "tappy" (blue) + "maps" (dark slate) wordmark.
+Current slogan text: `"map it your way"`.
 North arrow: ORNATE style, top right near Maine. Scale bar: ORNATE style, bottom left under Alaska.
 
 ## Infrastructure

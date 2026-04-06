@@ -66,7 +66,7 @@ North arrow: ORNATE style, top right near Maine. Scale bar: ORNATE style, bottom
 
 ## Infrastructure
 - **Vercel**: Serverless functions in `/api/stripe/`. 7 env vars configured in dashboard.
-- **Supabase**: Project `tylnxovujbhdmagugjew.supabase.co`. Tables: `user_subscriptions` (RLS), `analytics` (RLS).
+- **Supabase**: Project `qbhqdicppoahhvnuvcwd.supabase.co`. Tables: `user_subscriptions` (RLS), `analytics` (RLS), `export_counts` (RLS).
 - **Stripe**: Product with monthly ($5) and annual ($48) prices. Webhook at `/api/stripe/webhook`.
 - **DNS**: tappymaps.com -- A record 76.76.21.21, CNAME www to cname.vercel-dns.com.
 ## Feature Matrix (Current)

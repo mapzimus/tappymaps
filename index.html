@@ -936,56 +936,6 @@
     }
 
     /* Mobile/responsive layout */
-    @media (max-width: 900px) {
-      .container {
-        flex-direction: column;
-        height: auto;
-        min-height: 100vh;
-      }
-      .sidebar {
-        width: 100%;
-        max-height: none;
-        border-right: none;
-        border-bottom: 1px solid #3a3a5a;
-        padding: 15px;
-        -webkit-overflow-scrolling: touch;
-      }
-      body.light-mode .sidebar {
-        border-bottom-color: #e0e0e0;
-      }
-      .map-area {
-        flex: 1;
-        min-height: 50vh;
-      }
-      .sidebar-header {
-        margin-bottom: 15px;
-      }
-      .sidebar-title {
-        font-size: 18px;
-      }
-      .section {
-        padding: 10px;
-        margin-bottom: 8px;
-      }
-      .section-title {
-        font-size: 12px;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .section-title::after {
-        content: '▾';
-        font-size: 10px;
-        transition: transform 0.2s;
-      }
-      .section.collapsed .section-title::after {
-        transform: rotate(-90deg);
-      }
-      .section.collapsed .section-content {
-        display: none;
-      }
-    }
 
     @media (max-width: 600px) {
       .sidebar {
@@ -1178,12 +1128,143 @@
       50% { box-shadow: 0 0 0 6px rgba(43, 122, 140, 0.3); }
     }
 
-  </style>
+  
+    /* ===== MOBILE BOTTOM SHEET + FLOATING COLOR BAR ===== */
+    @media (max-width: 900px) {
+      .container {
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+        position: relative;
+      }
+      .sidebar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        width: 100%;
+        max-height: 70vh;
+        z-index: 1000;
+        transform: translateY(calc(100% - 0px));
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-right: none;
+        border-top: 1px solid #3a3a5a;
+        border-radius: 16px 16px 0 0;
+        padding: 0 15px 15px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      body.light-mode .sidebar {
+        border-top-color: #d0d0d0;
+      }
+      .sidebar.sheet-open {
+        transform: translateY(0);
+      }
+      .sheet-handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 0 8px;
+        cursor: pointer;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: inherit;
+      }
+      .sheet-handle-bar {
+        width: 40px;
+        height: 4px;
+        border-radius: 2px;
+        background: #64748B;
+      }
+      .map-area {
+        flex: 1;
+        height: 100vh;
+        height: 100dvh;
+        min-height: unset;
+        padding-bottom: 56px; /* space for floating color bar */
+      }
+
+      /* Floating color bar */
+      .mobile-color-bar {
+        display: flex;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 56px;
+        z-index: 999;
+        background: #1a1a2e;
+        border-top: 1px solid #3a3a5a;
+        align-items: center;
+        padding: 0 8px;
+        gap: 6px;
+      }
+      body.light-mode .mobile-color-bar {
+        background: #f7f8fa;
+        border-top-color: #d0d0d0;
+      }
+      .mobile-swatch-scroll {
+        display: flex;
+        overflow-x: auto;
+        gap: 6px;
+        flex: 1;
+        padding: 8px 0;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .mobile-swatch-scroll::-webkit-scrollbar { display: none; }
+
+      .mobile-swatch {
+        width: 40px; height: 40px;
+        min-width: 40px;
+        border-radius: 10px;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: transform 0.15s, border-color 0.15s;
+      }
+      .mobile-swatch.active {
+        border-color: white;
+        transform: scale(1.15);
+        box-shadow: 0 0 8px rgba(14,165,233,0.4);
+      }
+      body.light-mode .mobile-swatch.active {
+        border-color: #0F172A;
+      }
+      .mobile-sheet-toggle {
+        width: 40px; height: 40px; min-width: 40px;
+        border-radius: 10px;
+        background: #0EA5E9;
+        border: none;
+        color: white;
+        font-size: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+
+    /* Hide mobile elements on desktop */
+    .mobile-color-bar { display: none; }
+    .sheet-handle { display: none; }
+
+    /* Pinch-zoom states */
+    .map-svg-container {
+      touch-action: none;
+      overflow: hidden;
+    }
+    .map-svg-container.zoomed {
+      cursor: grab;
+    }
+    .map-svg-container.zoomed:active {
+      cursor: grabbing;
+    }
+
+    </style>
 </head>
 <body>
   <div class="container">
     <!-- Sidebar -->
-    <div class="sidebar">
+    <div class="sidebar" id="sidebarSheet">
+      <div class="sheet-handle" id="sheetHandle"><div class="sheet-handle-bar"></div></div>
       <div class="sidebar-header">
         <div class="sidebar-title">Tappymaps</div>
         <div style="display: flex; gap: 4px; align-items: center;">
@@ -1582,7 +1663,7 @@
         </div>
         <div class="onboarding-step">
           <div class="onboarding-step-num">2</div>
-          <div class="onboarding-step-text"><strong>Tap any state</strong> to color it. Tap again to remove.</div>
+          <div class="onboarding-step-text"><strong>Tap any state</strong> to color it. Tap again to remove. <span class="mobile-hint" style="display:none;">Long-press to remove any color.</span></div>
         </div>
         <div class="onboarding-step">
           <div class="onboarding-step-num">3</div>
@@ -3897,8 +3978,13 @@
           pathEl.addEventListener('click', (e) => {
             e.stopPropagation();
             saveHistory();
-            countyColors[countyFips] = appState.selectedColor;
-            pathEl.style.fill = appState.selectedColor;
+            if (countyColors[countyFips] === appState.selectedColor) {
+              delete countyColors[countyFips];
+              pathEl.style.fill = '';
+            } else {
+              countyColors[countyFips] = appState.selectedColor;
+              pathEl.style.fill = appState.selectedColor;
+            }
             updateStatsBar();
           });
 
@@ -4326,5 +4412,230 @@
     // Initialize app
     init()
   </script>
+
+  <!-- Mobile Floating Color Bar -->
+  <div class="mobile-color-bar" id="mobileColorBar">
+    <div class="mobile-swatch-scroll" id="mobileSwatchScroll"></div>
+    <button class="mobile-sheet-toggle" id="mobileSheetToggle" aria-label="Toggle controls">☰</button>
+  </div>
+
+<script>
+    // ===== MOBILE UX =====
+    (function() {
+      const isMobile = () => window.innerWidth <= 900;
+      const sidebar = document.getElementById('sidebarSheet');
+      const handle = document.getElementById('sheetHandle');
+      const toggleBtn = document.getElementById('mobileSheetToggle');
+      const colorBar = document.getElementById('mobileColorBar');
+      const swatchScroll = document.getElementById('mobileSwatchScroll');
+
+      // --- Bottom Sheet ---
+      function openSheet() { sidebar?.classList.add('sheet-open'); }
+      function closeSheet() { sidebar?.classList.remove('sheet-open'); }
+      function toggleSheet() {
+        sidebar?.classList.toggle('sheet-open');
+      }
+
+      handle?.addEventListener('click', toggleSheet);
+      toggleBtn?.addEventListener('click', toggleSheet);
+
+      // Tap map to close sheet
+      document.querySelector('.map-area')?.addEventListener('click', (e) => {
+        if (isMobile() && sidebar?.classList.contains('sheet-open')) {
+          if (!e.target.closest('.state-path')) closeSheet();
+        }
+      });
+
+      // --- Floating Color Bar ---
+      function buildMobileSwatches() {
+        if (!swatchScroll) return;
+        swatchScroll.innerHTML = '';
+        const grid = document.querySelector('.color-grid, .swatch-grid');
+        if (!grid) return;
+        const swatches = grid.querySelectorAll('.color-swatch');
+        swatches.forEach(sw => {
+          const color = sw.style.backgroundColor || sw.getAttribute('data-color');
+          if (!color) return;
+          const el = document.createElement('div');
+          el.className = 'mobile-swatch';
+          el.style.backgroundColor = color;
+          if (appState.selectedColor === rgbToHex(color) || appState.selectedColor === color) {
+            el.classList.add('active');
+          }
+          el.addEventListener('click', () => {
+            sw.click(); // trigger original swatch click
+            updateMobileSwatchActive();
+          });
+          swatchScroll.appendChild(el);
+        });
+      }
+
+      function rgbToHex(rgb) {
+        if (rgb.startsWith('#')) return rgb;
+        const m = rgb.match(/\d+/g);
+        if (!m || m.length < 3) return rgb;
+        return '#' + m.slice(0,3).map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
+      }
+
+      function updateMobileSwatchActive() {
+        if (!swatchScroll) return;
+        swatchScroll.querySelectorAll('.mobile-swatch').forEach(el => {
+          const c = rgbToHex(el.style.backgroundColor);
+          el.classList.toggle('active', c === appState.selectedColor);
+        });
+      }
+
+      // Build swatches on load and when colors change
+      const observer = new MutationObserver(() => {
+        if (isMobile()) buildMobileSwatches();
+      });
+      const grid = document.querySelector('.color-grid, .swatch-grid');
+      if (grid) observer.observe(grid, { childList: true, subtree: true, attributes: true });
+
+      // Initial build
+      setTimeout(() => { if (isMobile()) buildMobileSwatches(); }, 500);
+      window.addEventListener('resize', () => {
+        if (isMobile()) buildMobileSwatches();
+      });
+
+      // --- Long-press to remove (touch devices) ---
+      let longPressTimer = null;
+      let touchMoved = false;
+
+      document.addEventListener('touchstart', (e) => {
+        const path = e.target.closest('.state-path');
+        if (!path) return;
+        touchMoved = false;
+        longPressTimer = setTimeout(() => {
+          if (touchMoved) return;
+          e.preventDefault();
+          // Long-press: remove color
+          const stateName = path.getAttribute('data-state');
+          const countyFips = path.getAttribute('data-county');
+          if (typeof saveHistory === 'function') saveHistory();
+          if (stateName && appState.stateColors) {
+            delete appState.stateColors[stateName];
+            path.style.fill = '';
+            if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
+            if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
+          } else if (countyFips && typeof countyColors !== 'undefined') {
+            const fips = String(countyFips).padStart(5, '0');
+            delete countyColors[fips];
+            path.style.fill = '';
+          }
+          if (typeof updateStatsBar === 'function') updateStatsBar();
+          if (typeof updateURL === 'function') updateURL();
+          // Haptic feedback if available
+          if (navigator.vibrate) navigator.vibrate(30);
+        }, 500);
+      }, { passive: false });
+
+      document.addEventListener('touchmove', () => {
+        touchMoved = true;
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      }, { passive: true });
+
+      document.addEventListener('touchend', () => {
+        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      });
+
+      // --- Pinch-to-Zoom ---
+      const mapContainer = document.querySelector('.map-area');
+      const mapSvg = document.querySelector('.map-area svg');
+      let currentScale = 1;
+      let panX = 0, panY = 0;
+      let lastPinchDist = 0;
+      let isPinching = false;
+      let isPanning = false;
+      let lastPanX = 0, lastPanY = 0;
+
+      function applyTransform() {
+        if (!mapSvg) return;
+        mapSvg.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
+        mapSvg.style.transformOrigin = 'center center';
+        mapContainer?.classList.toggle('zoomed', currentScale > 1.05);
+      }
+
+      function resetZoom() {
+        currentScale = 1; panX = 0; panY = 0;
+        if (mapSvg) {
+          mapSvg.style.transition = 'transform 0.3s ease';
+          applyTransform();
+          setTimeout(() => { mapSvg.style.transition = ''; }, 300);
+        }
+      }
+
+      function clampPan() {
+        if (!mapContainer) return;
+        const rect = mapContainer.getBoundingClientRect();
+        const maxPan = (currentScale - 1) * Math.max(rect.width, rect.height) / 2;
+        panX = Math.max(-maxPan, Math.min(maxPan, panX));
+        panY = Math.max(-maxPan, Math.min(maxPan, panY));
+      }
+
+      function getPinchDist(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx*dx + dy*dy);
+      }
+
+      if (mapContainer) {
+        mapContainer.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 2) {
+            isPinching = true;
+            lastPinchDist = getPinchDist(e.touches);
+            e.preventDefault();
+          } else if (e.touches.length === 1 && currentScale > 1.05) {
+            isPanning = true;
+            lastPanX = e.touches[0].clientX;
+            lastPanY = e.touches[0].clientY;
+          }
+        }, { passive: false });
+
+        mapContainer.addEventListener('touchmove', (e) => {
+          if (isPinching && e.touches.length === 2) {
+            e.preventDefault();
+            const dist = getPinchDist(e.touches);
+            const delta = dist / lastPinchDist;
+            currentScale = Math.max(1, Math.min(4, currentScale * delta));
+            lastPinchDist = dist;
+            clampPan();
+            applyTransform();
+          } else if (isPanning && e.touches.length === 1 && currentScale > 1.05) {
+            e.preventDefault();
+            panX += e.touches[0].clientX - lastPanX;
+            panY += e.touches[0].clientY - lastPanY;
+            lastPanX = e.touches[0].clientX;
+            lastPanY = e.touches[0].clientY;
+            clampPan();
+            applyTransform();
+          }
+        }, { passive: false });
+
+        mapContainer.addEventListener('touchend', (e) => {
+          if (e.touches.length < 2) isPinching = false;
+          if (e.touches.length < 1) isPanning = false;
+        });
+
+        // Double-tap to reset zoom
+        let lastTap = 0;
+        mapContainer.addEventListener('touchend', (e) => {
+          if (e.touches.length > 0) return;
+          const now = Date.now();
+          if (now - lastTap < 300 && currentScale > 1.05) {
+            e.preventDefault();
+            resetZoom();
+          }
+          lastTap = now;
+        });
+      }
+
+      // --- County click toggle (same as state toggle) ---
+      // Patch inline county click to also toggle
+      const origAddEventListener = EventTarget.prototype.addEventListener;
+      // (County toggle is handled by the patched code below)
+
+    })();
+</script>
 </body>
 </html>

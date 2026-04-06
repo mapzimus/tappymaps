@@ -1426,7 +1426,7 @@
           </g>
 
           <!-- Logo Watermark -->
-          <g id="logoWatermark" transform="translate(380, 586) scale(0.52)" opacity="0.45">
+          <g id="logoWatermark" transform="translate(350, 575) scale(0.72)" opacity="0.45">
             <g>
               <!-- Pin icon -->
               <circle cx="30" cy="24" r="22" fill="#0EA5E9"/>
@@ -1582,7 +1582,7 @@
         </div>
         <div class="onboarding-step">
           <div class="onboarding-step-num">2</div>
-          <div class="onboarding-step-text"><strong>Click any state</strong> on the map to color it. Right-click to remove.</div>
+          <div class="onboarding-step-text"><strong>Tap any state</strong> to color it. Tap again to remove.</div>
         </div>
         <div class="onboarding-step">
           <div class="onboarding-step-num">3</div>
@@ -2325,9 +2325,14 @@
       saveHistory();
 
       const pathEl = e.target.closest('.state-path') || e.target;
-      // Left-click always paints with selected color
-      appState.stateColors[stateName] = appState.selectedColor;
-      pathEl.style.fill = appState.selectedColor;
+      // Toggle: if state is already this color, uncolor it
+      if (appState.stateColors[stateName] === appState.selectedColor) {
+        delete appState.stateColors[stateName];
+        pathEl.style.fill = '';
+      } else {
+        appState.stateColors[stateName] = appState.selectedColor;
+        pathEl.style.fill = appState.selectedColor;
+      }
 
       updateLabelContrast(stateName);
       updateLegendDisplay();

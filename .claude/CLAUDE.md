@@ -61,8 +61,9 @@ All work is tracked in Notion under the Tappymaps project page.
 ## Logo & Watermark
 SVG `<g>` element inside the map SVG. Current transform: `translate(480, 586) scale(0.52)`.
 Logo uses the Tappymaps brand: blue map pin + "tappy" (blue) + "maps" (dark slate) wordmark.
-Current slogan text: `"map it your way"`.
+Current slogan text: `"Tap. Color. Share."`.
 North arrow: ORNATE style, top right near Maine. Scale bar: ORNATE style, bottom left under Alaska.
+Brand kit: C:\Users\mhowe\Downloads\tappymaps-brand\ (18 assets, 4K logos, all sizes favicons)
 
 ## Infrastructure
 - **Vercel**: Serverless functions in `/api/stripe/`. 7 env vars configured in dashboard.

@@ -2149,6 +2149,9 @@
     // ============================================================================
 
     const extraPalettes = {
+      // --- Tappymaps Brand ---
+      'Tappymaps Brand': ['#0EA5E9', '#0284C7', '#F97316', '#FB923C', '#0F172A', '#64748B', '#F0F9FF', '#38BDF8', '#075985', '#EA580C', '#334155', '#94A3B8'],
+
       // --- Nature & Landscape ---
       'Earth Tones': ['#5C4033', '#8B5E3C', '#A67B5B', '#C4A882', '#D2B48C', '#8F9779', '#6B7F3B', '#4A5D23', '#3B3C36', '#9E7E6B', '#C9B99A', '#E8DCC8'],
       'Forest': ['#1B4332', '#2D6A4F', '#40916C', '#52B788', '#74C69D', '#95D5B2', '#B7E4C7', '#D8F3DC', '#344E41', '#588157', '#A3B18A', '#DAD7CD'],
@@ -2199,6 +2202,7 @@
 
       // Group extra palettes by category using name prefixes
       const categories = [
+        { title: 'Tappymaps', keys: ['Tappymaps Brand'] },
         { title: 'Nature & Landscape', keys: ['Earth Tones', 'Forest', 'Desert', 'Ocean', 'Autumn Leaves'] },
         { title: 'Pastels & Soft', keys: ['Pastel Rainbow', 'Pastel Spring', 'Cotton Candy', 'Ice Cream'] },
         { title: 'Bold & Vivid', keys: ['Bold Primary', 'Neon Glow', 'Pop Art'] },
@@ -4503,14 +4507,25 @@
       // --- Long-press to remove (touch devices) ---
       let longPressTimer = null;
       let touchMoved = false;
+      let longPressTriggered = false;
+
+      // Suppress click events that fire right after a long-press
+      document.addEventListener('click', (e) => {
+        if (longPressTriggered) {
+          e.stopPropagation();
+          e.preventDefault();
+          longPressTriggered = false;
+        }
+      }, true); // capture phase to intercept before onStateClick
 
       document.addEventListener('touchstart', (e) => {
         const path = e.target.closest('.state-path');
         if (!path) return;
         touchMoved = false;
+        longPressTriggered = false;
         longPressTimer = setTimeout(() => {
           if (touchMoved) return;
-          e.preventDefault();
+          longPressTriggered = true;
           // Long-press: remove color
           const stateName = path.getAttribute('data-state');
           const countyFips = path.getAttribute('data-county');
@@ -4534,6 +4549,7 @@
 
       document.addEventListener('touchmove', () => {
         touchMoved = true;
+        longPressTriggered = false;
         if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
       }, { passive: true });
 

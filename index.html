@@ -2409,6 +2409,8 @@
 
     function onStateClick(e, stateName) {
       e.stopPropagation();
+      // Skip if this click was triggered after a long-press
+      if (window._tappyLongPress) { window._tappyLongPress = false; return; }
       saveHistory();
 
       const pathEl = e.target.closest('.state-path') || e.target;
@@ -4507,14 +4509,14 @@
       // --- Long-press to remove (touch devices) ---
       let longPressTimer = null;
       let touchMoved = false;
-      let longPressTriggered = false;
-
       // Suppress click events that fire right after a long-press
       document.addEventListener('click', (e) => {
-        if (longPressTriggered) {
+        if (window._tappyLongPress) {
           e.stopPropagation();
+          e.stopImmediatePropagation();
           e.preventDefault();
-          longPressTriggered = false;
+          // Reset after a short delay to handle any queued events
+          setTimeout(() => { window._tappyLongPress = false; }, 100);
         }
       }, true); // capture phase to intercept before onStateClick
 
@@ -4522,10 +4524,10 @@
         const path = e.target.closest('.state-path');
         if (!path) return;
         touchMoved = false;
-        longPressTriggered = false;
+        window._tappyLongPress = false;
         longPressTimer = setTimeout(() => {
           if (touchMoved) return;
-          longPressTriggered = true;
+          window._tappyLongPress = true;
           // Long-press: remove color
           const stateName = path.getAttribute('data-state');
           const countyFips = path.getAttribute('data-county');
@@ -4549,7 +4551,7 @@
 
       document.addEventListener('touchmove', () => {
         touchMoved = true;
-        longPressTriggered = false;
+        window._tappyLongPress = false;
         if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
       }, { passive: true });
 

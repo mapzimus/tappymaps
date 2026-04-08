@@ -2877,11 +2877,21 @@
       }
     }
 
+    // Admin emails that get automatic Pro access
+    const ADMIN_EMAILS = ['max@mapparatus.org', 'mhowe.gis@gmail.com'];
+
     async function checkSubscriptionStatus(token) {
       if (!token) {
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (!session) return;
         token = session.access_token;
+      }
+      // Auto-grant Pro for admin accounts
+      if (appState.currentUser && ADMIN_EMAILS.includes(appState.currentUser.email)) {
+        appState.proUnlocked = true;
+        appState.subscription = { status: 'admin' };
+        updateProGates();
+        return;
       }
       try {
         const res = await fetch('/api/stripe/verify-subscription', {

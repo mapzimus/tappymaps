@@ -1190,10 +1190,26 @@
         .container {
           height: 100vh;
           height: 100dvh;
+          flex-direction: row;
         }
-        svg {
-          max-height: calc(100dvh - 56px);
-          max-height: calc(100vh - 56px);
+        .map-container {
+          height: 100vh;
+          height: 100dvh;
+          flex: 1;
+          overflow: hidden;
+        }
+        .map-container svg {
+          width: 100%;
+          height: auto;
+          max-height: calc(100dvh - 48px);
+          max-height: calc(100vh - 48px);
+        }
+        .mobile-color-bar {
+          bottom: 0 !important;
+          height: 44px !important;
+        }
+        .sidebar {
+          display: none;
         }
       }
 
@@ -2420,6 +2436,7 @@
       e.stopPropagation();
       // Suppress click if long-press just fired (within last 800ms)
       if (window._tappyLongPressTime && (Date.now() - window._tappyLongPressTime < 800)) return;
+      const pathEl = e.target.closest('.state-path') || e.target;
       saveHistory();
       // Toggle: if state is already this color, uncolor it
       if (appState.stateColors[stateName] === appState.selectedColor) {

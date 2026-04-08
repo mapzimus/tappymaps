@@ -1185,6 +1185,18 @@
         padding: 6px 10px 0;
       }
 
+      /* Landscape adjustments */
+      @media (orientation: landscape) {
+        .container {
+          height: 100vh;
+          height: 100dvh;
+        }
+        svg {
+          max-height: calc(100dvh - 56px);
+          max-height: calc(100vh - 56px);
+        }
+      }
+
       /* Floating color bar */
       .mobile-color-bar {
         display: flex;
@@ -2406,9 +2418,8 @@
 
     function onStateClick(e, stateName) {
       e.stopPropagation();
-      const pathEl = e.target.closest('.state-path') || e.target;
-      // Suppress click if long-press just fired on this element
-      if (pathEl._suppressClick) { delete pathEl._suppressClick; return; }
+      // Suppress click if long-press just fired (within last 800ms)
+      if (window._tappyLongPressTime && (Date.now() - window._tappyLongPressTime < 800)) return;
       saveHistory();
       // Toggle: if state is already this color, uncolor it
       if (appState.stateColors[stateName] === appState.selectedColor) {
@@ -4542,46 +4553,49 @@
       setTimeout(updateMobileVisibility, 300);
       setTimeout(updateMobileVisibility, 1000);
 
-      // --- Long-press to remove (touch + desktop right-click) ---
-      // On mobile: hold for 500ms to remove color
-      // Uses a global flag on the path element itself to block the synthetic click
+      // --- Long-press to remove (touch devices) ---
+      // Uses timestamp checked in onStateClick - immune to event target quirks
+      window._tappyLongPressTime = 0;
       let lpTimer = null;
       let lpMoved = false;
-      let lpTarget = null;
 
-      document.addEventListener('touchstart', (e) => {
-        const path = e.target.closest('.state-path');
-        if (!path) return;
-        lpMoved = false;
-        lpTarget = path;
+      // Attach directly to SVG for reliable touch detection on iOS
+      const svgEl = document.querySelector('#mapSVG');
+      if (svgEl) {
+        svgEl.addEventListener('touchstart', (e) => {
+          const path = e.target.closest('.state-path');
+          if (!path) return;
+          lpMoved = false;
 
-        lpTimer = setTimeout(() => {
-          if (lpMoved) return;
-          lpTimer = null;
+          lpTimer = setTimeout(() => {
+            if (lpMoved) return;
+            lpTimer = null;
 
-          // Mark this element to suppress the next click
-          path._suppressClick = true;
-          setTimeout(() => { delete path._suppressClick; }, 400);
+            // Set timestamp - onStateClick checks this
+            window._tappyLongPressTime = Date.now();
 
-          // Remove color
-          const stateName = path.getAttribute('data-state');
-          const countyFips = path.getAttribute('data-county');
-          if (typeof saveHistory === 'function') saveHistory();
-          if (stateName && appState.stateColors) {
-            delete appState.stateColors[stateName];
-            path.style.fill = '';
-            if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
-            if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
-          } else if (countyFips && typeof countyColors !== 'undefined') {
-            const fips = String(countyFips).padStart(5, '0');
-            delete countyColors[fips];
-            path.style.fill = '';
-          }
-          if (typeof updateStatsBar === 'function') updateStatsBar();
-          if (typeof updateURL === 'function') updateURL();
-          if (navigator.vibrate) navigator.vibrate(30);
-        }, 500);
-      }, { passive: true });
+            // Remove color
+            const stateName = path.getAttribute('data-state');
+            const countyFips = path.getAttribute('data-county');
+            if (typeof saveHistory === 'function') saveHistory();
+            if (stateName && typeof appState !== 'undefined' && appState.stateColors) {
+              delete appState.stateColors[stateName];
+              path.style.fill = '';
+              if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
+              if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
+            } else if (countyFips && typeof countyColors !== 'undefined') {
+              const fips = String(countyFips).padStart(5, '0');
+              delete countyColors[fips];
+              path.style.fill = '';
+            }
+            if (typeof updateStatsBar === 'function') updateStatsBar();
+            if (typeof updateURL === 'function') updateURL();
+            // Haptic + visual feedback
+            if (navigator.vibrate) navigator.vibrate(30);
+            if (typeof showMessage === 'function') showMessage('Color removed', 'success');
+          }, 500);
+        }, { passive: true });
+      }
 
       document.addEventListener('touchmove', () => {
         lpMoved = true;

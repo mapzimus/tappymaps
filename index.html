@@ -2406,12 +2406,10 @@
 
     function onStateClick(e, stateName) {
       e.stopPropagation();
-      // Suppress click if long-press just fired on this element
       const pathEl = e.target.closest('.state-path') || e.target;
+      // Suppress click if long-press just fired on this element
       if (pathEl._suppressClick) { delete pathEl._suppressClick; return; }
       saveHistory();
-
-      const pathEl = e.target.closest('.state-path') || e.target;
       // Toggle: if state is already this color, uncolor it
       if (appState.stateColors[stateName] === appState.selectedColor) {
         delete appState.stateColors[stateName];

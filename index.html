@@ -1243,8 +1243,10 @@
     }
 
     /* Hide mobile elements on desktop */
-    .mobile-color-bar { display: none; }
-    .sheet-handle { display: none; }
+    @media (min-width: 901px) {
+      .mobile-color-bar { display: none; }
+      .sheet-handle { display: none; }
+    }
 
     /* Pinch-zoom states */
     .map-svg-container {

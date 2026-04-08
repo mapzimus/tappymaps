@@ -1176,12 +1176,25 @@
         border-radius: 2px;
         background: #64748B;
       }
-      .map-area {
+      .map-container {
         flex: 1;
         height: 100vh;
         height: 100dvh;
         min-height: unset;
         padding-bottom: 56px; /* space for floating color bar */
+      }
+      .main {
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+      }
+      .stats-bar {
+        padding: 6px 12px;
+        font-size: 10px;
+      }
+      .map-title {
+        font-size: 16px;
+        padding: 6px 10px 0;
       }
 
       /* Floating color bar */
@@ -1249,14 +1262,13 @@
     }
 
     /* Pinch-zoom states */
-    .map-svg-container {
+    .map-container {
       touch-action: none;
-      overflow: hidden;
     }
-    .map-svg-container.zoomed {
+    .map-container.zoomed {
       cursor: grab;
     }
-    .map-svg-container.zoomed:active {
+    .map-container.zoomed:active {
       cursor: grabbing;
     }
 
@@ -4448,7 +4460,7 @@
       toggleBtn?.addEventListener('click', toggleSheet);
 
       // Tap map to close sheet
-      document.querySelector('.map-area')?.addEventListener('click', (e) => {
+      document.querySelector('.map-container')?.addEventListener('click', (e) => {
         if (isMobile() && sidebar?.classList.contains('sheet-open')) {
           if (!e.target.closest('.state-path')) closeSheet();
         }
@@ -4560,8 +4572,8 @@
       });
 
       // --- Pinch-to-Zoom ---
-      const mapContainer = document.querySelector('.map-area');
-      const mapSvg = document.querySelector('.map-area svg');
+      const mapContainer = document.querySelector('.map-container');
+      const mapSvg = document.querySelector('.map-container svg');
       let currentScale = 1;
       let panX = 0, panY = 0;
       let lastPinchDist = 0;

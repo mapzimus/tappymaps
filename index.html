@@ -4577,9 +4577,15 @@
         if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
       }, { passive: true });
 
-      document.addEventListener('touchend', () => {
+      document.addEventListener('touchend', (e) => {
+        if (window._tappyLongPress) {
+          // Prevent browser from synthesizing a click event after long-press
+          e.preventDefault();
+          // Reset flag after a brief delay (allows current event cycle to complete)
+          setTimeout(() => { window._tappyLongPress = false; }, 300);
+        }
         if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
-      });
+      }, { passive: false });
 
       // --- Pinch-to-Zoom ---
       const mapContainer = document.querySelector('.map-container');

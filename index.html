@@ -1505,7 +1505,7 @@
     <div class="main">
       <div class="map-container ocean-on" id="mapContainer">
         <div class="map-title" id="mapTitle" contenteditable="true">My US Map</div>
-        <div class="map-subtitle" id="mapSubtitle" contenteditable="true" data-placeholder="Click to add subtitle"></div>
+        <div class="map-subtitle" id="mapSubtitle" contenteditable="true" data-placeholder="Add subtitle"></div>
         <svg id="mapSVG" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet">
           <g id="statesGroup" transform="translate(5, -20) scale(0.95)"></g>
 
@@ -1673,7 +1673,7 @@
       <div class="onboarding-steps">
         <div class="onboarding-step">
           <div class="onboarding-step-num">1</div>
-          <div class="onboarding-step-text"><strong>Pick a color</strong> from the palette on the left</div>
+          <div class="onboarding-step-text"><strong>Pick a color</strong> from the palette</div>
         </div>
         <div class="onboarding-step">
           <div class="onboarding-step-num">2</div>
@@ -2421,6 +2421,9 @@
 
     function onStateClick(e, stateName) {
       e.stopPropagation();
+      // Suppress click if long-press just fired on this element
+      const pathEl = e.target.closest('.state-path') || e.target;
+      if (pathEl._suppressClick) { delete pathEl._suppressClick; return; }
       saveHistory();
 
       const pathEl = e.target.closest('.state-path') || e.target;
@@ -2573,7 +2576,7 @@
         colorEl.className = 'legend-color';
         colorEl.style.backgroundColor = entry.color;
         colorEl.style.cursor = 'pointer';
-        colorEl.title = 'Click to paint with this color';
+        colorEl.title = 'Select this color';
         if (entry.color.toLowerCase() === appState.selectedColor.toLowerCase()) {
           colorEl.classList.add('selected-paint');
         }
@@ -3401,7 +3404,7 @@
       if (subtitle && !pro) {
         subtitle.dataset.placeholder = 'Add subtitle (Pro)';
       } else if (subtitle) {
-        subtitle.dataset.placeholder = 'Click to add subtitle';
+        subtitle.dataset.placeholder = 'Add subtitle';
       }
     }
 
@@ -4457,12 +4460,33 @@
       const colorBar = document.getElementById('mobileColorBar');
       const swatchScroll = document.getElementById('mobileSwatchScroll');
 
+      // --- Force mobile element visibility via JS (iOS CSS workaround) ---
+      function updateMobileVisibility() {
+        if (isMobile()) {
+          if (colorBar) {
+            colorBar.style.display = 'flex';
+            colorBar.style.position = 'fixed';
+            colorBar.style.bottom = '0';
+            colorBar.style.left = '0';
+            colorBar.style.right = '0';
+            colorBar.style.height = '56px';
+            colorBar.style.zIndex = '999';
+          }
+          if (handle) handle.style.display = 'flex';
+          // Show mobile onboarding hint
+          document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'inline');
+          buildMobileSwatches();
+        } else {
+          if (colorBar) colorBar.style.display = 'none';
+          if (handle) handle.style.display = 'none';
+          document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'none');
+        }
+      }
+
       // --- Bottom Sheet ---
       function openSheet() { sidebar?.classList.add('sheet-open'); }
       function closeSheet() { sidebar?.classList.remove('sheet-open'); }
-      function toggleSheet() {
-        sidebar?.classList.toggle('sheet-open');
-      }
+      function toggleSheet() { sidebar?.classList.toggle('sheet-open'); }
 
       handle?.addEventListener('click', toggleSheet);
       toggleBtn?.addEventListener('click', toggleSheet);
@@ -4486,12 +4510,15 @@
           if (!color) return;
           const el = document.createElement('div');
           el.className = 'mobile-swatch';
+          el.style.cssText = 'width:40px;height:40px;min-width:40px;border-radius:10px;border:2px solid transparent;cursor:pointer;';
           el.style.backgroundColor = color;
           if (appState.selectedColor === rgbToHex(color) || appState.selectedColor === color) {
             el.classList.add('active');
+            el.style.borderColor = 'white';
+            el.style.transform = 'scale(1.15)';
           }
           el.addEventListener('click', () => {
-            sw.click(); // trigger original swatch click
+            sw.click();
             updateMobileSwatchActive();
           });
           swatchScroll.appendChild(el);
@@ -4499,7 +4526,7 @@
       }
 
       function rgbToHex(rgb) {
-        if (rgb.startsWith('#')) return rgb;
+        if (!rgb || rgb.startsWith('#')) return rgb;
         const m = rgb.match(/\d+/g);
         if (!m || m.length < 3) return rgb;
         return '#' + m.slice(0,3).map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
@@ -4509,55 +4536,51 @@
         if (!swatchScroll) return;
         swatchScroll.querySelectorAll('.mobile-swatch').forEach(el => {
           const c = rgbToHex(el.style.backgroundColor);
-          el.classList.toggle('active', c === appState.selectedColor);
+          const isActive = c === appState.selectedColor;
+          el.classList.toggle('active', isActive);
+          el.style.borderColor = isActive ? 'white' : 'transparent';
+          el.style.transform = isActive ? 'scale(1.15)' : '';
         });
       }
 
       // Build swatches on load and when colors change
-      const observer = new MutationObserver(() => {
-        if (isMobile()) buildMobileSwatches();
-      });
-      const grid = document.querySelector('.color-grid, .swatch-grid');
-      if (grid) observer.observe(grid, { childList: true, subtree: true, attributes: true });
+      const colorGrid = document.querySelector('.color-grid, .swatch-grid');
+      if (colorGrid) {
+        const observer = new MutationObserver(() => {
+          if (isMobile()) buildMobileSwatches();
+        });
+        observer.observe(colorGrid, { childList: true, subtree: true, attributes: true });
+      }
 
-      // Initial build
-      setTimeout(() => { if (isMobile()) buildMobileSwatches(); }, 500);
-      window.addEventListener('resize', () => {
-        if (isMobile()) buildMobileSwatches();
-      });
+      // Initialize on load and resize
+      updateMobileVisibility();
+      window.addEventListener('resize', updateMobileVisibility);
+      // Also try after a delay in case DOM isn't ready
+      setTimeout(updateMobileVisibility, 300);
+      setTimeout(updateMobileVisibility, 1000);
 
-      // --- Long-press to remove (touch devices) ---
-      let longPressTimer = null;
-      let touchMoved = false;
+      // --- Long-press to remove (touch + desktop right-click) ---
+      // On mobile: hold for 500ms to remove color
+      // Uses a global flag on the path element itself to block the synthetic click
+      let lpTimer = null;
+      let lpMoved = false;
+      let lpTarget = null;
 
       document.addEventListener('touchstart', (e) => {
         const path = e.target.closest('.state-path');
         if (!path) return;
-        touchMoved = false;
-        longPressTimer = setTimeout(() => {
-          if (touchMoved) return;
-          longPressTimer = null;
+        lpMoved = false;
+        lpTarget = path;
 
-          // Attach a one-time click blocker directly on this element
-          // This is the most reliable way to prevent the synthetic click
-          path.addEventListener('click', function blockClick(ev) {
-            ev.stopImmediatePropagation();
-            ev.preventDefault();
-            ev.stopPropagation();
-          }, { capture: true, once: true });
+        lpTimer = setTimeout(() => {
+          if (lpMoved) return;
+          lpTimer = null;
 
-          // Also block on the SVG and document level as backup
-          const svg = path.closest('svg');
-          if (svg) {
-            svg.addEventListener('click', function blockSvgClick(ev) {
-              if (ev.target.closest('.state-path') === path) {
-                ev.stopImmediatePropagation();
-                ev.preventDefault();
-              }
-            }, { capture: true, once: true });
-          }
+          // Mark this element to suppress the next click
+          path._suppressClick = true;
+          setTimeout(() => { delete path._suppressClick; }, 400);
 
-          // Long-press: remove color
+          // Remove color
           const stateName = path.getAttribute('data-state');
           const countyFips = path.getAttribute('data-county');
           if (typeof saveHistory === 'function') saveHistory();
@@ -4573,18 +4596,17 @@
           }
           if (typeof updateStatsBar === 'function') updateStatsBar();
           if (typeof updateURL === 'function') updateURL();
-          // Haptic feedback if available
           if (navigator.vibrate) navigator.vibrate(30);
         }, 500);
-      }, { passive: false });
+      }, { passive: true });
 
       document.addEventListener('touchmove', () => {
-        touchMoved = true;
-        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        lpMoved = true;
+        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
       }, { passive: true });
 
       document.addEventListener('touchend', () => {
-        if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
       });
 
       // --- Pinch-to-Zoom ---

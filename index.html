@@ -1176,17 +1176,15 @@
         border-radius: 2px;
         background: #64748B;
       }
+      .main {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+      }
       .map-container {
         flex: 1;
-        height: 100vh;
-        height: 100dvh;
-        min-height: unset;
+        min-height: 0;
         padding-bottom: 56px; /* space for floating color bar */
-      }
-      .main {
-        height: 100vh;
-        height: 100dvh;
-        overflow: hidden;
       }
       .stats-bar {
         padding: 6px 12px;
@@ -1261,10 +1259,7 @@
       .sheet-handle { display: none; }
     }
 
-    /* Pinch-zoom states */
-    .map-container {
-      touch-action: none;
-    }
+    /* Pinch-zoom states - touch-action set via JS on mobile only */
     .map-container.zoomed {
       cursor: grab;
     }

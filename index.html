@@ -486,6 +486,7 @@
       min-height: 0;
       -webkit-user-select: none;
       user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .state-path {
@@ -494,6 +495,8 @@
       stroke-width: 0.8;
       cursor: pointer;
       transition: fill 0.2s, stroke 0.2s;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
     }
 
     body.light-mode .state-path {
@@ -1188,28 +1191,25 @@
       /* Landscape adjustments */
       @media (orientation: landscape) {
         .container {
-          height: 100vh;
           height: 100dvh;
-          flex-direction: row;
+          height: 100vh;
+          overflow: hidden;
         }
         .map-container {
-          height: 100vh;
-          height: 100dvh;
-          flex: 1;
+          height: calc(100dvh - 48px);
+          height: calc(100vh - 48px);
           overflow: hidden;
         }
         .map-container svg {
           width: 100%;
-          height: auto;
+          height: 100%;
           max-height: calc(100dvh - 48px);
           max-height: calc(100vh - 48px);
+          object-fit: contain;
         }
         .mobile-color-bar {
           bottom: 0 !important;
           height: 44px !important;
-        }
-        .sidebar {
-          display: none;
         }
       }
 
@@ -4574,7 +4574,9 @@
       // Uses timestamp checked in onStateClick - immune to event target quirks
       window._tappyLongPressTime = 0;
       let lpTimer = null;
-      let lpMoved = false;
+      let lpStartX = 0;
+      let lpStartY = 0;
+      const LP_MOVE_THRESHOLD = 15; // pixels - ignore micro-jitter
 
       // Attach directly to SVG for reliable touch detection on iOS
       const svgEl = document.querySelector('#mapSVG');
@@ -4582,10 +4584,10 @@
         svgEl.addEventListener('touchstart', (e) => {
           const path = e.target.closest('.state-path');
           if (!path) return;
-          lpMoved = false;
+          lpStartX = e.touches[0].clientX;
+          lpStartY = e.touches[0].clientY;
 
           lpTimer = setTimeout(() => {
-            if (lpMoved) return;
             lpTimer = null;
 
             // Set timestamp - onStateClick checks this
@@ -4614,9 +4616,15 @@
         }, { passive: true });
       }
 
-      document.addEventListener('touchmove', () => {
-        lpMoved = true;
-        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+      document.addEventListener('touchmove', (e) => {
+        if (lpTimer) {
+          const dx = e.touches[0].clientX - lpStartX;
+          const dy = e.touches[0].clientY - lpStartY;
+          if (Math.sqrt(dx*dx + dy*dy) > LP_MOVE_THRESHOLD) {
+            clearTimeout(lpTimer);
+            lpTimer = null;
+          }
+        }
       }, { passive: true });
 
       document.addEventListener('touchend', () => {

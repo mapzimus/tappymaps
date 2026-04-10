@@ -1188,7 +1188,7 @@
         padding: 6px 10px 0;
       }
 
-      /* Landscape adjustments */
+      /* Landscape: full canvas, no palette bar */
       @media (orientation: landscape) {
         .container {
           height: 100dvh;
@@ -1196,20 +1196,24 @@
           overflow: hidden;
         }
         .map-container {
-          height: calc(100dvh - 48px);
-          height: calc(100vh - 48px);
+          height: 100dvh;
+          height: 100vh;
           overflow: hidden;
         }
         .map-container svg {
           width: 100%;
           height: 100%;
-          max-height: calc(100dvh - 48px);
-          max-height: calc(100vh - 48px);
-          object-fit: contain;
+          max-height: 100dvh;
+          max-height: 100vh;
         }
         .mobile-color-bar {
-          bottom: 0 !important;
-          height: 44px !important;
+          display: none !important;
+        }
+        .stats-bar {
+          display: none;
+        }
+        .map-title {
+          display: none;
         }
       }
 
@@ -1283,6 +1287,90 @@
     }
     .map-container.zoomed:active {
       cursor: grabbing;
+    }
+
+
+    /* Floating Symbology Menu (long-press on mobile) */
+    .symbology-menu {
+      display: none;
+      position: fixed;
+      z-index: 2000;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      min-width: 200px;
+      -webkit-touch-callout: none;
+      touch-action: none;
+    }
+    body.light-mode .symbology-menu {
+      background: #ffffff;
+      border-color: #e2e8f0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .symbology-menu.visible {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .symbology-menu .sym-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+      padding: 0 4px 4px;
+      border-bottom: 1px solid #334155;
+    }
+    body.light-mode .symbology-menu .sym-header {
+      color: #64748b;
+      border-bottom-color: #e2e8f0;
+    }
+    .symbology-menu .sym-colors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 4px 0;
+    }
+    .symbology-menu .sym-swatch {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    .symbology-menu .sym-swatch.active {
+      border-color: #0EA5E9;
+      transform: scale(1.1);
+    }
+    .symbology-menu .sym-action {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #e2e8f0;
+      transition: background 0.15s;
+    }
+    body.light-mode .symbology-menu .sym-action {
+      color: #334155;
+    }
+    .symbology-menu .sym-action:hover,
+    .symbology-menu .sym-action:active {
+      background: #334155;
+    }
+    body.light-mode .symbology-menu .sym-action:hover,
+    body.light-mode .symbology-menu .sym-action:active {
+      background: #f1f5f9;
+    }
+    .symbology-menu .sym-action .sym-icon {
+      font-size: 18px;
+      width: 24px;
+      text-align: center;
+    }
+    .symbology-menu .sym-remove {
+      color: #ef4444;
     }
 
     </style>
@@ -4455,6 +4543,16 @@
     init()
   </script>
 
+  <!-- Floating Symbology Menu (appears on long-press) -->
+  <div class="symbology-menu" id="symbologyMenu">
+    <div class="sym-header" id="symStateName">State</div>
+    <div class="sym-colors" id="symColors"></div>
+    <div class="sym-action sym-remove" id="symRemove">
+      <span class="sym-icon">&#x2715;</span>
+      <span>Remove color</span>
+    </div>
+  </div>
+
   <!-- Mobile Floating Color Bar -->
   <div class="mobile-color-bar" id="mobileColorBar">
     <div class="mobile-swatch-scroll" id="mobileSwatchScroll"></div>
@@ -4570,56 +4668,141 @@
       setTimeout(updateMobileVisibility, 300);
       setTimeout(updateMobileVisibility, 1000);
 
-      // --- Long-press to remove (touch devices) ---
-      // Uses timestamp checked in onStateClick - immune to event target quirks
+      // --- Long-press to open symbology menu (touch devices) ---
       window._tappyLongPressTime = 0;
       let lpTimer = null;
       let lpStartX = 0;
       let lpStartY = 0;
-      const LP_MOVE_THRESHOLD = 15; // pixels - ignore micro-jitter
+      const LP_MOVE_THRESHOLD = 15;
+      let lpTargetPath = null;
 
-      // Attach directly to SVG for reliable touch detection on iOS
+      const symMenu = document.getElementById('symbologyMenu');
+      const symStateName = document.getElementById('symStateName');
+      const symColors = document.getElementById('symColors');
+      const symRemove = document.getElementById('symRemove');
+
+      function showSymbologyMenu(path, touchX, touchY) {
+        if (!symMenu || !path) return;
+        const stateName = path.getAttribute('data-state');
+        const countyFips = path.getAttribute('data-county');
+        const label = stateName || ('County ' + countyFips) || 'Unknown';
+        lpTargetPath = path;
+
+        // Set header
+        if (symStateName) symStateName.textContent = label;
+
+        // Build color swatches from current palette
+        if (symColors) {
+          symColors.innerHTML = '';
+          const colors = (typeof appState !== 'undefined' && appState.presetColors) || [];
+          colors.forEach(function(color) {
+            const sw = document.createElement('div');
+            sw.className = 'sym-swatch';
+            sw.style.backgroundColor = color;
+            if (typeof appState !== 'undefined' && appState.selectedColor === color) {
+              sw.classList.add('active');
+            }
+            sw.addEventListener('click', function() {
+              if (typeof saveHistory === 'function') saveHistory();
+              if (stateName && typeof appState !== 'undefined') {
+                appState.stateColors[stateName] = color;
+                appState.selectedColor = color;
+                path.style.fill = color;
+                if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
+                if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
+                if (typeof selectColor === 'function') selectColor(color);
+              } else if (countyFips && typeof countyColors !== 'undefined') {
+                const fips = String(countyFips).padStart(5, '0');
+                countyColors[fips] = color;
+                path.style.fill = color;
+              }
+              if (typeof updateStatsBar === 'function') updateStatsBar();
+              if (typeof updateURL === 'function') updateURL();
+              hideSymbologyMenu();
+            });
+            symColors.appendChild(sw);
+          });
+        }
+
+        // Position menu near the touch point
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        let left = touchX - 100;
+        let top = touchY - 220;
+        // Keep on screen
+        if (left < 8) left = 8;
+        if (left + 210 > vw) left = vw - 218;
+        if (top < 8) top = touchY + 20;
+        if (top + 200 > vh) top = vh - 208;
+
+        symMenu.style.left = left + 'px';
+        symMenu.style.top = top + 'px';
+        symMenu.classList.add('visible');
+
+        // Haptic feedback
+        if (navigator.vibrate) navigator.vibrate(30);
+      }
+
+      function hideSymbologyMenu() {
+        if (symMenu) symMenu.classList.remove('visible');
+        lpTargetPath = null;
+      }
+
+      // Remove color button
+      if (symRemove) {
+        symRemove.addEventListener('click', function() {
+          if (!lpTargetPath) return;
+          const stateName = lpTargetPath.getAttribute('data-state');
+          const countyFips = lpTargetPath.getAttribute('data-county');
+          if (typeof saveHistory === 'function') saveHistory();
+          if (stateName && typeof appState !== 'undefined' && appState.stateColors) {
+            delete appState.stateColors[stateName];
+            lpTargetPath.style.fill = '';
+            if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
+            if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
+          } else if (countyFips && typeof countyColors !== 'undefined') {
+            const fips = String(countyFips).padStart(5, '0');
+            delete countyColors[fips];
+            lpTargetPath.style.fill = '';
+          }
+          if (typeof updateStatsBar === 'function') updateStatsBar();
+          if (typeof updateURL === 'function') updateURL();
+          if (typeof showMessage === 'function') showMessage('Color removed', 'success');
+          hideSymbologyMenu();
+        });
+      }
+
+      // Tap anywhere else to close menu
+      document.addEventListener('click', function(e) {
+        if (symMenu && symMenu.classList.contains('visible')) {
+          if (!symMenu.contains(e.target)) {
+            hideSymbologyMenu();
+          }
+        }
+      });
+
+      // Attach long-press to SVG
       const svgEl = document.querySelector('#mapSVG');
       if (svgEl) {
-        svgEl.addEventListener('touchstart', (e) => {
+        svgEl.addEventListener('touchstart', function(e) {
           const path = e.target.closest('.state-path');
           if (!path) return;
           lpStartX = e.touches[0].clientX;
           lpStartY = e.touches[0].clientY;
 
-          lpTimer = setTimeout(() => {
+          lpTimer = setTimeout(function() {
             lpTimer = null;
-
-            // Set timestamp - onStateClick checks this
+            // Set timestamp so onStateClick skips the synthetic click
             window._tappyLongPressTime = Date.now();
-
-            // Remove color
-            const stateName = path.getAttribute('data-state');
-            const countyFips = path.getAttribute('data-county');
-            if (typeof saveHistory === 'function') saveHistory();
-            if (stateName && typeof appState !== 'undefined' && appState.stateColors) {
-              delete appState.stateColors[stateName];
-              path.style.fill = '';
-              if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
-              if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
-            } else if (countyFips && typeof countyColors !== 'undefined') {
-              const fips = String(countyFips).padStart(5, '0');
-              delete countyColors[fips];
-              path.style.fill = '';
-            }
-            if (typeof updateStatsBar === 'function') updateStatsBar();
-            if (typeof updateURL === 'function') updateURL();
-            // Haptic + visual feedback
-            if (navigator.vibrate) navigator.vibrate(30);
-            if (typeof showMessage === 'function') showMessage('Color removed', 'success');
+            showSymbologyMenu(path, lpStartX, lpStartY);
           }, 500);
         }, { passive: true });
       }
 
-      document.addEventListener('touchmove', (e) => {
-        if (lpTimer) {
-          const dx = e.touches[0].clientX - lpStartX;
-          const dy = e.touches[0].clientY - lpStartY;
+      document.addEventListener('touchmove', function(e) {
+        if (lpTimer && e.touches.length > 0) {
+          var dx = e.touches[0].clientX - lpStartX;
+          var dy = e.touches[0].clientY - lpStartY;
           if (Math.sqrt(dx*dx + dy*dy) > LP_MOVE_THRESHOLD) {
             clearTimeout(lpTimer);
             lpTimer = null;
@@ -4627,7 +4810,12 @@
         }
       }, { passive: true });
 
-      document.addEventListener('touchend', () => {
+      document.addEventListener('touchend', function() {
+        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
+      });
+
+      // iOS fires touchcancel instead of touchend when native gesture takes over
+      document.addEventListener('touchcancel', function() {
         if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
       });
 

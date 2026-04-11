@@ -3332,7 +3332,90 @@
       counter.classList.toggle('low', remaining <= 1);
     }
 
-    // ── Export: PNG ──────────────────────────────────────────────
+    // ── Shared capture helper ────────────────────────────────────
+    async function captureMapImage() {
+      const statsBar = document.getElementById('statsBar');
+      const watermarkEl = document.getElementById('freeWatermark');
+      const subtitleEl = document.getElementById('mapSubtitle');
+      const mapContainer = document.getElementById('mapContainer');
+      const svg = document.getElementById('mapSVG');
+      const legendEl = document.getElementById('legendDisplay');
+
+      // Save original styles
+      const origStatsDisplay = statsBar.style.display;
+      const origStatsVis = statsBar.style.visibility;
+      const origOverflow = mapContainer.style.overflow;
+      const origSvgFlex = svg.style.flex;
+      const origSvgMinH = svg.style.minHeight;
+      const origSvgH = svg.style.height;
+      const origLegendStyle = legendEl ? legendEl.style.cssText : '';
+      const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
+
+      // Hide non-export elements
+      statsBar.style.display = 'none';
+      statsBar.style.visibility = 'hidden';
+      if (watermarkEl) watermarkEl.style.display = 'none';
+      if (subtitleWasEmpty) subtitleEl.style.display = 'none';
+
+      // Let SVG expand to natural size for capture
+      mapContainer.style.overflow = 'visible';
+      svg.style.flex = 'none';
+      svg.style.minHeight = 'auto';
+      svg.style.height = 'auto';
+
+      // Shrink legend for mobile export
+      const isMobileExport = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (legendEl && legendEl.style.display !== 'none' && isMobileExport) {
+        legendEl.style.maxWidth = '160px';
+        legendEl.style.padding = '8px 10px';
+        legendEl.querySelectorAll('.legend-title').forEach(t => t.style.fontSize = '11px');
+        legendEl.querySelectorAll('.legend-item').forEach(i => { i.style.fontSize = '11px'; i.style.gap = '6px'; i.style.marginBottom = '4px'; });
+        legendEl.querySelectorAll('.legend-item-color').forEach(c => { c.style.width = '14px'; c.style.height = '14px'; });
+      }
+
+      // Recalculate legend position after style changes
+      updateLegendPosition();
+
+      const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
+
+      // Scroll to top to eliminate scroll-position capture offset
+      const origScrollY = window.scrollY;
+      window.scrollTo(0, 0);
+
+      // Wait two animation frames for browser repaint
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+      let canvas;
+      try {
+        canvas = await html2canvas(mapContainer, {
+          backgroundColor: bgColor,
+          scrollX: 0,
+          scrollY: 0,
+          scale: 3,
+          useCORS: true,
+          width: mapContainer.offsetWidth,
+          height: mapContainer.offsetHeight
+        });
+      } finally {
+        // Restore everything
+        window.scrollTo(0, origScrollY);
+        statsBar.style.display = origStatsDisplay;
+        statsBar.style.visibility = origStatsVis;
+        if (watermarkEl && !isPro()) watermarkEl.style.display = '';
+        if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
+        mapContainer.style.overflow = origOverflow;
+        svg.style.flex = origSvgFlex;
+        svg.style.minHeight = origSvgMinH;
+        svg.style.height = origSvgH;
+        if (legendEl) {
+          legendEl.style.cssText = origLegendStyle;
+          updateLegendDisplay();
+        }
+      }
+      return canvas;
+    }
+
+    // ── Export: PNG ─────────────────────────────────────────────────────
 
     async function exportPNG() {
       const perm = await checkExportPermission();
@@ -3351,7 +3434,6 @@
 
       showMessage('Exporting PNG...', 'info');
 
-      // Track whether this is the clean first export (no watermark)
       const cleanExport = perm.anonymous || isPro();
 
       if (!isPro()) {
@@ -3361,48 +3443,8 @@
         }
       }
 
-      const statsBar = document.getElementById('statsBar');
-      statsBar.style.display = 'none';
-      statsBar.style.visibility = 'hidden';
-      // Hide watermark during export so the exported image is clean
-      const watermarkEl = document.getElementById('freeWatermark');
-      if (watermarkEl) watermarkEl.style.display = 'none';
-      const subtitleEl = document.getElementById('mapSubtitle');
-      const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
-      if (subtitleWasEmpty) subtitleEl.style.display = 'none';
-      const mapContainer = document.getElementById('mapContainer');
-      const svg = document.getElementById('mapSVG');
-      const origOverflow = mapContainer.style.overflow;
-      const origSvgFlex = svg.style.flex;
-      const origSvgMinH = svg.style.minHeight;
-      mapContainer.style.overflow = 'visible';
-      svg.style.flex = 'none';
-      svg.style.minHeight = 'auto';
-      svg.style.height = 'auto';
-
-      const legendEl = document.getElementById('legendDisplay');
-      const origLegendStyle = legendEl ? legendEl.style.cssText : '';
-      if (legendEl && legendEl.style.display !== 'none') {
-        const isMobileExport = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobileExport) {
-          legendEl.style.maxWidth = '160px';
-          legendEl.style.padding = '8px 10px';
-          legendEl.querySelectorAll('.legend-title').forEach(t => t.style.fontSize = '11px');
-          legendEl.querySelectorAll('.legend-item').forEach(i => { i.style.fontSize = '11px'; i.style.gap = '6px'; i.style.marginBottom = '4px'; });
-          legendEl.querySelectorAll('.legend-item-color').forEach(c => { c.style.width = '14px'; c.style.height = '14px'; });
-        }
-      }
-
-      const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
-      // Wait two animation frames so the browser fully repaints before html2canvas captures
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-      html2canvas(mapContainer, {
-        backgroundColor: bgColor,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-        scale: 3,
-        useCORS: true
-      }).then(canvas => {
+      try {
+        const canvas = await captureMapImage();
         const ctx = canvas.getContext('2d');
         ctx.save();
         if (!cleanExport) {
@@ -3438,23 +3480,10 @@
           showMessage('PNG exported successfully', 'success');
           trackEvent('export_png', { title: appState.mapTitle, states: Object.keys(appState.stateColors).length });
         }
-      }).catch(err => {
+      } catch (err) {
         console.error('Export failed:', err);
         showMessage('Export failed', 'error');
-      }).finally(() => {
-        statsBar.style.display = '';
-        statsBar.style.visibility = '';
-        if (watermarkEl && !isPro()) watermarkEl.style.display = '';
-        if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
-        mapContainer.style.overflow = origOverflow;
-        svg.style.flex = origSvgFlex;
-        svg.style.minHeight = origSvgMinH;
-        svg.style.height = '';
-        if (legendEl) {
-          legendEl.style.cssText = origLegendStyle;
-          updateLegendDisplay();
-        }
-      });
+      }
     }
 
     async function copyImageToClipboard() {
@@ -3471,34 +3500,8 @@
         }
       }
 
-      const statsBar = document.getElementById('statsBar');
-      statsBar.style.display = 'none';
-      statsBar.style.visibility = 'hidden';
-      const watermarkEl = document.getElementById('freeWatermark');
-      if (watermarkEl) watermarkEl.style.display = 'none';
-      const subtitleEl = document.getElementById('mapSubtitle');
-      const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
-      if (subtitleWasEmpty) subtitleEl.style.display = 'none';
-      const mapContainer = document.getElementById('mapContainer');
-      const svg = document.getElementById('mapSVG');
-      const origOverflow = mapContainer.style.overflow;
-      const origSvgFlex = svg.style.flex;
-      const origSvgMinH = svg.style.minHeight;
-      mapContainer.style.overflow = 'visible';
-      svg.style.flex = 'none';
-      svg.style.minHeight = 'auto';
-      svg.style.height = 'auto';
-
-      const legendEl = document.getElementById('legendDisplay');
-      const origLegendStyle = legendEl ? legendEl.style.cssText : '';
-
-      const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
-
       try {
-        const canvas = await html2canvas(mapContainer, {
-          backgroundColor: bgColor, scrollX: 0, scrollY: -window.scrollY, scale: 3, useCORS: true
-        });
+        const canvas = await captureMapImage();
         const ctx = canvas.getContext('2d');
         if (!cleanExport) {
           const sf = 3;
@@ -3514,20 +3517,7 @@
         trackEvent('copy_image', { title: appState.mapTitle, states: Object.keys(appState.stateColors).length });
       } catch (err) {
         console.error('Copy to clipboard failed:', err);
-        showMessage('Copy failed — your browser may not support clipboard images', 'error');
-      } finally {
-        statsBar.style.display = '';
-        statsBar.style.visibility = '';
-        if (watermarkEl && !isPro()) watermarkEl.style.display = '';
-        if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
-        mapContainer.style.overflow = origOverflow;
-        svg.style.flex = origSvgFlex;
-        svg.style.minHeight = origSvgMinH;
-        svg.style.height = '';
-        if (legendEl) {
-          legendEl.style.cssText = origLegendStyle;
-          updateLegendDisplay();
-        }
+        showMessage('Copy failed \u2014 your browser may not support clipboard images', 'error');
       }
     }
 
@@ -3934,12 +3924,22 @@
       const legend = document.getElementById('legendDisplay');
       if (!legend) return;
 
+      const isMobile = window.innerWidth <= 900;
+      const isMobileLandscape = isMobile &&
+        window.matchMedia('(orientation: landscape)').matches;
+
       // Compute where the SVG actually starts (below title + subtitle)
-      // so top-positioned legends don't overlap the title text.
+      // In landscape, title/subtitle are hidden via CSS — use minimal offset
       const titleEl = document.getElementById('mapTitle');
       const subtitleEl = document.getElementById('mapSubtitle');
-      const svgTopOffset = (titleEl ? titleEl.offsetHeight : 80) +
-                           (subtitleEl ? subtitleEl.offsetHeight : 30) + 14;
+      const svgTopOffset = isMobileLandscape ? 10 :
+        (titleEl ? titleEl.offsetHeight : 80) +
+        (subtitleEl ? subtitleEl.offsetHeight : 30) + 14;
+
+      // In landscape the color bar is hidden, so use smaller bottom offset
+      // On desktop, no color bar either — use 20px
+      const bottomOffset = isMobileLandscape ? '15px' :
+        (isMobile ? '65px' : '20px');
 
       // Reset all position properties cleanly before applying new ones
       legend.style.top = 'auto';
@@ -3949,11 +3949,11 @@
 
       switch (appState.legendPosition) {
         case 'bottom-right':
-          legend.style.bottom = '65px';
+          legend.style.bottom = bottomOffset;
           legend.style.right = '20px';
           break;
         case 'bottom-left':
-          legend.style.bottom = '65px';
+          legend.style.bottom = bottomOffset;
           legend.style.left = '20px';
           break;
         case 'top-right':
@@ -4738,11 +4738,18 @@
 
       // Initialize on load, resize, and orientation change
       updateMobileVisibility();
-      window.addEventListener('resize', updateMobileVisibility);
+      window.addEventListener('resize', function() {
+        updateMobileVisibility();
+        if (typeof updateLegendPosition === 'function') updateLegendPosition();
+      });
       window.addEventListener('orientationchange', function() {
         // Small delay for iOS to finish rotating
         setTimeout(updateMobileVisibility, 100);
         setTimeout(updateMobileVisibility, 500);
+        // Recalculate legend position for new orientation
+        setTimeout(function() {
+          if (typeof updateLegendPosition === 'function') updateLegendPosition();
+        }, 300);
       });
       // Also try after a delay in case DOM isn't ready
       setTimeout(updateMobileVisibility, 300);

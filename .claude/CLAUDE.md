@@ -1,7 +1,7 @@
 # Tappymaps
 
 ## What It Is
-Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in one file (`index.html`, ~4,641 lines). No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
+Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in one file (`index.html`, ~5,706 lines). No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
 
 Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella overseeing three products:
 - **Tappymaps** (tappymaps.com): This app. Consumer map-making. Casual, playful, approachable.
@@ -64,12 +64,29 @@ All work is tracked in Notion under the Tappymaps project page.
 - `onStateClick()` (~line 2323) -- handles state coloring with click-to-toggle (click to color, click again to uncolor)
 - `updateLegendPosition()` (~line 3552) -- positions legend at four corners, dynamic offsets
 - `updateStatsBar()` (~line 1975) -- bottom status bar, branches on countyMode
-- `exportPNG()` (~line 3040) -- async, uses double rAF await before html2canvas capture
-- `copyImageToClipboard()` -- same pipeline as exportPNG, writes to clipboard via ClipboardItem API
+- `captureMapImage()` (~line 3547) -- shared async helper for all html2canvas captures. Forces landscape aspect ratio (1010:710), scrolls to (0,0), shrinks legend on mobile, restores in finally block. Returns canvas. NEVER add a second html2canvas call.
+- `exportPNG()` (~line 3647) -- calls captureMapImage(), adds watermark if non-Pro. Mobile: tries Web Share API first, falls back to in-app overlay with hold-to-save instructions.
+- `copyImageToClipboard()` (~line 3714) -- calls captureMapImage(), writes to clipboard via ClipboardItem API
 - `trackEvent()` -- localStorage + optional Supabase fire-and-forget analytics
 
+## Template System
+- `TEMPLATES` array -- 10 curated templates across 5 categories (travel, personal, food, opinions, fun)
+- Each template: `{ id, title, category, presetColors, legendEntries, darkMode }`
+- First-visit: onboarding "Let's Go" opens template picker instead of guided hints
+- Returning users: "Browse Templates" button at top of sidebar
+- `loadTemplate()` -- applies template to appState, clears map, rebuilds UI
+- `showTemplatePicker()` / `hideTemplatePicker()` / `buildTemplateGrid()` -- modal overlay with card-based browsing
+
+## Mobile Export Architecture
+- `captureMapImage()` forces landscape aspect ratio (SVG viewBox 1010:710) on ALL exports
+- Every export looks identical regardless of device orientation
+- Mobile flow: Web Share API (native share sheet) -> fallback in-app overlay with hold-to-save
+- Desktop flow: direct download link
+- Watermark added post-capture for non-Pro users
+- `updateLegendPosition()` is orientation-aware: landscape mobile gets 15px bottom offset, everything else gets 65px
+
 ## Critical Patterns
-- **html2canvas timing:** Always apply `display: none` BEFORE the `await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))` line in exportPNG. Without this, hidden elements appear in exports.
+- **html2canvas capture:** All capture logic is in `captureMapImage()`. It forces landscape ratio (1010:710), scrolls to (0,0), passes explicit width/height, and restores state in a finally block. NEVER add a second html2canvas call -- always use the shared helper.
 - **nonColorable set:** DC and territories excluded from "X of 50 states colored" count.
 - **URL hash state:** If adding new `appState` fields that should persist, include them in the `btoa(JSON.stringify(...))` encode/decode.
 - **County mode:** Separate `countyColors` map and `countyTotal`. Stats bar and export logic both branch on `countyMode`.

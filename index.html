@@ -1369,7 +1369,64 @@
       width: 24px;
       text-align: center;
     }
-    .symbology-menu .sym-remove {
+    .symbology-menu .sym-section {
+      padding: 2px 0;
+    }
+    .symbology-menu .sym-label-input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 13px;
+      outline: none;
+      box-sizing: border-box;
+    }
+    .symbology-menu .sym-label-input:focus {
+      border-color: #0EA5E9;
+    }
+    body.light-mode .symbology-menu .sym-label-input {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #1e293b;
+    }
+    .symbology-menu .sym-divider {
+      height: 1px;
+      background: #334155;
+      margin: 2px 0;
+    }
+    body.light-mode .symbology-menu .sym-divider {
+      background: #e2e8f0;
+    }
+    .symbology-menu .sym-actions-row {
+      display: flex;
+      gap: 6px;
+      justify-content: space-between;
+    }
+    .symbology-menu .sym-action-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 0;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 18px;
+      color: #94a3b8;
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body.light-mode .symbology-menu .sym-action-btn {
+      color: #64748b;
+    }
+    .symbology-menu .sym-action-btn:active {
+      background: #334155;
+    }
+    body.light-mode .symbology-menu .sym-action-btn:active {
+      background: #f1f5f9;
+    }
+    .symbology-menu .sym-remove-btn {
       color: #ef4444;
     }
 
@@ -4547,9 +4604,16 @@
   <div class="symbology-menu" id="symbologyMenu">
     <div class="sym-header" id="symStateName">State</div>
     <div class="sym-colors" id="symColors"></div>
-    <div class="sym-action sym-remove" id="symRemove">
-      <span class="sym-icon">&#x2715;</span>
-      <span>Remove color</span>
+    <div class="sym-section">
+      <input type="text" class="sym-label-input" id="symLabelInput" placeholder="Legend label (e.g. Visited)" maxlength="40">
+    </div>
+    <div class="sym-divider"></div>
+    <div class="sym-actions-row">
+      <div class="sym-action-btn" id="symUndo" title="Undo">&#x21A9;</div>
+      <div class="sym-action-btn" id="symSelectAll" title="Select all">&#x2B1A;</div>
+      <div class="sym-action-btn" id="symClear" title="Clear map">&#x1F5D1;</div>
+      <div class="sym-action-btn sym-remove-btn" id="symRemove" title="Remove color">&#x2715;</div>
+      <div class="sym-action-btn" id="symExport" title="Save/Share">&#x1F4E4;</div>
     </div>
   </div>
 
@@ -4707,6 +4771,19 @@
         // Set header
         if (symStateName) symStateName.textContent = label;
 
+        // Pre-fill legend label if one exists for current color
+        if (symLabelInput && typeof appState !== 'undefined' && appState.legendEntries) {
+          var currentColor = appState.selectedColor;
+          var existingLabel = '';
+          for (var i = 0; i < appState.legendEntries.length; i++) {
+            if (appState.legendEntries[i].color === currentColor) {
+              existingLabel = appState.legendEntries[i].label || '';
+              break;
+            }
+          }
+          symLabelInput.value = existingLabel;
+        }
+
         // Build color swatches from current palette
         if (symColors) {
           symColors.innerHTML = '';
@@ -4764,6 +4841,12 @@
         lpTargetPath = null;
       }
 
+      // --- Symbology Menu Actions ---
+      const symLabelInput = document.getElementById('symLabelInput');
+      const symUndo = document.getElementById('symUndo');
+      const symSelectAll = document.getElementById('symSelectAll');
+      const symClear = document.getElementById('symClear');
+
       // Remove color button
       if (symRemove) {
         symRemove.addEventListener('click', function() {
@@ -4777,7 +4860,7 @@
             if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
             if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
           } else if (countyFips && typeof countyColors !== 'undefined') {
-            const fips = String(countyFips).padStart(5, '0');
+            var fips = String(countyFips).padStart(5, '0');
             delete countyColors[fips];
             lpTargetPath.style.fill = '';
           }
@@ -4785,6 +4868,103 @@
           if (typeof updateURL === 'function') updateURL();
           if (typeof showMessage === 'function') showMessage('Color removed', 'success');
           hideSymbologyMenu();
+        });
+      }
+
+      // Legend label input - adds/updates legend entry for current color
+      if (symLabelInput) {
+        symLabelInput.addEventListener('change', function() {
+          var label = symLabelInput.value.trim();
+          if (!label || typeof appState === 'undefined') return;
+          var color = appState.selectedColor;
+          // Check if legend entry for this color already exists
+          var found = false;
+          if (appState.legendEntries) {
+            for (var i = 0; i < appState.legendEntries.length; i++) {
+              if (appState.legendEntries[i].color === color) {
+                appState.legendEntries[i].label = label;
+                found = true;
+                break;
+              }
+            }
+            if (!found) {
+              appState.legendEntries.push({ color: color, label: label });
+            }
+          }
+          if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
+          if (typeof updateURL === 'function') updateURL();
+          if (typeof showMessage === 'function') showMessage('Legend updated', 'success');
+          hideSymbologyMenu();
+        });
+        // Also handle Enter key
+        symLabelInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            symLabelInput.blur();
+            var evt = new Event('change');
+            symLabelInput.dispatchEvent(evt);
+          }
+        });
+      }
+
+      // Undo button
+      if (symUndo) {
+        symUndo.addEventListener('click', function() {
+          if (typeof undo === 'function') undo();
+          hideSymbologyMenu();
+        });
+      }
+
+      // Select all button
+      if (symSelectAll) {
+        symSelectAll.addEventListener('click', function() {
+          if (typeof saveHistory === 'function') saveHistory();
+          if (typeof appState !== 'undefined') {
+            document.querySelectorAll('.state-path').forEach(function(p) {
+              var name = p.getAttribute('data-state');
+              if (name && typeof appState.stateColors !== 'undefined') {
+                appState.stateColors[name] = appState.selectedColor;
+                p.style.fill = appState.selectedColor;
+              }
+            });
+          }
+          if (typeof updateStatsBar === 'function') updateStatsBar();
+          if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
+          if (typeof updateURL === 'function') updateURL();
+          if (typeof showMessage === 'function') showMessage('All states selected', 'success');
+          hideSymbologyMenu();
+        });
+      }
+
+      // Clear map button
+      if (symClear) {
+        symClear.addEventListener('click', function() {
+          if (typeof saveHistory === 'function') saveHistory();
+          if (typeof appState !== 'undefined' && appState.stateColors) {
+            var keys = Object.keys(appState.stateColors);
+            for (var i = 0; i < keys.length; i++) {
+              delete appState.stateColors[keys[i]];
+            }
+          }
+          document.querySelectorAll('.state-path').forEach(function(p) {
+            p.style.fill = '';
+          });
+          if (typeof updateStatsBar === 'function') updateStatsBar();
+          if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
+          if (typeof updateURL === 'function') updateURL();
+          if (typeof showMessage === 'function') showMessage('Map cleared', 'success');
+          hideSymbologyMenu();
+        });
+      }
+
+      // Export/Share button
+      var symExport = document.getElementById('symExport');
+      if (symExport) {
+        symExport.addEventListener('click', function() {
+          hideSymbologyMenu();
+          // Try native share first (mobile), fall back to export PNG
+          if (typeof exportPNG === 'function') {
+            exportPNG();
+          }
         });
       }
 

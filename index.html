@@ -1430,6 +1430,198 @@
       color: #ef4444;
     }
 
+
+    /* ===== TEMPLATE PICKER ===== */
+    .template-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.75);
+      z-index: 2500;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(3px);
+    }
+    .template-overlay.active {
+      display: flex;
+    }
+    .template-modal {
+      background: #16213e;
+      border: 1px solid #2b7a8c33;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 560px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    body.light-mode .template-modal {
+      background: #ffffff;
+      border-color: #d0d8e0;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .template-modal-header {
+      padding: 20px 24px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .template-modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      color: #e0e0e0;
+      letter-spacing: 0.5px;
+    }
+    body.light-mode .template-modal-title {
+      color: #1a1a2e;
+    }
+    .template-close-btn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255,255,255,0.08);
+      color: #a0a0a0;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    body.light-mode .template-close-btn {
+      background: #f0f0f0;
+      color: #666;
+    }
+    .template-close-btn:hover {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+    }
+    .template-categories {
+      display: flex;
+      gap: 6px;
+      padding: 0 24px 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .template-categories::-webkit-scrollbar { display: none; }
+    .template-cat-pill {
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid #3a3a5a;
+      background: transparent;
+      color: #a0b0c0;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    body.light-mode .template-cat-pill {
+      border-color: #d0d8e0;
+      color: #667;
+    }
+    .template-cat-pill.active {
+      background: #0EA5E9;
+      border-color: #0EA5E9;
+      color: #fff;
+    }
+    .template-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding: 0 24px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .template-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    body.light-mode .template-card {
+      background: #f8f9fa;
+      border-color: #e8ecf0;
+    }
+    .template-card:hover {
+      border-color: #0EA5E9;
+      background: rgba(14, 165, 233, 0.08);
+      transform: translateY(-1px);
+    }
+    .template-card-swatches {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .template-card-swatch {
+      width: 20px; height: 20px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    body.light-mode .template-card-swatch {
+      border-color: rgba(0,0,0,0.08);
+    }
+    .template-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .template-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #e0e0e0;
+      margin-bottom: 2px;
+    }
+    body.light-mode .template-card-title {
+      color: #1a1a2e;
+    }
+    .template-card-cat {
+      font-size: 11px;
+      color: #6b7b8b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .template-blank-card {
+      border-style: dashed;
+      border-color: rgba(255,255,255,0.15);
+    }
+    body.light-mode .template-blank-card {
+      border-color: #c0c8d0;
+    }
+    .template-blank-card .template-card-title {
+      color: #6b7b8b;
+    }
+    .template-cta-bar {
+      padding: 14px 24px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      text-align: center;
+    }
+    body.light-mode .template-cta-bar {
+      border-top-color: #e8ecf0;
+    }
+    .template-cta-text {
+      font-size: 11px;
+      color: #5a6a7a;
+    }
+
+    @media (max-width: 900px) {
+      .template-modal {
+        width: 100%;
+        height: 100%;
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+      }
+      .template-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     </style>
 </head>
 <body>
@@ -1447,6 +1639,9 @@
 
       <!-- Color Palette -->
       <div class="section">
+        <div style="margin-bottom: 10px;">
+          <button class="btn primary" onclick="showTemplatePicker()" style="width: 100%; padding: 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">&#x1F5FA; Browse Templates</button>
+        </div>
         <div class="section-title">Color Palette</div>
         <div class="section-content">
           <div class="color-grid" id="colorGrid"></div>
@@ -1823,11 +2018,27 @@
   <div class="confirmation-message" id="confirmationMessage"></div>
 
   <!-- Onboarding Welcome Overlay -->
+
+  <!-- Template Picker -->
+  <div class="template-overlay" id="templateOverlay">
+    <div class="template-modal">
+      <div class="template-modal-header">
+        <div class="template-modal-title">Choose a Template</div>
+        <button class="template-close-btn" id="templateCloseBtn">&times;</button>
+      </div>
+      <div class="template-categories" id="templateCategories"></div>
+      <div class="template-grid" id="templateGrid"></div>
+      <div class="template-cta-bar">
+        <div class="template-cta-text">Pick a prompt and start tapping — or go blank</div>
+      </div>
+    </div>
+  </div>
+
   <div class="onboarding-overlay" id="onboardingOverlay">
     <div class="onboarding-card">
       <div class="onboarding-icon">🗺</div>
       <div class="onboarding-title">Welcome to Tappymaps</div>
-      <div class="onboarding-desc">Create beautiful colored maps of the US in seconds. Here's how it works:</div>
+      <div class="onboarding-desc">Create beautiful colored maps of the US in seconds. Pick a template to get started, or go blank.</div>
       <div class="onboarding-steps">
         <div class="onboarding-step">
           <div class="onboarding-step-num">1</div>
@@ -1958,7 +2169,7 @@
 
       document.getElementById('onboardingStart').addEventListener('click', () => {
         dismissOnboarding();
-        startGuidedHints();
+        showTemplatePicker();
       });
 
       document.getElementById('onboardingSkip').addEventListener('click', () => {
@@ -4587,12 +4798,319 @@
         showMessage('Access codes are no longer accepted. Please subscribe to unlock Pro.', 'info');
       });
 
+      // Template picker
+      const templateCloseBtn = document.getElementById('templateCloseBtn');
+      if (templateCloseBtn) templateCloseBtn.addEventListener('click', hideTemplatePicker);
+      const templateOverlay = document.getElementById('templateOverlay');
+      if (templateOverlay) templateOverlay.addEventListener('click', (e) => {
+        if (e.target === templateOverlay) hideTemplatePicker();
+      });
+
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
           e.preventDefault();
           undo();
         }
+      });
+    }
+
+
+    // ============================================================================
+    // TEMPLATES
+    // ============================================================================
+
+    const TEMPLATES = [
+      {
+        id: 'states-ive-visited',
+        title: "States I've Visited",
+        category: 'travel',
+        presetColors: ['#22c55e', '#86efac', '#dcfce7'],
+        legendEntries: [
+          { color: '#22c55e', label: 'Visited' },
+          { color: '#86efac', label: 'Passed through' },
+          { color: '#dcfce7', label: 'Want to visit' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-ive-driven-through',
+        title: "States I've Driven Through",
+        category: 'travel',
+        presetColors: ['#f97316', '#fdba74', '#fed7aa'],
+        legendEntries: [
+          { color: '#f97316', label: 'Road tripped' },
+          { color: '#fdba74', label: 'Drove through' },
+          { color: '#fed7aa', label: 'Want to drive' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-id-live-in',
+        title: "States I'd Live In",
+        category: 'personal',
+        presetColors: ['#3b82f6', '#93c5fd', '#ef4444', '#fca5a5'],
+        legendEntries: [
+          { color: '#3b82f6', label: 'Would move tomorrow' },
+          { color: '#93c5fd', label: 'Would consider' },
+          { color: '#ef4444', label: 'Never' },
+          { color: '#fca5a5', label: 'Maybe for the right job' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-ranked-by-pizza',
+        title: 'States Ranked by Pizza',
+        category: 'food',
+        presetColors: ['#ef4444', '#f97316', '#eab308', '#a3e635', '#22c55e'],
+        legendEntries: [
+          { color: '#ef4444', label: 'Elite tier' },
+          { color: '#f97316', label: 'Solid' },
+          { color: '#eab308', label: 'Average' },
+          { color: '#a3e635', label: 'Below average' },
+          { color: '#22c55e', label: 'No opinion' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-where-i-know-someone',
+        title: 'States Where I Know Someone',
+        category: 'personal',
+        presetColors: ['#8b5cf6', '#c4b5fd', '#ede9fe'],
+        legendEntries: [
+          { color: '#8b5cf6', label: 'Close friend/family' },
+          { color: '#c4b5fd', label: 'Acquaintance' },
+          { color: '#ede9fe', label: 'Internet friend' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'overrated-states',
+        title: 'Most Overrated States',
+        category: 'opinions',
+        presetColors: ['#ef4444', '#f97316', '#22c55e', '#3b82f6'],
+        legendEntries: [
+          { color: '#ef4444', label: 'Very overrated' },
+          { color: '#f97316', label: 'Kinda overrated' },
+          { color: '#22c55e', label: 'Underrated' },
+          { color: '#3b82f6', label: 'Properly rated' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'find-on-blank-map',
+        title: 'States I Could Find on a Blank Map',
+        category: 'fun',
+        presetColors: ['#22c55e', '#ef4444'],
+        legendEntries: [
+          { color: '#22c55e', label: 'Easy' },
+          { color: '#ef4444', label: 'No chance' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-ive-cried-in',
+        title: "States I've Cried In",
+        category: 'fun',
+        presetColors: ['#8b5cf6', '#c084fc', '#e9d5ff', '#fde68a'],
+        legendEntries: [
+          { color: '#8b5cf6', label: 'Full breakdown' },
+          { color: '#c084fc', label: 'A few tears' },
+          { color: '#e9d5ff', label: 'Teared up' },
+          { color: '#fde68a', label: 'Happy tears' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-ranked-by-vibes',
+        title: 'States Ranked by Vibes',
+        category: 'opinions',
+        presetColors: ['#0ea5e9', '#22c55e', '#eab308', '#f97316', '#ef4444'],
+        legendEntries: [
+          { color: '#0ea5e9', label: 'Immaculate vibes' },
+          { color: '#22c55e', label: 'Good vibes' },
+          { color: '#eab308', label: 'Mid vibes' },
+          { color: '#f97316', label: 'Off vibes' },
+          { color: '#ef4444', label: 'No vibes' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'zombie-apocalypse',
+        title: "States I'd Survive a Zombie Apocalypse In",
+        category: 'fun',
+        presetColors: ['#22c55e', '#eab308', '#ef4444', '#1e293b'],
+        legendEntries: [
+          { color: '#22c55e', label: 'I survive' },
+          { color: '#eab308', label: '50/50' },
+          { color: '#ef4444', label: "I'm toast" },
+          { color: '#1e293b', label: 'Already overrun' }
+        ],
+        darkMode: true
+      }
+    ];
+
+
+    // ── Template System ──────────────────────────────────────────
+
+    function loadTemplate(templateId) {
+      const tpl = TEMPLATES.find(t => t.id === templateId);
+      if (!tpl) return;
+
+      // Confirm if user has work
+      if (Object.keys(appState.stateColors).length > 0) {
+        if (!confirm('Loading a template will clear your current map. Continue?')) return;
+      }
+
+      saveHistory();
+
+      // Clear map
+      appState.stateColors = {};
+      document.querySelectorAll('.state-path').forEach(p => p.style.fill = '');
+
+      // Apply template
+      appState.mapTitle = tpl.title;
+      appState.mapSubtitle = '';
+      appState.presetColors = [...tpl.presetColors];
+      appState.selectedColor = tpl.presetColors[0];
+      appState.legendEntries = tpl.legendEntries.map(e => ({...e}));
+
+      // Update title display
+      const titleEl = document.getElementById('mapTitle');
+      if (titleEl) titleEl.textContent = tpl.title;
+      const subtitleEl = document.getElementById('mapSubtitle');
+      if (subtitleEl) subtitleEl.textContent = '';
+
+      // Rebuild color palette
+      initializeColorPalette();
+
+      // Update everything
+      updateLegendDisplay();
+      updateStatsBar();
+      updateURL();
+
+      // Rebuild mobile swatches if in mobile mode
+      if (window.innerWidth <= 900) {
+        const swatchScroll = document.getElementById('mobileSwatchScroll');
+        if (swatchScroll) {
+          // Trigger a MutationObserver-based rebuild by touching the grid
+          const grid = document.querySelector('.color-grid, .swatch-grid');
+          if (grid) {
+            grid.dispatchEvent(new Event('change'));
+            // Fallback: manually rebuild
+            setTimeout(() => {
+              swatchScroll.innerHTML = '';
+              appState.presetColors.forEach(color => {
+                const el = document.createElement('div');
+                el.className = 'mobile-swatch';
+                el.style.cssText = 'width:40px;height:40px;min-width:40px;border-radius:10px;border:2px solid transparent;cursor:pointer;';
+                el.style.backgroundColor = color;
+                if (appState.selectedColor === color) {
+                  el.classList.add('active');
+                  el.style.borderColor = 'white';
+                  el.style.transform = 'scale(1.15)';
+                }
+                el.addEventListener('click', () => {
+                  selectColor(color);
+                  // Update mobile swatch active states
+                  swatchScroll.querySelectorAll('.mobile-swatch').forEach(s => {
+                    const c = s.style.backgroundColor;
+                    const hex = c.startsWith('#') ? c : '#' + c.match(/\d+/g).slice(0,3).map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
+                    const isActive = hex === color;
+                    s.classList.toggle('active', isActive);
+                    s.style.borderColor = isActive ? 'white' : 'transparent';
+                    s.style.transform = isActive ? 'scale(1.15)' : '';
+                  });
+                });
+                swatchScroll.appendChild(el);
+              });
+            }, 100);
+          }
+        }
+      }
+
+      // Close picker
+      hideTemplatePicker();
+
+      showMessage('Template loaded: ' + tpl.title, 'success');
+      trackEvent('template_load', { id: tpl.id, title: tpl.title });
+    }
+
+    function showTemplatePicker() {
+      const overlay = document.getElementById('templateOverlay');
+      if (!overlay) return;
+
+      buildTemplateGrid('all');
+      buildTemplateCategoryPills();
+      overlay.classList.add('active');
+      trackEvent('template_picker_open');
+    }
+
+    function hideTemplatePicker() {
+      const overlay = document.getElementById('templateOverlay');
+      if (overlay) overlay.classList.remove('active');
+    }
+
+    function buildTemplateCategoryPills() {
+      const container = document.getElementById('templateCategories');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const categories = ['all', ...new Set(TEMPLATES.map(t => t.category))];
+      categories.forEach(cat => {
+        const pill = document.createElement('button');
+        pill.className = 'template-cat-pill' + (cat === 'all' ? ' active' : '');
+        pill.textContent = cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1);
+        pill.addEventListener('click', () => {
+          container.querySelectorAll('.template-cat-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          buildTemplateGrid(cat);
+        });
+        container.appendChild(pill);
+      });
+    }
+
+    function buildTemplateGrid(category) {
+      const grid = document.getElementById('templateGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      // Blank map card always first
+      const blankCard = document.createElement('div');
+      blankCard.className = 'template-card template-blank-card';
+      blankCard.innerHTML = `
+        <div class="template-card-swatches">
+          <div class="template-card-swatch" style="background:#2a2a4a; border-color:#3d3d5c;"></div>
+        </div>
+        <div class="template-card-info">
+          <div class="template-card-title">Blank Map</div>
+          <div class="template-card-cat">Start from scratch</div>
+        </div>
+      `;
+      blankCard.addEventListener('click', () => {
+        hideTemplatePicker();
+      });
+      grid.appendChild(blankCard);
+
+      // Template cards
+      const filtered = category === 'all' ? TEMPLATES : TEMPLATES.filter(t => t.category === category);
+      filtered.forEach(tpl => {
+        const card = document.createElement('div');
+        card.className = 'template-card';
+
+        const swatchesHTML = tpl.presetColors.slice(0, 5).map(c =>
+          '<div class="template-card-swatch" style="background:' + c + ';"></div>'
+        ).join('');
+
+        card.innerHTML = `
+          <div class="template-card-swatches">${swatchesHTML}</div>
+          <div class="template-card-info">
+            <div class="template-card-title">${tpl.title}</div>
+            <div class="template-card-cat">${tpl.category}</div>
+          </div>
+        `;
+        card.addEventListener('click', () => loadTemplate(tpl.id));
+        grid.appendChild(card);
       });
     }
 

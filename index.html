@@ -4570,18 +4570,29 @@
       const swatchScroll = document.getElementById('mobileSwatchScroll');
 
       // --- Force mobile element visibility via JS (iOS CSS workaround) ---
+      function isLandscape() {
+        return window.matchMedia('(orientation: landscape)').matches;
+      }
+
       function updateMobileVisibility() {
         if (isMobile()) {
-          if (colorBar) {
-            colorBar.style.display = 'flex';
-            colorBar.style.position = 'fixed';
-            colorBar.style.bottom = '0';
-            colorBar.style.left = '0';
-            colorBar.style.right = '0';
-            colorBar.style.height = '56px';
-            colorBar.style.zIndex = '999';
+          if (isLandscape()) {
+            // Landscape: hide color bar and handle, full canvas mode
+            if (colorBar) colorBar.style.display = 'none';
+            if (handle) handle.style.display = 'none';
+          } else {
+            // Portrait: show color bar
+            if (colorBar) {
+              colorBar.style.display = 'flex';
+              colorBar.style.position = 'fixed';
+              colorBar.style.bottom = '0';
+              colorBar.style.left = '0';
+              colorBar.style.right = '0';
+              colorBar.style.height = '56px';
+              colorBar.style.zIndex = '999';
+            }
+            if (handle) handle.style.display = 'flex';
           }
-          if (handle) handle.style.display = 'flex';
           // Show mobile onboarding hint
           document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'inline');
           buildMobileSwatches();
@@ -4661,9 +4672,14 @@
         observer.observe(colorGrid, { childList: true, subtree: true, attributes: true });
       }
 
-      // Initialize on load and resize
+      // Initialize on load, resize, and orientation change
       updateMobileVisibility();
       window.addEventListener('resize', updateMobileVisibility);
+      window.addEventListener('orientationchange', function() {
+        // Small delay for iOS to finish rotating
+        setTimeout(updateMobileVisibility, 100);
+        setTimeout(updateMobileVisibility, 500);
+      });
       // Also try after a delay in case DOM isn't ready
       setTimeout(updateMobileVisibility, 300);
       setTimeout(updateMobileVisibility, 1000);
@@ -4864,13 +4880,12 @@
           if (e.touches.length === 2) {
             isPinching = true;
             lastPinchDist = getPinchDist(e.touches);
-            e.preventDefault();
           } else if (e.touches.length === 1 && currentScale > 1.05) {
             isPanning = true;
             lastPanX = e.touches[0].clientX;
             lastPanY = e.touches[0].clientY;
           }
-        }, { passive: false });
+        }, { passive: true });
 
         mapContainer.addEventListener('touchmove', (e) => {
           if (isPinching && e.touches.length === 2) {

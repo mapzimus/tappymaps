@@ -69,6 +69,15 @@ All work is tracked in Notion under the Tappymaps project page.
 - `copyImageToClipboard()` (~line 3714) -- calls captureMapImage(), writes to clipboard via ClipboardItem API
 - `trackEvent()` -- localStorage + optional Supabase fire-and-forget analytics
 
+## Design Token System
+- CSS custom properties defined in `:root` block (30+ tokens)
+- `[data-theme="light"]` overrides for light theme
+- Theme toggle sets BOTH `body.light-mode` class AND `data-theme` attribute (parallel migration)
+- Token categories: brand, semantic, surfaces, text, shadows, radius, motion, z-index
+- `body.light-mode` CSS selectors still exist with hardcoded values as fallback
+- To complete migration: remove `body.light-mode` selectors once tokens are fully adopted
+- Key tokens: `--accent` (#0EA5E9), `--error` (#ef4444), `--bg`, `--surface`, `--border`, `--text`
+
 ## Template System
 - `TEMPLATES` array -- 10 curated templates across 5 categories (travel, personal, food, opinions, fun)
 - Each template: `{ id, title, category, presetColors, legendEntries, darkMode }`

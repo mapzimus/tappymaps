@@ -1,7 +1,7 @@
 # Tappymaps
 
 ## What It Is
-Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in one file (`index.html`, ~4,220 lines). No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
+Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in one file (`index.html`, ~4,641 lines). No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
 
 Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella overseeing three products:
 - **Tappymaps** (tappymaps.com): This app. Consumer map-making. Casual, playful, approachable.
@@ -13,6 +13,19 @@ Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella overseein
 - **Repo**: https://github.com/mapzimus/tappymaps
 - **Social**: Instagram @tappymaps.app
 
+## Brand Identity
+- **Logo**: Concept A -- turquoise teardrop map pin (dark ring + orange dot center) with "tappy" in turquoise + "maps" in orange wordmark
+- **Slogan**: "Tap. Color. Share."
+- **Primary color**: #0EA5E9 (turquoise/sky blue)
+- **Primary dark**: #0284C7
+- **Secondary color**: #F97316 (orange)
+- **Secondary light**: #FB923C
+- **Slate dark**: #0F172A
+- **Slate medium**: #64748B
+- **Light BG**: #F0F9FF
+- **Typography**: Outfit Bold / Instrument Sans / Geist Mono (Arial/Consolas fallbacks)
+- **Brand kit**: C:\Users\mhowe\Downloads\tappymaps-brand\ (18 assets: 4K logos on white/dark/transparent, favicons all sizes, social assets, watermark SVG, brand guide)
+
 ## Stack
 - Vanilla HTML/CSS/JS (no framework)
 - SVG maps via TopoJSON (`us-atlas@3/states-albers-10m.json`), Albers projection pre-applied
@@ -22,6 +35,7 @@ Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella overseein
 - Payments: Stripe subscription (Pro tier)
 - State persistence: URL hash using `btoa(JSON.stringify(...))`
 - Analytics: localStorage (capped 500) + fire-and-forget Supabase insert
+
 ## Git Workflow
 - Default branch: `master` (auto-deploys to tappymaps.com via Vercel)
 - **Git shell via Desktop Commander:** Use `cmd` shell with:
@@ -45,7 +59,9 @@ All work is tracked in Notion under the Tappymaps project page.
 - Update Task Board as work progresses
 - Add session summary to Session Notes at end of each session
 - When creating Notion pages in databases, use `data_source_id` parent type (not `database_id`)
+
 ## Key Functions to Know
+- `onStateClick()` (~line 2323) -- handles state coloring with click-to-toggle (click to color, click again to uncolor)
 - `updateLegendPosition()` (~line 3552) -- positions legend at four corners, dynamic offsets
 - `updateStatsBar()` (~line 1975) -- bottom status bar, branches on countyMode
 - `exportPNG()` (~line 3040) -- async, uses double rAF await before html2canvas capture
@@ -57,19 +73,35 @@ All work is tracked in Notion under the Tappymaps project page.
 - **nonColorable set:** DC and territories excluded from "X of 50 states colored" count.
 - **URL hash state:** If adding new `appState` fields that should persist, include them in the `btoa(JSON.stringify(...))` encode/decode.
 - **County mode:** Separate `countyColors` map and `countyTotal`. Stats bar and export logic both branch on `countyMode`.
+- **Click-to-toggle:** `onStateClick` checks if `stateColors[name] === selectedColor` -- if so, deletes the color (uncolors). Same logic applies to county click handler. No right-click needed.
+
+## Mobile UX (lines ~1133-1243 CSS, ~4416-4638 JS)
+Mobile breakpoint: `@media (max-width: 900px)`. The mobile overhaul includes:
+- **Bottom sheet sidebar**: Sidebar slides up from bottom as a sheet with drag handle. Max 70vh. Tap map to close.
+- **Floating color bar**: Fixed 56px bar at bottom with horizontally scrollable swatches + hamburger toggle for sheet. Uses MutationObserver to sync with desktop palette.
+- **Long-press to remove**: 500ms long-press on any colored state/county removes its color. Includes haptic feedback (`navigator.vibrate(30)`).
+- **Pinch-to-zoom**: Two-finger pinch scales map SVG 1x-4x via CSS transforms. Single-finger pan when zoomed. Clamped boundaries.
+- **Double-tap reset**: Quick double-tap (within 300ms) resets zoom to 1x with smooth animation.
+- **Layout**: Full viewport `100dvh` with `100vh` fallback, `touch-action: none` on map container.
+
+### Mobile App Strategy
+- **Current**: Mobile web with responsive layout (live now)
+- **Next step**: PWA (service worker + manifest for install-to-homescreen)
+- **Eventual**: Capacitor wrapper for App Store (iOS) + Google Play (Android) distribution
+- The single HTML file will be the webview content with minimal changes for Capacitor
 
 ## Logo & Watermark
-SVG `<g>` element inside the map SVG. Current transform: `translate(480, 586) scale(0.52)`.
-Logo uses the Tappymaps brand: blue map pin + "tappy" (blue) + "maps" (dark slate) wordmark.
-Current slogan text: `"Tap. Color. Share."`.
+SVG `<g>` element inside the map SVG. Current transform: `translate(350, 575) scale(0.72)`, opacity 0.45.
+Logo: turquoise pin icon + "tappy" (#0EA5E9) + "maps" (#F97316) wordmark.
+Slogan: "Tap. Color. Share." in slate gray (#64748B).
 North arrow: ORNATE style, top right near Maine. Scale bar: ORNATE style, bottom left under Alaska.
-Brand kit: C:\Users\mhowe\Downloads\tappymaps-brand\ (18 assets, 4K logos, all sizes favicons)
 
 ## Infrastructure
 - **Vercel**: Serverless functions in `/api/stripe/`. 7 env vars configured in dashboard.
 - **Supabase**: Project `qbhqdicppoahhvnuvcwd.supabase.co`. Tables: `user_subscriptions` (RLS), `analytics` (RLS), `export_counts` (RLS).
 - **Stripe**: Product with monthly ($5) and annual ($48) prices. Webhook at `/api/stripe/webhook`.
 - **DNS**: tappymaps.com -- A record 76.76.21.21, CNAME www to cname.vercel-dns.com.
+
 ## Feature Matrix (Current)
 | Feature | Free | Pro |
 |---------|------|-----|
@@ -98,6 +130,8 @@ Brand kit: C:\Users\mhowe\Downloads\tappymaps-brand\ (18 assets, 4K logos, all s
 - Webhook returns 200 on DB failure (should return 500)
 - Hardcoded promo codes bypass payment (remove before real launch)
 - Export counter is localStorage-only (bypassable)
+- Mobile UX needs real-device testing (touch interactions, pinch-zoom, bottom sheet)
+
 ## Naming History
 - Original name: CakeMapper (cakemapper)
 - Second name: Mapparatus (mapparatus.org)

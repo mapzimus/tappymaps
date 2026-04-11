@@ -3559,6 +3559,10 @@
       const origSvgFlex = svg.style.flex;
       const origSvgMinH = svg.style.minHeight;
       const origSvgH = svg.style.height;
+      const origSvgW = svg.style.width;
+      const origContainerW = mapContainer.style.width;
+      const origContainerH = mapContainer.style.height;
+      const origContainerPos = mapContainer.style.position;
       const origLegendStyle = legendEl ? legendEl.style.cssText : '';
       const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
 
@@ -3568,11 +3572,21 @@
       if (watermarkEl) watermarkEl.style.display = 'none';
       if (subtitleWasEmpty) subtitleEl.style.display = 'none';
 
-      // Let SVG expand to natural size for capture
-      mapContainer.style.overflow = 'visible';
+      // ── FORCE LANDSCAPE ASPECT RATIO ──
+      // SVG viewBox is 1010x710 (~1.42:1). Force container to this ratio
+      // so every export looks identical regardless of device orientation.
+      const EXPORT_RATIO = 1010 / 710; // ~1.4225
+      const captureWidth = Math.max(mapContainer.offsetWidth, 800);
+      const captureHeight = Math.round(captureWidth / EXPORT_RATIO);
+      mapContainer.style.width = captureWidth + 'px';
+      mapContainer.style.height = captureHeight + 'px';
+      mapContainer.style.overflow = 'hidden';
+
+      // Let SVG fill the forced landscape container
       svg.style.flex = 'none';
       svg.style.minHeight = 'auto';
-      svg.style.height = 'auto';
+      svg.style.height = '100%';
+      svg.style.width = '100%';
 
       // Shrink legend for mobile export
       const isMobileExport = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -3584,7 +3598,7 @@
         legendEl.querySelectorAll('.legend-item-color').forEach(c => { c.style.width = '14px'; c.style.height = '14px'; });
       }
 
-      // Recalculate legend position after style changes
+      // Recalculate legend position for the forced landscape layout
       updateLegendPosition();
 
       const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
@@ -3604,8 +3618,8 @@
           scrollY: 0,
           scale: 3,
           useCORS: true,
-          width: mapContainer.offsetWidth,
-          height: mapContainer.offsetHeight
+          width: captureWidth,
+          height: captureHeight
         });
       } finally {
         // Restore everything
@@ -3614,10 +3628,14 @@
         statsBar.style.visibility = origStatsVis;
         if (watermarkEl && !isPro()) watermarkEl.style.display = '';
         if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
+        mapContainer.style.width = origContainerW;
+        mapContainer.style.height = origContainerH;
         mapContainer.style.overflow = origOverflow;
+
         svg.style.flex = origSvgFlex;
         svg.style.minHeight = origSvgMinH;
         svg.style.height = origSvgH;
+        svg.style.width = origSvgW;
         if (legendEl) {
           legendEl.style.cssText = origLegendStyle;
           updateLegendDisplay();
@@ -3671,18 +3689,65 @@
           .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tappymaps';
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (isMobile) {
-          canvas.toBlob(blob => {
-            const url = URL.createObjectURL(blob);
-            const win = window.open(url, '_blank');
-            if (!win) {
-              const img = document.createElement('img');
-              img.src = url;
-              img.style.cssText = 'max-width:100%;position:fixed;top:0;left:0;z-index:99999;background:#000;width:100vw;height:100vh;object-fit:contain;';
-              img.onclick = () => { img.remove(); URL.revokeObjectURL(url); };
-              document.body.appendChild(img);
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+          const file = new File([blob], slug + '.png', { type: 'image/png' });
+
+          // Try Web Share API first (native iOS/Android share sheet)
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+              await navigator.share({ files: [file], title: appState.mapTitle || 'Tappymaps' });
+              showMessage('Shared successfully!', 'success');
+              trackEvent('export_png', { title: appState.mapTitle, method: 'share_api', states: Object.keys(appState.stateColors).length });
+              return;
+            } catch (shareErr) {
+              // User cancelled share or it failed — fall through to overlay
+              if (shareErr.name === 'AbortError') {
+                showMessage('Share cancelled', 'info');
+                return;
+              }
             }
-            showMessage('Long-press the image to save to your camera roll', 'success');
-          }, 'image/png');
+          }
+
+          // Fallback: in-app overlay with save instructions
+          const url = URL.createObjectURL(blob);
+          const overlay = document.createElement('div');
+          overlay.id = 'exportOverlay';
+          overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:100000;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+
+          // Close button
+          const closeBtn = document.createElement('button');
+          closeBtn.textContent = '\u2715 Close';
+          closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:16px;cursor:pointer;z-index:100001;';
+          closeBtn.onclick = () => { overlay.remove(); URL.revokeObjectURL(url); };
+
+          // The exported image
+          const img = document.createElement('img');
+          img.src = url;
+          img.style.cssText = 'max-width:100%;max-height:65vh;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,0.5);object-fit:contain;-webkit-touch-callout:default;';
+
+          // Instruction text
+          const hint = document.createElement('p');
+          hint.innerHTML = '\ud83d\udc47 <strong>Hold the image</strong> to save to your camera roll';
+          hint.style.cssText = 'color:#fff;font-size:17px;margin-top:20px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,sans-serif;';
+
+          // Optional share button as backup
+          const shareBtn = document.createElement('button');
+          shareBtn.textContent = '\ud83d\udcf2 Share';
+          shareBtn.style.cssText = 'margin-top:14px;background:#0EA5E9;color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:16px;font-weight:600;cursor:pointer;';
+          shareBtn.onclick = async () => {
+            if (navigator.share) {
+              try { await navigator.share({ files: [file], title: appState.mapTitle || 'Tappymaps' }); } catch(e) {}
+            }
+          };
+
+          overlay.appendChild(closeBtn);
+          overlay.appendChild(img);
+          overlay.appendChild(hint);
+          if (navigator.share) overlay.appendChild(shareBtn);
+          document.body.appendChild(overlay);
+
+          showMessage('Hold the image to save it', 'success');
+          trackEvent('export_png', { title: appState.mapTitle, method: 'overlay', states: Object.keys(appState.stateColors).length });
         } else {
           const link = document.createElement('a');
           link.href = canvas.toDataURL('image/png');

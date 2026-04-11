@@ -3936,10 +3936,10 @@
         (titleEl ? titleEl.offsetHeight : 80) +
         (subtitleEl ? subtitleEl.offsetHeight : 30) + 14;
 
-      // In landscape the color bar is hidden, so use smaller bottom offset
-      // On desktop, no color bar either — use 20px
-      const bottomOffset = isMobileLandscape ? '15px' :
-        (isMobile ? '65px' : '20px');
+      // In landscape, color bar + stats bar are hidden — use small offset
+      // In portrait mobile, 65px clears the 56px color bar
+      // On desktop, 65px clears the stats bar at the bottom of the container
+      const bottomOffset = isMobileLandscape ? '15px' : '65px';
 
       // Reset all position properties cleanly before applying new ones
       legend.style.top = 'auto';

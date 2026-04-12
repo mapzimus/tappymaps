@@ -1141,7 +1141,7 @@
         padding: 6px 10px 0;
       }
 
-      /* Landscape: full canvas, no palette bar */
+      /* Landscape: full canvas, icon bar on left */
       @media (orientation: landscape) {
         .container {
           height: 100dvh;
@@ -1152,6 +1152,7 @@
           height: 100dvh;
           height: 100vh;
           overflow: hidden;
+          margin-left: 48px;
         }
         .map-container svg {
           width: 100%;
@@ -1159,14 +1160,57 @@
           max-height: 100dvh;
           max-height: 100vh;
         }
-        .mobile-icon-bar, .mobile-panel, .mobile-panel-backdrop {
-          display: none !important;
-        }
         .stats-bar {
           display: none;
         }
         .map-title {
           display: none;
+        }
+        /* Icon bar: vertical strip on left */
+        .mobile-icon-bar {
+          display: flex !important;
+          position: fixed;
+          top: 0; left: 0; bottom: 0;
+          right: auto;
+          width: 48px;
+          flex-direction: column;
+          border-top: none;
+          border-right: 1px solid var(--border);
+          z-index: var(--z-color-bar);
+        }
+        .mobile-quick-swatches {
+          display: none;
+        }
+        .icon-bar-buttons {
+          flex-direction: column;
+          justify-content: center;
+          height: 100%;
+          padding: 8px 0;
+          gap: 4px;
+        }
+        .icon-bar-btn {
+          padding: 8px 4px;
+          font-size: 8px;
+        }
+        .icon-bar-btn svg {
+          width: 16px; height: 16px;
+        }
+        .icon-bar-btn span {
+          font-size: 8px;
+        }
+        /* Panels: slide from left */
+        .mobile-panel {
+          top: 0; left: 48px; bottom: 0;
+          right: auto;
+          width: 280px;
+          max-height: 100%;
+          border-radius: 0;
+          border-top: none;
+          border-right: 1px solid var(--border);
+          transform: translateX(-110%);
+        }
+        .mobile-panel.panel-open {
+          transform: translateX(0);
         }
       }
 
@@ -5960,9 +6004,7 @@
       // --- Visibility Management ---
       function updateMobileVisibility() {
         if (isMobile()) {
-          if (isLandscape()) {
-            closeAllPanels();
-          } else {
+          if (!isLandscape()) {
             buildQuickSwatches();
           }
           document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'inline');

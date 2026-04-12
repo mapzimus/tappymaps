@@ -3194,7 +3194,7 @@
       },
       geo: {
         coastal: ['Alaska', 'Alabama', 'California', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Mississippi', 'New Hampshire', 'New Jersey', 'New York', 'North Carolina', 'Oregon', 'Rhode Island', 'South Carolina', 'Texas', 'Virginia', 'Washington'],
-        landlocked: ['Arizona', 'Arkansas', 'Colorado', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Michigan', 'Minnesota', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Mexico', 'North Dakota', 'Ohio', 'Oklahoma', 'Pennsylvania', 'South Dakota', 'Tennessee', 'Utah', 'Vermont', 'West Virginia', 'Wisconsin', 'Wyoming'],
+        landlocked: ['Arizona', 'Arkansas', 'Colorado', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Minnesota', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Mexico', 'North Dakota', 'Ohio', 'Oklahoma', 'Pennsylvania', 'South Dakota', 'Tennessee', 'Utah', 'Vermont', 'West Virginia', 'Wisconsin', 'Wyoming'],
         border_canada: ['Alaska', 'Idaho', 'Maine', 'Michigan', 'Minnesota', 'Montana', 'New Hampshire', 'New York', 'North Dakota', 'Ohio', 'Pennsylvania', 'Vermont', 'Washington'],
         border_mexico: ['Arizona', 'California', 'New Mexico', 'Texas'],
         great_lakes: ['Illinois', 'Indiana', 'Michigan', 'Minnesota', 'New York', 'Ohio', 'Pennsylvania', 'Wisconsin'],
@@ -3202,7 +3202,7 @@
       },
       fun: {
         original_13: ['Connecticut', 'Delaware', 'Georgia', 'Maryland', 'Massachusetts', 'New Hampshire', 'New Jersey', 'New York', 'North Carolina', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'Virginia'],
-        last_10: ['Alaska', 'Hawaii', 'Arizona', 'New Mexico', 'Oklahoma', 'Utah', 'Colorado', 'North Dakota', 'South Dakota', 'Montana'],
+        last_10: ['Hawaii', 'Alaska', 'Arizona', 'New Mexico', 'Oklahoma', 'Utah', 'Idaho', 'Washington', 'Montana', 'North Dakota'],
         most_populated: ['California', 'Texas', 'Florida', 'New York', 'Pennsylvania', 'Illinois', 'Ohio', 'Georgia', 'North Carolina', 'Michigan'],
         least_populated: ['Wyoming', 'Vermont', 'Alaska', 'North Dakota', 'South Dakota', 'Delaware', 'Montana', 'Rhode Island', 'Maine', 'New Hampshire']
       }
@@ -3235,7 +3235,12 @@
       const all50 = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
       const newColors = {};
       all50.forEach(s => {
-        if (!appState.stateColors[s]) newColors[s] = appState.selectedColor;
+        if (appState.stateColors[s]) {
+          // Was colored -> leave empty (inverted)
+        } else {
+          // Was empty -> color with current color
+          newColors[s] = appState.selectedColor;
+        }
       });
       appState.stateColors = newColors;
       renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
@@ -3245,8 +3250,9 @@
     function randomFill() {
       saveHistory();
       const all50 = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
+      appState.stateColors = {};
       const count = Math.floor(Math.random() * 20) + 8;
-      const shuffled = all50.sort(() => Math.random() - 0.5);
+      const shuffled = [...all50].sort(() => Math.random() - 0.5);
       shuffled.slice(0, count).forEach(s => { appState.stateColors[s] = appState.selectedColor; });
       renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
       showMessage(`${count} random states filled`, 'success');
@@ -4985,7 +4991,7 @@
         if (!gateProFeature('quick fill')) return;
         randomFill();
       });
-      document.querySelectorAll('.qf-toggle').forEach(chip => {
+      document.querySelectorAll('#quickFillSection .qf-toggle').forEach(chip => {
         chip.addEventListener('click', () => {
           if (!gateProFeature('quick fill')) return;
           toggleQuickFillGroup(chip.dataset.group, chip.dataset.key, chip);

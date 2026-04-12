@@ -88,30 +88,117 @@
       --z-export-overlay: 3500;
     }
 
-    /* Light theme overrides */
+    /* ===== THEME SYSTEM ===== */
+
+    /* Light */
     [data-theme="light"] {
       --bg: #e8ecf1;
       --surface: #f0f2f5;
       --surface-raised: #f7f8fa;
-      --border: #e0e0e0;
-      --text: #2c2c2c;
-      --text-muted: #7a8a9b;
-      --text-dim: #666;
-      --state-fill: var(--state-fill);
-      --state-stroke: var(--state-stroke);
+      --border: #c8cdd4;
+      --border-subtle: #d5dae0;
+      --border-muted: #bcc4ce;
+      --border-faint: #dde2e8;
+      --text: #1a1a2e;
+      --text-muted: #5a6a7b;
+      --text-dim: #4a5568;
+      --text-strong: #111;
+      --state-fill: #c8cfe0;
+      --state-stroke: #8a96aa;
       --ocean-bg: #c9d4e0;
-    
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
-    --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
-  
-    --border-subtle: #e5e8ec;
-    --border-muted: #d0d8e0;
-    --border-faint: #e2e8f0;
-    --text-strong: #333;
-    --surface-hover: #f1f5f9;
-  }
+      --surface-hover: #e4e8ee;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
+      --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Midnight — default dark, inherits from :root */
+
+    /* Slate */
+    [data-theme="slate"] {
+      --bg: #1e293b;
+      --surface: #1e293b;
+      --surface-raised: #334155;
+      --border: #475569;
+      --border-subtle: #475569;
+      --border-muted: #475569;
+      --border-faint: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-dim: #94a3b8;
+      --text-strong: #f1f5f9;
+      --state-fill: #334155;
+      --state-stroke: #475569;
+      --ocean-bg: #0f172a;
+      --surface-hover: #334155;
+    }
+
+    /* Warm */
+    [data-theme="warm"] {
+      --bg: #faf5ef;
+      --surface: #fff8f0;
+      --surface-raised: #fff;
+      --border: #d4c4b0;
+      --border-subtle: #e0d4c4;
+      --border-muted: #c8b8a4;
+      --border-faint: #e8ddd0;
+      --text: #3d2c1e;
+      --text-muted: #7a6652;
+      --text-dim: #6b5a48;
+      --text-strong: #2a1a0e;
+      --state-fill: #e0d4c4;
+      --state-stroke: #b8a892;
+      --ocean-bg: #d4cabb;
+      --surface-hover: #f0e8dc;
+      --shadow-sm: 0 2px 8px rgba(60, 40, 20, 0.08);
+      --shadow-md: 0 4px 16px rgba(60, 40, 20, 0.1);
+      --shadow-lg: 0 10px 40px rgba(60, 40, 20, 0.12);
+      --shadow-xl: 0 20px 60px rgba(60, 40, 20, 0.15);
+    }
+
+    /* Forest */
+    [data-theme="forest"] {
+      --bg: #1a2e1a;
+      --surface: #1e3320;
+      --surface-raised: #2a4a2c;
+      --border: #3d6640;
+      --border-subtle: #3d6640;
+      --border-muted: #3d6640;
+      --border-faint: #2a4a2c;
+      --text: #d4e8d4;
+      --text-muted: #8ab88a;
+      --text-dim: #8ab88a;
+      --text-strong: #e8f5e8;
+      --state-fill: #2a4a2c;
+      --state-stroke: #3d6640;
+      --ocean-bg: #122012;
+      --surface-hover: #2a4a2c;
+      --accent: #4ade80;
+      --accent-hover: #22c55e;
+    }
+
+    /* Ocean */
+    [data-theme="ocean"] {
+      --bg: #0c1929;
+      --surface: #0f2038;
+      --surface-raised: #163050;
+      --border: #1e4976;
+      --border-subtle: #1e4976;
+      --border-muted: #1e4976;
+      --border-faint: #163050;
+      --text: #c8ddf0;
+      --text-muted: #6a9cc8;
+      --text-dim: #6a9cc8;
+      --text-strong: #e0f0ff;
+      --state-fill: #163050;
+      --state-stroke: #1e4976;
+      --ocean-bg: #081220;
+      --surface-hover: #163050;
+      --accent: #38bdf8;
+      --accent-hover: #0ea5e9;
+    }
+
 
 
 
@@ -535,7 +622,7 @@
     }
 
     .map-container.ocean-on {
-      background: #161f33;
+      background: var(--ocean-bg);
     }
 
 
@@ -579,7 +666,7 @@
       text-anchor: middle;
       dominant-baseline: middle;
       pointer-events: none;
-      fill: #b8b8b8;
+      fill: var(--text-muted);
       transition: fill var(--duration-normal);
     }
 
@@ -589,8 +676,8 @@
 
     .legend-group {
       position: absolute;
-      background: rgba(22, 33, 62, 0.92);
-      border: 1px solid rgba(43, 122, 140, 0.3);
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: var(--radius-md);
       padding: 16px 20px;
       max-width: 320px;
@@ -620,7 +707,7 @@
       margin-bottom: 8px;
       font-size: var(--text-h3);
       font-weight: 500;
-      color: #c8d0d8;
+      color: var(--text);
     }
 
     .legend-item-color {
@@ -628,12 +715,12 @@
       height: 22px;
       border-radius: var(--radius-sm);
       flex-shrink: 0;
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid var(--border);
     }
 
     .tooltip {
       position: fixed;
-      background: rgba(22, 33, 62, 0.95);
+      background: var(--surface);
       color: var(--text);
       padding: 8px 12px;
       border-radius: var(--radius-sm);
@@ -4340,21 +4427,47 @@
 
     function loadThemePreference() {
       const stored = localStorage.getItem('tappymaps-theme');
-      if (stored === 'light') {
-        appState.darkMode = false;
-        document.body.classList.add('light-mode');
-          document.documentElement.dataset.theme = 'light';
-        document.getElementById('themeToggle').textContent = '☀️';
+      if (stored && stored !== 'dark') {
+        applyTheme(stored, false);
       }
     }
 
-    function toggleTheme() {
-      appState.darkMode = !appState.darkMode;
-      document.body.classList.toggle('light-mode');
-        document.documentElement.dataset.theme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
-      document.getElementById('themeToggle').textContent = appState.darkMode ? '🌙' : '☀️';
-      localStorage.setItem('tappymaps-theme', appState.darkMode ? 'dark' : 'light');
+    const themeList = [
+      { id: 'dark',   label: 'Midnight', icon: '🌙', isLight: false },
+      { id: 'light',  label: 'Light',    icon: '☀️', isLight: true },
+      { id: 'slate',  label: 'Slate',    icon: '🪨', isLight: false },
+      { id: 'warm',   label: 'Warm',     icon: '🏖️', isLight: true },
+      { id: 'forest', label: 'Forest',   icon: '🌲', isLight: false },
+      { id: 'ocean',  label: 'Ocean',    icon: '🌊', isLight: false }
+    ];
+    let currentThemeIndex = 0;
+
+    function applyTheme(themeId, save) {
+      const theme = themeList.find(t => t.id === themeId) || themeList[0];
+      currentThemeIndex = themeList.indexOf(theme);
+      // Set data-theme for CSS vars (dark uses no attribute or 'dark')
+      if (themeId === 'dark') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.dataset.theme = themeId;
+      }
+      // Light mode class for legacy overrides
+      if (theme.isLight) {
+        document.body.classList.add('light-mode');
+        appState.darkMode = false;
+      } else {
+        document.body.classList.remove('light-mode');
+        appState.darkMode = true;
+      }
+      document.getElementById('themeToggle').textContent = theme.icon;
+      document.getElementById('themeToggle').title = theme.label + ' theme';
+      if (save !== false) localStorage.setItem('tappymaps-theme', themeId);
       updateProGates();
+    }
+
+    function toggleTheme() {
+      currentThemeIndex = (currentThemeIndex + 1) % themeList.length;
+      applyTheme(themeList[currentThemeIndex].id);
     }
 
     // ============================================================================
@@ -4534,7 +4647,7 @@
       // In landscape, color bar + stats bar are hidden — use small offset
       // In portrait mobile, 65px clears the 56px color bar
       // On desktop, 65px clears the stats bar at the bottom of the container
-      const bottomOffset = isMobileLandscape ? '15px' : '65px';
+      const bottomOffset = isMobileLandscape ? '15px' : (isMobile ? '110px' : '65px');
 
       // Reset all position properties cleanly before applying new ones
       legend.style.top = 'auto';

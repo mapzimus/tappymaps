@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>Tappymaps - Paint the Nation</title>
+    <title>Tappymaps - Tap. Color. Share.</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
 <style>
     * {
@@ -1103,6 +1103,11 @@
     }
 
   
+    /* ===== HIDE MOBILE ELEMENTS ON DESKTOP ===== */
+    @media (min-width: 901px) {
+      .mobile-icon-bar, .mobile-panel, .mobile-panel-backdrop, .mobile-account-menu { display: none !important; }
+    }
+
     /* ===== MOBILE BOTTOM SHEET + FLOATING COLOR BAR ===== */
     @media (max-width: 900px) {
       .container {
@@ -5956,22 +5961,12 @@
       function updateMobileVisibility() {
         if (isMobile()) {
           if (isLandscape()) {
-            if (iconBar) iconBar.style.display = 'none';
             closeAllPanels();
           } else {
-            if (iconBar) {
-              iconBar.style.display = 'flex';
-              iconBar.style.position = 'fixed';
-              iconBar.style.bottom = '0';
-              iconBar.style.left = '0';
-              iconBar.style.right = '0';
-              iconBar.style.zIndex = '999';
-            }
+            buildQuickSwatches();
           }
           document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'inline');
-          buildQuickSwatches();
         } else {
-          if (iconBar) iconBar.style.display = 'none';
           closeAllPanels();
           document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'none');
         }

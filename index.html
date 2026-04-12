@@ -877,79 +877,46 @@
     }
 
     /* Quick Fill Section */
-    .region-buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      margin-bottom: 8px;
+    .qf-group { margin-bottom: 10px; }
+    .qf-group-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      font-weight: 600;
     }
-
-    .region-btn {
+    .qf-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .qf-chip {
       background: var(--surface-raised);
       color: var(--text);
       border: 1px solid var(--border);
-      padding: 6px 8px;
-      border-radius: var(--radius-sm);
-      font-size: var(--text-xs);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
       cursor: pointer;
-      transition: background-color var(--duration-normal), border-color var(--duration-normal);
+      transition: all var(--duration-normal);
       font-weight: 500;
+      white-space: nowrap;
     }
-
-    body.light-mode .region-btn {
+    body.light-mode .qf-chip {
       background: #e8e8e8;
       border-color: #d0d0d0;
-      color: var(--text);
     }
-
-    .region-btn:hover {
+    .qf-chip:hover {
       background: var(--accent);
       border-color: var(--accent);
       color: #fff;
     }
-
-    body.light-mode .region-btn:hover {
+    .qf-chip.qf-active {
       background: var(--accent);
       border-color: var(--accent);
       color: #fff;
-    }
-
-    .quick-fill-divider {
-      border-top: 1px solid var(--border);
-      margin: 8px 0;
-    }
-
-
-    .region-select-group {
-      display: flex;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-
-    .region-select {
-      flex: 1;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 6px;
-      border-radius: var(--radius-sm);
-      font-size: var(--text-xs);
-    }
-
-    .region-select-btn {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      padding: 6px 10px;
-      border-radius: var(--radius-sm);
-      font-size: var(--text-xs);
-      cursor: pointer;
-      font-weight: 600;
-      transition: background-color var(--duration-normal);
-    }
-
-    .region-select-btn:hover {
-      background: var(--accent-hover);
+      box-shadow: 0 0 6px rgba(14,165,233,0.35);
     }
 
     /* Mobile/responsive layout */
@@ -1200,7 +1167,7 @@
           max-height: 100dvh;
           max-height: 100vh;
         }
-        .mobile-color-bar {
+        .mobile-icon-bar, .mobile-panel, .mobile-panel-backdrop {
           display: none !important;
         }
         .stats-bar {
@@ -1211,63 +1178,199 @@
         }
       }
 
-      /* Floating color bar */
-      .mobile-color-bar {
-        display: flex;
+      /* === ICON BAR === */
+      .mobile-icon-bar {
+        display: none;
         position: fixed;
         bottom: 0; left: 0; right: 0;
-        height: 56px;
-        z-index: var(--z-color-bar);
-        background: var(--bg);
+        background: var(--surface);
         border-top: 1px solid var(--border);
-        align-items: center;
-        padding: 0 8px;
-        gap: 6px;
+        z-index: var(--z-color-bar);
+        flex-direction: column;
       }
-      .mobile-swatch-scroll {
+      .mobile-quick-swatches {
         display: flex;
         overflow-x: auto;
         gap: 6px;
-        flex: 1;
-        padding: 8px 0;
+        padding: 6px 10px;
         scrollbar-width: none;
-        -ms-overflow-style: none;
+        -webkit-overflow-scrolling: touch;
+        border-bottom: 1px solid var(--border-faint);
       }
-      .mobile-swatch-scroll::-webkit-scrollbar { display: none; }
-
-      .mobile-swatch {
-        width: 40px; height: 40px;
-        min-width: 40px;
-        border-radius: var(--radius-lg);
-        border: 2px solid transparent;
-        cursor: pointer;
-        transition: transform var(--duration-fast), border-color var(--duration-fast);
+      .mobile-quick-swatches::-webkit-scrollbar { display: none; }
+      .mobile-quick-swatches .mobile-swatch {
+        width: 32px; height: 32px; min-width: 32px;
+        border-radius: 8px; border: 2px solid transparent;
+        cursor: pointer; transition: transform 0.15s;
       }
-      .mobile-swatch.active {
-        border-color: white;
-        transform: scale(1.15);
+      .mobile-quick-swatches .mobile-swatch.active {
+        border-color: white; transform: scale(1.15);
         box-shadow: 0 0 8px rgba(14,165,233,0.4);
       }
-      body.light-mode .mobile-swatch.active {
+      body.light-mode .mobile-quick-swatches .mobile-swatch.active {
         border-color: #0F172A;
       }
-      .mobile-sheet-toggle {
-        width: 40px; height: 40px; min-width: 40px;
-        border-radius: var(--radius-lg);
-        background: var(--accent);
-        border: none;
-        color: white;
-        font-size: 20px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      .icon-bar-buttons {
+        display: flex; align-items: center;
+        justify-content: space-around;
+        padding: 4px 0 max(4px, env(safe-area-inset-bottom));
       }
+      .icon-bar-btn {
+        display: flex; flex-direction: column; align-items: center;
+        gap: 2px; background: none; border: none;
+        color: var(--text-muted); font-size: 10px;
+        cursor: pointer; padding: 6px 16px;
+        border-radius: var(--radius-md);
+        transition: color var(--duration-fast), background var(--duration-fast);
+      }
+      .icon-bar-btn.active {
+        color: var(--accent); background: rgba(14,165,233,0.1);
+      }
+      .icon-bar-btn span { font-size: 10px; font-weight: 600; }
+      .icon-bar-account { padding: 6px 10px; }
+      .icon-bar-account svg { width: 16px; height: 16px; }
+      /* === PANELS === */
+      .mobile-panel {
+        display: none; position: fixed;
+        bottom: 0; left: 0; right: 0;
+        max-height: 65vh;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        border-radius: 16px 16px 0 0;
+        z-index: 1001; flex-direction: column;
+        overflow: hidden;
+        transform: translateY(100%);
+        transition: transform var(--duration-normal) ease;
+      }
+      .mobile-panel.panel-open {
+        display: flex; transform: translateY(0);
+      }
+      .panel-header {
+        display: flex; align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-faint);
+        flex-shrink: 0;
+      }
+      .panel-title { font-weight: 700; font-size: 14px; color: var(--text); }
+      .panel-close {
+        background: none; border: none; color: var(--text-muted);
+        font-size: 22px; cursor: pointer; padding: 4px 8px; line-height: 1;
+      }
+      .panel-body {
+        overflow-y: auto; padding: 8px 16px 16px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .panel-section { margin-bottom: 14px; }
+      .panel-section-title {
+        font-size: 11px; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.05em;
+        color: var(--text-dim); margin-bottom: 6px;
+      }
+      .panel-input {
+        width: 100%; padding: 8px 10px;
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        color: var(--text); font-size: 13px;
+        box-sizing: border-box;
+      }
+      .panel-input:focus { outline: none; border-color: var(--accent); }
+      .panel-btn {
+        display: block; width: 100%; padding: 10px;
+        margin-bottom: 6px; background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm); color: var(--text);
+        font-size: 13px; cursor: pointer; text-align: center;
+      }
+      .panel-btn:active { background: var(--border-subtle); }
+      .panel-btn.panel-primary {
+        background: var(--accent); color: #fff;
+        border-color: var(--accent); font-weight: 600;
+      }
+      .panel-btn.panel-danger {
+        background: transparent; color: var(--accent);
+        border-color: var(--accent);
+      }
+      .panel-btn.panel-undo { flex: 1; }
+      .panel-undo-row { display: flex; gap: 8px; }
+      .panel-btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+      .panel-sm-btn {
+        flex: 1; min-width: 50px; padding: 8px 4px;
+        background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        color: var(--text); font-size: 12px;
+        cursor: pointer; text-align: center;
+      }
+      .panel-sm-btn:active { background: var(--border-subtle); }
+      .panel-sm-btn.active { border-color: var(--accent); color: var(--accent); }
+      .panel-toggle {
+        display: flex; align-items: center; gap: 8px;
+        padding: 8px 0; font-size: 13px;
+        color: var(--text); cursor: pointer;
+      }
+      .panel-toggle input[type="checkbox"] {
+        accent-color: var(--accent); width: 18px; height: 18px;
+      }
+      .panel-row {
+        display: flex; align-items: center;
+        gap: 8px; margin-bottom: 6px;
+      }
+      .panel-row label {
+        font-size: 13px; color: var(--text-muted); min-width: 80px;
+      }
+      .panel-color-picker {
+        width: 36px; height: 36px; border: none;
+        cursor: pointer; border-radius: var(--radius-sm);
+      }
+      .panel-hex-input {
+        flex: 1; padding: 8px; background: var(--surface-raised);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+        color: var(--text); font-size: 13px; font-family: monospace;
+      }
+      .panel-color-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+        gap: 6px;
+      }
+      .panel-color-grid .panel-swatch {
+        width: 36px; height: 36px;
+        border-radius: var(--radius-sm);
+        border: 2px solid transparent; cursor: pointer;
+      }
+      .panel-color-grid .panel-swatch.active {
+        border-color: white; transform: scale(1.1);
+      }
+      .pro-badge {
+        font-size: 9px; font-weight: 700; background: var(--accent);
+        color: #fff; padding: 1px 5px; border-radius: 3px;
+        margin-left: 4px; vertical-align: middle;
+      }
+      .mobile-account-menu {
+        display: none; position: fixed;
+        bottom: 70px; right: 8px;
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 8px; z-index: 1002;
+        min-width: 160px; box-shadow: var(--shadow-lg);
+      }
+      .mobile-account-menu.visible { display: block; }
+      .mobile-account-menu .panel-btn { margin-bottom: 4px; }
+      .mobile-panel-backdrop {
+        display: none; position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.3); z-index: 1000;
+      }
+      .mobile-panel-backdrop.visible { display: block; }
+
     }
 
     /* Hide mobile elements on desktop */
     @media (min-width: 901px) {
-      .mobile-color-bar { display: none; }
+      .mobile-icon-bar, .mobile-panel, .mobile-panel-backdrop, .mobile-account-menu { display: none !important; }
       .sheet-handle { display: none; }
     }
 
@@ -1279,6 +1382,48 @@
       cursor: grabbing;
     }
 
+
+
+    /* Multi-select mode */
+    @keyframes pulse-select {
+      0%, 100% { stroke-opacity: 1; stroke-width: 2.5; }
+      50% { stroke-opacity: 0.4; stroke-width: 1.5; }
+    }
+    .state-path.multi-selected {
+      stroke: var(--accent) !important;
+      stroke-width: 2.5px;
+      animation: pulse-select 1.2s ease-in-out infinite;
+      filter: drop-shadow(0 0 4px rgba(14,165,233,0.5));
+    }
+    .multi-select-bar {
+      display: none;
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-lg);
+      padding: 8px 16px;
+      z-index: 998;
+      gap: 8px;
+      align-items: center;
+      box-shadow: var(--shadow-lg);
+      white-space: nowrap;
+    }
+    .multi-select-bar.visible { display: flex; }
+    .multi-select-bar .ms-count {
+      font-size: 12px; color: var(--text-muted); font-weight: 600;
+    }
+    .multi-select-bar .ms-btn {
+      padding: 6px 14px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle); background: var(--surface-raised);
+      color: var(--text); font-size: 12px; cursor: pointer; font-weight: 600;
+    }
+    .multi-select-bar .ms-btn.ms-apply {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .multi-select-bar .ms-btn:active { opacity: 0.8; }
 
     /* Floating Symbology Menu (long-press on mobile) */
     .symbology-menu {
@@ -1731,6 +1876,10 @@
               Background
             </label>
           </div>
+          <div style="margin-top: 8px;">
+            <label style="font-size: 12px; margin-bottom: 4px; display: block; color: var(--text-muted);">Source citation</label>
+            <input type="text" id="sourceInput" placeholder="e.g. U.S. Census Bureau, 2024" maxlength="100" style="width: 100%; padding: 4px 8px; font-size: 11px; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text); box-sizing: border-box;">
+          </div>
         </div>
       </div>
 
@@ -1738,25 +1887,49 @@
       <div class="section" id="quickFillSection">
         <div class="section-title">Quick Fill <span class="pro-badge-inline" onclick="showUpgradeModal()">PRO</span></div>
         <div class="section-content">
-          <button class="btn secondary" id="selectAllBtn" style="margin-bottom: 8px;">✓ Select All</button>
-          <div class="region-buttons" id="regionButtons">
-            <button class="region-btn" data-region="northeast">Northeast</button>
-            <button class="region-btn" data-region="midwest">Midwest</button>
-            <button class="region-btn" data-region="south">South</button>
-            <button class="region-btn" data-region="west">West</button>
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 8px;">
+            <input type="checkbox" id="desktopMultiSelect" style="accent-color: #0EA5E9; cursor: pointer;">
+            Multi-select mode
+          </label>
+          <div class="qf-group">
+            <div class="qf-group-label">Actions</div>
+            <div class="qf-chip-row">
+              <button class="qf-chip" id="selectAllBtn">Fill All</button>
+              <button class="qf-chip" id="fillUncoloredBtn">Fill Empty</button>
+              <button class="qf-chip" id="invertSelectionBtn">Invert</button>
+              <button class="qf-chip" id="randomFillBtn">Random</button>
+            </div>
           </div>
-          <div class="quick-fill-divider"></div>
-          <div class="region-select-group">
-            <select class="region-select" id="clearRegionSelect">
-              <option value="">Clear Region...</option>
-              <option value="northeast">Northeast</option>
-              <option value="midwest">Midwest</option>
-              <option value="south">South</option>
-              <option value="west">West</option>
-            </select>
-            <button class="region-select-btn" id="clearRegionBtn">Clear</button>
+          <div class="qf-group">
+            <div class="qf-group-label">Census Regions</div>
+            <div class="qf-chip-row">
+              <button class="qf-chip qf-toggle" data-group="region" data-key="northeast">Northeast</button>
+              <button class="qf-chip qf-toggle" data-group="region" data-key="southeast">Southeast</button>
+              <button class="qf-chip qf-toggle" data-group="region" data-key="midwest">Midwest</button>
+              <button class="qf-chip qf-toggle" data-group="region" data-key="southwest">Southwest</button>
+              <button class="qf-chip qf-toggle" data-group="region" data-key="west">West</button>
+            </div>
           </div>
-          <button class="btn secondary" id="invertSelectionBtn">⟷ Invert</button>
+          <div class="qf-group">
+            <div class="qf-group-label">Geography</div>
+            <div class="qf-chip-row">
+              <button class="qf-chip qf-toggle" data-group="geo" data-key="coastal">Coastal</button>
+              <button class="qf-chip qf-toggle" data-group="geo" data-key="landlocked">Landlocked</button>
+              <button class="qf-chip qf-toggle" data-group="geo" data-key="border_canada">Canada Border</button>
+              <button class="qf-chip qf-toggle" data-group="geo" data-key="border_mexico">Mexico Border</button>
+              <button class="qf-chip qf-toggle" data-group="geo" data-key="great_lakes">Great Lakes</button>
+              <button class="qf-chip qf-toggle" data-group="geo" data-key="mountain">Mountain</button>
+            </div>
+          </div>
+          <div class="qf-group">
+            <div class="qf-group-label">Fun / History</div>
+            <div class="qf-chip-row">
+              <button class="qf-chip qf-toggle" data-group="fun" data-key="original_13">Original 13</button>
+              <button class="qf-chip qf-toggle" data-group="fun" data-key="last_10">Last 10 Admitted</button>
+              <button class="qf-chip qf-toggle" data-group="fun" data-key="most_populated">Top 10 Pop.</button>
+              <button class="qf-chip qf-toggle" data-group="fun" data-key="least_populated">Bottom 10 Pop.</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1859,6 +2032,7 @@
             <text x="90" y="14" text-anchor="middle" font-size="10" fill="currentColor" font-family="sans-serif" id="scaleMid">200</text>
             <text x="180" y="14" text-anchor="middle" font-size="10" fill="currentColor" font-family="sans-serif" id="scaleEnd">400 mi</text>
           </g>
+        <text id="mapSource" x="-10" y="668" font-size="9" fill="var(--text-muted)" font-family="system-ui, sans-serif" opacity="0" style="pointer-events:none;"></text>
         </svg>
         <div class="legend-group" id="legendDisplay" style="display: none;"></div>
         <div class="stats-bar" id="statsBar">
@@ -2044,6 +2218,9 @@
       legendEntries: [],
       mapTitle: 'My US Map',
       mapSubtitle: '',
+      mapSource: '',
+      multiSelectMode: false,
+      multiSelected: new Set(),
       titleColor: ACCENT,
       bgColor: '',
       scaleUnit: 'imperial',
@@ -2759,6 +2936,20 @@
       // Suppress click if long-press just fired (within last 800ms)
       if (window._tappyLongPressTime && (Date.now() - window._tappyLongPressTime < 800)) return;
       const pathEl = e.target.closest('.state-path') || e.target;
+
+      // Multi-select mode: toggle selection instead of coloring
+      if (appState.multiSelectMode) {
+        if (appState.multiSelected.has(stateName)) {
+          appState.multiSelected.delete(stateName);
+          pathEl.classList.remove('multi-selected');
+        } else {
+          appState.multiSelected.add(stateName);
+          pathEl.classList.add('multi-selected');
+        }
+        updateMultiSelectBar();
+        return;
+      }
+
       saveHistory();
       // Toggle: if state is already this color, uncolor it
       if (appState.stateColors[stateName] === appState.selectedColor) {
@@ -2993,64 +3184,115 @@
     // QUICK FILL FUNCTIONS
     // ============================================================================
 
+    const quickFillGroups = {
+      region: {
+        northeast: ['Connecticut', 'Maine', 'Massachusetts', 'New Hampshire', 'Rhode Island', 'Vermont', 'New Jersey', 'New York', 'Pennsylvania'],
+        southeast: ['Alabama', 'Arkansas', 'Delaware', 'Florida', 'Georgia', 'Kentucky', 'Louisiana', 'Maryland', 'Mississippi', 'North Carolina', 'South Carolina', 'Tennessee', 'Virginia', 'West Virginia'],
+        midwest: ['Illinois', 'Indiana', 'Iowa', 'Kansas', 'Michigan', 'Minnesota', 'Missouri', 'Nebraska', 'North Dakota', 'Ohio', 'South Dakota', 'Wisconsin'],
+        southwest: ['Arizona', 'New Mexico', 'Oklahoma', 'Texas'],
+        west: ['Alaska', 'California', 'Colorado', 'Hawaii', 'Idaho', 'Montana', 'Nevada', 'Oregon', 'Utah', 'Washington', 'Wyoming']
+      },
+      geo: {
+        coastal: ['Alaska', 'Alabama', 'California', 'Connecticut', 'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Mississippi', 'New Hampshire', 'New Jersey', 'New York', 'North Carolina', 'Oregon', 'Rhode Island', 'South Carolina', 'Texas', 'Virginia', 'Washington'],
+        landlocked: ['Arizona', 'Arkansas', 'Colorado', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Michigan', 'Minnesota', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Mexico', 'North Dakota', 'Ohio', 'Oklahoma', 'Pennsylvania', 'South Dakota', 'Tennessee', 'Utah', 'Vermont', 'West Virginia', 'Wisconsin', 'Wyoming'],
+        border_canada: ['Alaska', 'Idaho', 'Maine', 'Michigan', 'Minnesota', 'Montana', 'New Hampshire', 'New York', 'North Dakota', 'Ohio', 'Pennsylvania', 'Vermont', 'Washington'],
+        border_mexico: ['Arizona', 'California', 'New Mexico', 'Texas'],
+        great_lakes: ['Illinois', 'Indiana', 'Michigan', 'Minnesota', 'New York', 'Ohio', 'Pennsylvania', 'Wisconsin'],
+        mountain: ['Colorado', 'Idaho', 'Montana', 'Nevada', 'New Mexico', 'Utah', 'Wyoming', 'Arizona']
+      },
+      fun: {
+        original_13: ['Connecticut', 'Delaware', 'Georgia', 'Maryland', 'Massachusetts', 'New Hampshire', 'New Jersey', 'New York', 'North Carolina', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'Virginia'],
+        last_10: ['Alaska', 'Hawaii', 'Arizona', 'New Mexico', 'Oklahoma', 'Utah', 'Colorado', 'North Dakota', 'South Dakota', 'Montana'],
+        most_populated: ['California', 'Texas', 'Florida', 'New York', 'Pennsylvania', 'Illinois', 'Ohio', 'Georgia', 'North Carolina', 'Michigan'],
+        least_populated: ['Wyoming', 'Vermont', 'Alaska', 'North Dakota', 'South Dakota', 'Delaware', 'Montana', 'Rhode Island', 'Maine', 'New Hampshire']
+      }
+    };
+
+    // Track which toggle chips are active
+    const _qfActiveToggles = new Set();
+
     function selectAll() {
       saveHistory();
-      const all50States = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
-      all50States.forEach(state => {
-        appState.stateColors[state] = appState.selectedColor;
-      });
-      renderMap();
-      updateLegendDisplay();
-      updateStatsBar();
-      updateURL();
-      showMessage('All states selected', 'success');
+      const all50 = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
+      all50.forEach(s => { appState.stateColors[s] = appState.selectedColor; });
+      renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
+      showMessage('All states filled', 'success');
     }
 
-    function colorRegion(region) {
+    function fillUncolored() {
       saveHistory();
-      const states = (appState.regions[region] || []).filter(s => !nonColorable.has(s));
-      states.forEach(state => {
-        appState.stateColors[state] = appState.selectedColor;
+      const all50 = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
+      let count = 0;
+      all50.forEach(s => {
+        if (!appState.stateColors[s]) { appState.stateColors[s] = appState.selectedColor; count++; }
       });
-      renderMap();
-      updateLegendDisplay();
-      updateStatsBar();
-      updateURL();
-      showMessage(`${region.charAt(0).toUpperCase() + region.slice(1)} region colored`, 'success');
-    }
-
-    function clearRegion(region) {
-      saveHistory();
-      const states = appState.regions[region] || [];
-      states.forEach(state => {
-        delete appState.stateColors[state];
-      });
-      renderMap();
-      updateLegendDisplay();
-      updateStatsBar();
-      updateURL();
-      showMessage(`${region.charAt(0).toUpperCase() + region.slice(1)} region cleared`, 'success');
+      renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
+      showMessage(count ? `${count} empty states filled` : 'No empty states', 'success');
     }
 
     function invertSelection() {
       saveHistory();
-      const all50States = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
+      const all50 = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
       const newColors = {};
-      all50States.forEach(state => {
-        if (appState.stateColors[state]) {
-          // Keep colored states colored
-          newColors[state] = appState.stateColors[state];
-        } else {
-          // Color uncolored states
-          newColors[state] = appState.selectedColor;
-        }
+      all50.forEach(s => {
+        if (!appState.stateColors[s]) newColors[s] = appState.selectedColor;
       });
       appState.stateColors = newColors;
-      renderMap();
-      updateLegendDisplay();
-      updateStatsBar();
-      updateURL();
+      renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
       showMessage('Selection inverted', 'success');
+    }
+
+    function randomFill() {
+      saveHistory();
+      const all50 = Object.keys(appState.stateAbbreviations).filter(s => !nonColorable.has(s));
+      const count = Math.floor(Math.random() * 20) + 8;
+      const shuffled = all50.sort(() => Math.random() - 0.5);
+      shuffled.slice(0, count).forEach(s => { appState.stateColors[s] = appState.selectedColor; });
+      renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
+      showMessage(`${count} random states filled`, 'success');
+    }
+
+    function toggleQuickFillGroup(group, key, chipEl) {
+      const toggleKey = group + ':' + key;
+      const states = (quickFillGroups[group] && quickFillGroups[group][key]) || [];
+      if (!states.length) return;
+      saveHistory();
+
+      if (_qfActiveToggles.has(toggleKey)) {
+        // Remove — clear only these states
+        states.forEach(s => { delete appState.stateColors[s]; });
+        _qfActiveToggles.delete(toggleKey);
+        chipEl.classList.remove('qf-active');
+        showMessage(`Cleared ${states.length} states`, 'success');
+      } else {
+        // Fill these states with current color
+        states.forEach(s => { if (!nonColorable.has(s)) appState.stateColors[s] = appState.selectedColor; });
+        _qfActiveToggles.add(toggleKey);
+        chipEl.classList.add('qf-active');
+        showMessage(`Filled ${states.length} states`, 'success');
+      }
+      renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
+    }
+
+    // Keep colorRegion/clearRegion for backwards compat (mobile symbology menu etc.)
+    function colorRegion(region) {
+      const mapping = { northeast: 'northeast', midwest: 'midwest', south: 'southeast', west: 'west' };
+      const key = mapping[region] || region;
+      const states = (quickFillGroups.region && quickFillGroups.region[key]) || (appState.regions[region] || []);
+      saveHistory();
+      states.filter(s => !nonColorable.has(s)).forEach(s => { appState.stateColors[s] = appState.selectedColor; });
+      renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
+      showMessage(`Region colored`, 'success');
+    }
+
+    function clearRegion(region) {
+      const mapping = { northeast: 'northeast', midwest: 'midwest', south: 'southeast', west: 'west' };
+      const key = mapping[region] || region;
+      const states = (quickFillGroups.region && quickFillGroups.region[key]) || (appState.regions[region] || []);
+      saveHistory();
+      states.forEach(s => { delete appState.stateColors[s]; });
+      renderMap(); updateLegendDisplay(); updateStatsBar(); updateURL();
+      showMessage(`Region cleared`, 'success');
     }
 
     // ============================================================================
@@ -3073,6 +3315,67 @@
         updateURL();
         showMessage('Undone', 'success');
       }
+    // --- Multi-Select Mode ---
+    function updateMultiSelectBar() {
+      const bar = document.getElementById('multiSelectBar');
+      const countEl = document.getElementById('msCount');
+      if (!bar) return;
+      const count = appState.multiSelected.size;
+      if (count > 0) {
+        bar.classList.add('visible');
+        if (countEl) countEl.textContent = count + ' selected';
+      } else {
+        bar.classList.remove('visible');
+      }
+    }
+
+    function applyMultiSelect() {
+      if (appState.multiSelected.size === 0) return;
+      saveHistory();
+      appState.multiSelected.forEach(function(stateName) {
+        appState.stateColors[stateName] = appState.selectedColor;
+        const path = document.querySelector('.state-path[data-state="' + stateName + '"]');
+        if (path) {
+          path.style.fill = appState.selectedColor;
+          path.classList.remove('multi-selected');
+        }
+        if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
+      });
+      appState.multiSelected.clear();
+      updateMultiSelectBar();
+      updateLegendDisplay();
+      updateStatsBar();
+      updateURL();
+      showMessage('Color applied to selected states', 'success');
+    }
+
+    function clearMultiSelect() {
+      appState.multiSelected.forEach(function(stateName) {
+        const path = document.querySelector('.state-path[data-state="' + stateName + '"]');
+        if (path) path.classList.remove('multi-selected');
+      });
+      appState.multiSelected.clear();
+      updateMultiSelectBar();
+    }
+
+    function toggleMultiSelectMode(enabled) {
+      appState.multiSelectMode = enabled;
+      if (!enabled) clearMultiSelect();
+      // Update the checkbox if it exists
+      var cb = document.getElementById('mobileMultiSelect');
+      if (cb) cb.checked = enabled;
+    }
+
+    // Wire multi-select bar buttons
+    document.getElementById('msApply')?.addEventListener('click', applyMultiSelect);
+    document.getElementById('msClear')?.addEventListener('click', clearMultiSelect);
+    // Desktop multi-select toggle
+    document.getElementById('desktopMultiSelect')?.addEventListener('change', function(e) {
+      toggleMultiSelectMode(e.target.checked);
+    });
+
+
+
     }
 
     // ============================================================================
@@ -3085,7 +3388,8 @@
         legend: appState.legendEntries,
         title: appState.mapTitle,
         subtitle: appState.mapSubtitle,
-        legendTitle: appState.legendTitle
+        legendTitle: appState.legendTitle,
+        source: appState.mapSource
       };
       return btoa(JSON.stringify(state));
     }
@@ -3117,6 +3421,7 @@
           appState.legendEntries = state.legend || [];
           appState.mapTitle = state.title || 'My US Map';
           appState.mapSubtitle = state.subtitle || '';
+          appState.mapSource = state.source || '';
           if (state.legendTitle) {
             appState.legendTitle = state.legendTitle;
             document.getElementById('legendTitleInput').value = state.legendTitle;
@@ -3124,6 +3429,13 @@
 
           document.getElementById('mapTitle').textContent = appState.mapTitle;
           document.getElementById('mapSubtitle').textContent = appState.mapSubtitle;
+
+          // Restore source text
+          var srcEl = document.getElementById('mapSource');
+          if (srcEl) {
+            srcEl.textContent = appState.mapSource;
+            srcEl.style.opacity = appState.mapSource ? '1' : '0';
+          }
 
           renderMap();
           updateLegendBuilder();
@@ -4661,23 +4973,22 @@
         if (!gateProFeature('quick fill')) return;
         selectAll();
       });
+      document.getElementById('fillUncoloredBtn').addEventListener('click', () => {
+        if (!gateProFeature('quick fill')) return;
+        fillUncolored();
+      });
       document.getElementById('invertSelectionBtn').addEventListener('click', () => {
         if (!gateProFeature('invert')) return;
         invertSelection();
       });
-      document.getElementById('clearRegionBtn').addEventListener('click', () => {
-        if (!gateProFeature('region clear')) return;
-        const region = document.getElementById('clearRegionSelect').value;
-        if (region) {
-          clearRegion(region);
-          document.getElementById('clearRegionSelect').value = '';
-        }
+      document.getElementById('randomFillBtn').addEventListener('click', () => {
+        if (!gateProFeature('quick fill')) return;
+        randomFill();
       });
-      document.querySelectorAll('.region-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          if (!gateProFeature('region fill')) return;
-          const region = e.target.getAttribute('data-region');
-          colorRegion(region);
+      document.querySelectorAll('.qf-toggle').forEach(chip => {
+        chip.addEventListener('click', () => {
+          if (!gateProFeature('quick fill')) return;
+          toggleQuickFillGroup(chip.dataset.group, chip.dataset.key, chip);
         });
       });
 
@@ -4796,6 +5107,18 @@
         appState.bgColor = e.target.value;
         document.getElementById('mapContainer').style.backgroundColor = e.target.value;
       });
+
+    // Source citation input
+    document.getElementById('sourceInput')?.addEventListener('input', function(e) {
+      appState.mapSource = e.target.value;
+      const srcEl = document.getElementById('mapSource');
+      if (srcEl) {
+        srcEl.textContent = e.target.value;
+        srcEl.style.opacity = e.target.value ? '1' : '0';
+      }
+      updateURL();
+    });
+
 
       // County view
       document.getElementById('countyViewBtn').addEventListener('click', openCountySelector);
@@ -4969,15 +5292,210 @@
         darkMode: true
       },
       {
-        id: 'zombie-apocalypse',
-        title: "States I'd Survive a Zombie Apocalypse In",
-        category: 'fun',
-        presetColors: ['#22c55e', '#eab308', '#ef4444', '#1e293b'],
+        id: 'best-state-bbq',
+        title: 'States Ranked by BBQ',
+        category: 'food',
+        presetColors: ['#dc2626', '#f97316', '#fbbf24', '#a3e635', '#d1d5db'],
         legendEntries: [
-          { color: '#22c55e', label: 'I survive' },
-          { color: '#eab308', label: '50/50' },
-          { color: '#ef4444', label: "I'm toast" },
-          { color: '#1e293b', label: 'Already overrun' }
+          { color: '#dc2626', label: 'World class' },
+          { color: '#f97316', label: 'Legit' },
+          { color: '#fbbf24', label: 'Decent' },
+          { color: '#a3e635', label: 'Trying their best' },
+          { color: '#d1d5db', label: 'What BBQ?' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-ive-slept-in',
+        title: "States I've Slept In",
+        category: 'travel',
+        presetColors: ['#6366f1', '#a78bfa', '#e0e7ff'],
+        legendEntries: [
+          { color: '#6366f1', label: 'Lived there' },
+          { color: '#a78bfa', label: 'Stayed overnight' },
+          { color: '#e0e7ff', label: 'Slept in my car' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-weather',
+        title: 'States Ranked by Weather',
+        category: 'opinions',
+        presetColors: ['#f59e0b', '#22d3ee', '#3b82f6', '#6b7280', '#1e3a5f'],
+        legendEntries: [
+          { color: '#f59e0b', label: 'Perfect' },
+          { color: '#22d3ee', label: 'Pretty nice' },
+          { color: '#3b82f6', label: 'Tolerable' },
+          { color: '#6b7280', label: 'Rough' },
+          { color: '#1e3a5f', label: 'Unhinged weather' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-cost-of-living',
+        title: 'States by Cost of Living',
+        category: 'data',
+        presetColors: ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e'],
+        legendEntries: [
+          { color: '#ef4444', label: 'Absurd' },
+          { color: '#f97316', label: 'Expensive' },
+          { color: '#eab308', label: 'Average' },
+          { color: '#84cc16', label: 'Affordable' },
+          { color: '#22c55e', label: 'Cheap' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-accent',
+        title: 'Best State Accents',
+        category: 'fun',
+        presetColors: ['#ec4899', '#f472b6', '#f9a8d4', '#e5e7eb'],
+        legendEntries: [
+          { color: '#ec4899', label: 'Iconic' },
+          { color: '#f472b6', label: 'Recognizable' },
+          { color: '#f9a8d4', label: 'Subtle' },
+          { color: '#e5e7eb', label: 'What accent?' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-ive-eaten-in',
+        title: "States I've Had a Meal In",
+        category: 'food',
+        presetColors: ['#f97316', '#fbbf24', '#fef3c7'],
+        legendEntries: [
+          { color: '#f97316', label: 'Memorable meal' },
+          { color: '#fbbf24', label: 'Ate something' },
+          { color: '#fef3c7', label: 'Gas station snack' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-road-trip-scenery',
+        title: 'Best States for Road Trip Scenery',
+        category: 'travel',
+        presetColors: ['#059669', '#34d399', '#a7f3d0', '#fde68a', '#d1d5db'],
+        legendEntries: [
+          { color: '#059669', label: 'Jaw-dropping' },
+          { color: '#34d399', label: 'Beautiful' },
+          { color: '#a7f3d0', label: 'Nice enough' },
+          { color: '#fde68a', label: 'Flat but charming' },
+          { color: '#d1d5db', label: 'Cornfield simulator' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-sports-fans',
+        title: 'States by Sports Fan Intensity',
+        category: 'opinions',
+        presetColors: ['#dc2626', '#f97316', '#3b82f6', '#93c5fd', '#e5e7eb'],
+        legendEntries: [
+          { color: '#dc2626', label: 'Unhinged' },
+          { color: '#f97316', label: 'Passionate' },
+          { color: '#3b82f6', label: 'Casual' },
+          { color: '#93c5fd', label: 'Bandwagon' },
+          { color: '#e5e7eb', label: 'What sport?' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-dating-scene',
+        title: 'States Ranked by Dating Scene',
+        category: 'fun',
+        presetColors: ['#e11d48', '#fb7185', '#fda4af', '#d1d5db'],
+        legendEntries: [
+          { color: '#e11d48', label: 'Great scene' },
+          { color: '#fb7185', label: 'Decent' },
+          { color: '#fda4af', label: 'Slim pickings' },
+          { color: '#d1d5db', label: "Don't bother" }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-coffee',
+        title: 'Best Coffee States',
+        category: 'food',
+        presetColors: ['#78350f', '#92400e', '#b45309', '#d4a373', '#e5e7eb'],
+        legendEntries: [
+          { color: '#78350f', label: 'Elite coffee culture' },
+          { color: '#92400e', label: 'Solid cafes' },
+          { color: '#b45309', label: 'Chain coffee only' },
+          { color: '#d4a373', label: 'Gas station brew' },
+          { color: '#e5e7eb', label: 'Sweet tea state' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-ive-gotten-lost-in',
+        title: "States I've Gotten Lost In",
+        category: 'travel',
+        presetColors: ['#7c3aed', '#facc15'],
+        legendEntries: [
+          { color: '#7c3aed', label: 'Got lost' },
+          { color: '#facc15', label: 'Found myself' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-haunted-factor',
+        title: 'Most Haunted States',
+        category: 'fun',
+        presetColors: ['#1e1b4b', '#4c1d95', '#7c3aed', '#ddd6fe'],
+        legendEntries: [
+          { color: '#1e1b4b', label: 'Definitely haunted' },
+          { color: '#4c1d95', label: 'Suspicious vibes' },
+          { color: '#7c3aed', label: 'A little spooky' },
+          { color: '#ddd6fe', label: 'Too boring to haunt' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-nightlife',
+        title: 'Best States for Nightlife',
+        category: 'opinions',
+        presetColors: ['#a855f7', '#d946ef', '#f0abfc', '#e5e7eb'],
+        legendEntries: [
+          { color: '#a855f7', label: 'Legendary' },
+          { color: '#d946ef', label: 'Fun night out' },
+          { color: '#f0abfc', label: 'One good bar' },
+          { color: '#e5e7eb', label: 'Closes at 9pm' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-where-ive-used-gps',
+        title: "States Where I've Needed GPS",
+        category: 'travel',
+        presetColors: ['#0ea5e9', '#bae6fd'],
+        legendEntries: [
+          { color: '#0ea5e9', label: 'Completely lost without GPS' },
+          { color: '#bae6fd', label: 'Could navigate by feel' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-by-friendliness',
+        title: 'Friendliest States',
+        category: 'personal',
+        presetColors: ['#22c55e', '#86efac', '#fbbf24', '#f87171'],
+        legendEntries: [
+          { color: '#22c55e', label: 'Ridiculously friendly' },
+          { color: '#86efac', label: 'Warm' },
+          { color: '#fbbf24', label: 'Polite but distant' },
+          { color: '#f87171', label: 'Leave me alone energy' }
+        ],
+        darkMode: true
+      },
+      {
+        id: 'states-id-pick-in-draft',
+        title: 'State Draft Pick Order',
+        category: 'fun',
+        presetColors: ['#eab308', '#a3a3a3', '#b45309', '#e5e7eb'],
+        legendEntries: [
+          { color: '#eab308', label: '1st round' },
+          { color: '#a3a3a3', label: '2nd round' },
+          { color: '#b45309', label: '3rd round' },
+          { color: '#e5e7eb', label: 'Undrafted' }
         ],
         darkMode: true
       }
@@ -5022,44 +5540,10 @@
       updateStatsBar();
       updateURL();
 
-      // Rebuild mobile swatches if in mobile mode
+      // Rebuild mobile quick swatches if in mobile mode
       if (window.innerWidth <= 900) {
-        const swatchScroll = document.getElementById('mobileSwatchScroll');
-        if (swatchScroll) {
-          // Trigger a MutationObserver-based rebuild by touching the grid
-          const grid = document.querySelector('.color-grid, .swatch-grid');
-          if (grid) {
-            grid.dispatchEvent(new Event('change'));
-            // Fallback: manually rebuild
-            setTimeout(() => {
-              swatchScroll.innerHTML = '';
-              appState.presetColors.forEach(color => {
-                const el = document.createElement('div');
-                el.className = 'mobile-swatch';
-                el.style.cssText = 'width:40px;height:40px;min-width:40px;border-radius:10px;border:2px solid transparent;cursor:pointer;';
-                el.style.backgroundColor = color;
-                if (appState.selectedColor === color) {
-                  el.classList.add('active');
-                  el.style.borderColor = 'white';
-                  el.style.transform = 'scale(1.15)';
-                }
-                el.addEventListener('click', () => {
-                  selectColor(color);
-                  // Update mobile swatch active states
-                  swatchScroll.querySelectorAll('.mobile-swatch').forEach(s => {
-                    const c = s.style.backgroundColor;
-                    const hex = c.startsWith('#') ? c : '#' + c.match(/\d+/g).slice(0,3).map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
-                    const isActive = hex === color;
-                    s.classList.toggle('active', isActive);
-                    s.style.borderColor = isActive ? 'white' : 'transparent';
-                    s.style.transform = isActive ? 'scale(1.15)' : '';
-                  });
-                });
-                swatchScroll.appendChild(el);
-              });
-            }, 100);
-          }
-        }
+        const grid = document.querySelector('.color-grid, .swatch-grid');
+        if (grid) grid.dispatchEvent(new Event('change'));
       }
 
       // Close picker
@@ -5168,75 +5652,277 @@
     </div>
   </div>
 
-  <!-- Mobile Floating Color Bar -->
-  <div class="mobile-color-bar" id="mobileColorBar">
-    <div class="mobile-swatch-scroll" id="mobileSwatchScroll"></div>
-    <button class="mobile-sheet-toggle" id="mobileSheetToggle" aria-label="Toggle controls">☰</button>
+
+  <!-- Multi-Select Floating Bar -->
+  <div class="multi-select-bar" id="multiSelectBar">
+    <span class="ms-count" id="msCount">0 selected</span>
+    <button class="ms-btn ms-apply" id="msApply">Apply Color</button>
+    <button class="ms-btn" id="msClear">Clear</button>
+  </div>
+
+  <!-- Panel Backdrop -->
+  <div class="mobile-panel-backdrop" id="mobilePanelBackdrop"></div>
+
+  <!-- Mobile Icon Bar -->
+  <div class="mobile-icon-bar" id="mobileIconBar">
+    <div class="mobile-quick-swatches" id="mobileQuickSwatches"></div>
+    <div class="icon-bar-buttons">
+      <button class="icon-bar-btn" id="iconBarTap" data-panel="tapPanel" aria-label="Tap tools">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M18.5 18.5L22 22"/></svg>
+        <span>Tap</span>
+      </button>
+      <button class="icon-bar-btn" id="iconBarColor" data-panel="colorPanel" aria-label="Color tools">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5" opacity="0.7"/><circle cx="8.5" cy="7.5" r="2.5" opacity="0.7"/><circle cx="6.5" cy="12" r="2.5" opacity="0.5"/></svg>
+        <span>Color</span>
+      </button>
+      <button class="icon-bar-btn" id="iconBarShare" data-panel="sharePanel" aria-label="Share tools">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        <span>Share</span>
+      </button>
+      <button class="icon-bar-btn icon-bar-account" id="iconBarAccount" aria-label="Account">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- TAP Panel -->
+  <div class="mobile-panel" id="tapPanel">
+    <div class="panel-header"><span class="panel-title">Tap Tools</span><button class="panel-close" aria-label="Close">&times;</button></div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">Map Title</div>
+        <input type="text" class="panel-input" id="mobileTitleInput" placeholder="Map title" maxlength="60">
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Source</div>
+        <input type="text" class="panel-input" id="mobileSourceInput" placeholder="e.g. U.S. Census Bureau, 2024" maxlength="100">
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Selection Mode</div>
+        <label class="panel-toggle"><input type="checkbox" id="mobileMultiSelect"><span>Multi-select (tap to select, then apply)</span></label>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Templates</div>
+        <button class="panel-btn" id="mobileBrowseTemplates">Browse Templates</button>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Display</div>
+        <label class="panel-toggle"><input type="checkbox" id="mobileToggleLabels"><span>State Labels</span></label>
+        <label class="panel-toggle"><input type="checkbox" id="mobileToggleOcean"><span>Ocean Background</span></label>
+        <label class="panel-toggle"><input type="checkbox" id="mobileToggleNorthArrow"><span>North Arrow</span></label>
+        <label class="panel-toggle"><input type="checkbox" id="mobileToggleScaleBar"><span>Scale Bar</span></label>
+        <label class="panel-toggle"><input type="checkbox" id="mobileToggleLogo"><span>Show Logo</span></label>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Legend Position</div>
+        <div class="panel-btn-row" id="mobileLegendPosition">
+          <button class="panel-sm-btn" data-pos="top-left">TL</button>
+          <button class="panel-sm-btn" data-pos="top-right">TR</button>
+          <button class="panel-sm-btn" data-pos="bottom-left">BL</button>
+          <button class="panel-sm-btn" data-pos="bottom-right">BR</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <button class="panel-btn" id="mobileCountyToggle">County View <span class="pro-badge">PRO</span></button>
+      </div>
+      <div class="panel-section">
+        <button class="panel-btn" id="mobileThemeToggle">Toggle Theme</button>
+        <button class="panel-btn" id="mobileHelp">Help</button>
+      </div>
+      <div class="panel-section panel-undo-row">
+        <button class="panel-btn panel-undo" id="mobileUndoTap">&#x21A9; Undo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLOR Panel -->
+  <div class="mobile-panel" id="colorPanel">
+    <div class="panel-header"><span class="panel-title">Color Tools</span><button class="panel-close" aria-label="Close">&times;</button></div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">Palette</div>
+        <div class="panel-color-grid" id="mobilePaletteGrid"></div>
+        <div class="panel-row" style="margin-top:8px;">
+          <input type="color" id="mobileColorPicker" class="panel-color-picker">
+          <input type="text" id="mobileHexInput" class="panel-hex-input" placeholder="#hex" maxlength="7">
+          <button class="panel-sm-btn" id="mobileAddColor">+</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Palette Presets</div>
+        <div class="panel-btn-row">
+          <button class="panel-sm-btn" id="mobileDefaultPalette">Default</button>
+          <button class="panel-sm-btn" id="mobileColorblindPalette">Colorblind</button>
+          <button class="panel-sm-btn" id="mobileMorePalettes">More</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Legend Builder <span class="pro-badge">PRO</span></div>
+        <div id="mobileLegendEntries"></div>
+        <div class="panel-btn-row">
+          <button class="panel-sm-btn" id="mobileAutoLegend">Auto</button>
+          <button class="panel-sm-btn" id="mobileAddLegend">+ Entry</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Quick Fill <span class="pro-badge">PRO</span></div>
+        <div class="qf-chip-row" style="margin-bottom:8px;">
+          <button class="qf-chip" id="mobileSelectAll">Fill All</button>
+          <button class="qf-chip" id="mobileFillEmpty">Fill Empty</button>
+          <button class="qf-chip" id="mobileInvert">Invert</button>
+          <button class="qf-chip" id="mobileRandom">Random</button>
+        </div>
+        <div class="qf-group-label" style="margin-top:4px;">Regions</div>
+        <div class="qf-chip-row" style="margin-bottom:6px;">
+          <button class="qf-chip qf-toggle" data-group="region" data-key="northeast">NE</button>
+          <button class="qf-chip qf-toggle" data-group="region" data-key="southeast">SE</button>
+          <button class="qf-chip qf-toggle" data-group="region" data-key="midwest">MW</button>
+          <button class="qf-chip qf-toggle" data-group="region" data-key="southwest">SW</button>
+          <button class="qf-chip qf-toggle" data-group="region" data-key="west">W</button>
+        </div>
+        <div class="qf-group-label">Geography</div>
+        <div class="qf-chip-row" style="margin-bottom:6px;">
+          <button class="qf-chip qf-toggle" data-group="geo" data-key="coastal">Coastal</button>
+          <button class="qf-chip qf-toggle" data-group="geo" data-key="landlocked">Landlocked</button>
+          <button class="qf-chip qf-toggle" data-group="geo" data-key="border_canada">CAN</button>
+          <button class="qf-chip qf-toggle" data-group="geo" data-key="border_mexico">MEX</button>
+          <button class="qf-chip qf-toggle" data-group="geo" data-key="great_lakes">Lakes</button>
+          <button class="qf-chip qf-toggle" data-group="geo" data-key="mountain">Mtn</button>
+        </div>
+        <div class="qf-group-label">Fun / History</div>
+        <div class="qf-chip-row">
+          <button class="qf-chip qf-toggle" data-group="fun" data-key="original_13">13 Colonies</button>
+          <button class="qf-chip qf-toggle" data-group="fun" data-key="last_10">Last 10</button>
+          <button class="qf-chip qf-toggle" data-group="fun" data-key="most_populated">Top Pop</button>
+          <button class="qf-chip qf-toggle" data-group="fun" data-key="least_populated">Low Pop</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-row"><label>Title Color</label><input type="color" id="mobileTitleColor" class="panel-color-picker"></div>
+        <div class="panel-row"><label>Background</label><input type="color" id="mobileBgColor" class="panel-color-picker"></div>
+      </div>
+      <div class="panel-section panel-undo-row">
+        <button class="panel-btn panel-undo" id="mobileUndoColor">&#x21A9; Undo</button>
+        <button class="panel-btn panel-danger" id="mobileClearAll">Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHARE Panel -->
+  <div class="mobile-panel" id="sharePanel">
+    <div class="panel-header"><span class="panel-title">Save & Share</span><button class="panel-close" aria-label="Close">&times;</button></div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <button class="panel-btn panel-primary" id="mobileExportPNG">Export PNG</button>
+        <button class="panel-btn" id="mobileExportSVG">Export SVG <span class="pro-badge">PRO</span></button>
+        <button class="panel-btn" id="mobileCopyClipboard">Copy to Clipboard</button>
+        <button class="panel-btn" id="mobileShareLink">Share Link <span class="pro-badge">PRO</span></button>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Config</div>
+        <button class="panel-btn" id="mobileSaveConfig">Save Config</button>
+        <button class="panel-btn" id="mobileLoadConfig">Load Config</button>
+      </div>
+      <div class="panel-section panel-undo-row">
+        <button class="panel-btn panel-undo" id="mobileUndoShare">&#x21A9; Undo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Menu -->
+  <div class="mobile-account-menu" id="mobileAccountMenu">
+    <div id="mobileAccountStatus" style="padding:6px 10px;font-size:12px;color:var(--text-muted);"></div>
+    <button class="panel-btn" id="mobileSignIn">Sign In</button>
+    <button class="panel-btn" id="mobileSignOut" style="display:none;">Sign Out</button>
+    <button class="panel-btn panel-primary" id="mobileUpgrade">Upgrade to Pro</button>
   </div>
 
 <script>
     // ===== MOBILE UX =====
     (function() {
       const isMobile = () => window.innerWidth <= 900;
-      const sidebar = document.getElementById('sidebarSheet');
-      const handle = document.getElementById('sheetHandle');
-      const toggleBtn = document.getElementById('mobileSheetToggle');
-      const colorBar = document.getElementById('mobileColorBar');
-      const swatchScroll = document.getElementById('mobileSwatchScroll');
+      const isLandscape = () => window.matchMedia('(orientation: landscape)').matches;
 
-      // --- Force mobile element visibility via JS (iOS CSS workaround) ---
-      function isLandscape() {
-        return window.matchMedia('(orientation: landscape)').matches;
+      // --- DOM refs ---
+      const iconBar = document.getElementById('mobileIconBar');
+      const quickSwatches = document.getElementById('mobileQuickSwatches');
+      const backdrop = document.getElementById('mobilePanelBackdrop');
+      const accountMenu = document.getElementById('mobileAccountMenu');
+      const panels = {
+        tapPanel: document.getElementById('tapPanel'),
+        colorPanel: document.getElementById('colorPanel'),
+        sharePanel: document.getElementById('sharePanel')
+      };
+      const iconBtns = {
+        tapPanel: document.getElementById('iconBarTap'),
+        colorPanel: document.getElementById('iconBarColor'),
+        sharePanel: document.getElementById('iconBarShare')
+      };
+      const accountBtn = document.getElementById('iconBarAccount');
+
+      let activePanel = null;
+
+      // --- Panel Management ---
+      function openPanel(panelId) {
+        closeAllPanels();
+        const panel = panels[panelId];
+        const btn = iconBtns[panelId];
+        if (!panel) return;
+        panel.classList.add('panel-open');
+        if (btn) btn.classList.add('active');
+        if (backdrop) backdrop.classList.add('visible');
+        activePanel = panelId;
+        // Sync panel state when opening
+        if (panelId === 'colorPanel') syncColorPanel();
+        if (panelId === 'tapPanel') syncTapPanel();
       }
 
-      function updateMobileVisibility() {
-        if (isMobile()) {
-          if (isLandscape()) {
-            // Landscape: hide color bar and handle, full canvas mode
-            if (colorBar) colorBar.style.display = 'none';
-            if (handle) handle.style.display = 'none';
-          } else {
-            // Portrait: show color bar
-            if (colorBar) {
-              colorBar.style.display = 'flex';
-              colorBar.style.position = 'fixed';
-              colorBar.style.bottom = '0';
-              colorBar.style.left = '0';
-              colorBar.style.right = '0';
-              colorBar.style.height = '56px';
-              colorBar.style.zIndex = '999';
-            }
-            if (handle) handle.style.display = 'flex';
-          }
-          // Show mobile onboarding hint
-          document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'inline');
-          buildMobileSwatches();
+      function closeAllPanels() {
+        Object.values(panels).forEach(p => { if (p) p.classList.remove('panel-open'); });
+        Object.values(iconBtns).forEach(b => { if (b) b.classList.remove('active'); });
+        if (backdrop) backdrop.classList.remove('visible');
+        if (accountMenu) accountMenu.classList.remove('visible');
+        activePanel = null;
+      }
+
+      function togglePanel(panelId) {
+        if (activePanel === panelId) {
+          closeAllPanels();
         } else {
-          if (colorBar) colorBar.style.display = 'none';
-          if (handle) handle.style.display = 'none';
-          document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'none');
+          openPanel(panelId);
         }
       }
 
-      // --- Bottom Sheet ---
-      function openSheet() { sidebar?.classList.add('sheet-open'); }
-      function closeSheet() { sidebar?.classList.remove('sheet-open'); }
-      function toggleSheet() { sidebar?.classList.toggle('sheet-open'); }
-
-      handle?.addEventListener('click', toggleSheet);
-      toggleBtn?.addEventListener('click', toggleSheet);
-
-      // Tap map to close sheet
-      document.querySelector('.map-container')?.addEventListener('click', (e) => {
-        if (isMobile() && sidebar?.classList.contains('sheet-open')) {
-          if (!e.target.closest('.state-path')) closeSheet();
-        }
+      // Icon bar button clicks
+      Object.keys(iconBtns).forEach(panelId => {
+        const btn = iconBtns[panelId];
+        if (btn) btn.addEventListener('click', () => togglePanel(panelId));
       });
 
-      // --- Floating Color Bar ---
-      function buildMobileSwatches() {
-        if (!swatchScroll) return;
-        swatchScroll.innerHTML = '';
+      // Account button
+      if (accountBtn) {
+        accountBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeAllPanels();
+          if (accountMenu) {
+            accountMenu.classList.toggle('visible');
+            syncAccountMenu();
+          }
+        });
+      }
+
+      // Close buttons in panel headers
+      document.querySelectorAll('.panel-close').forEach(btn => {
+        btn.addEventListener('click', closeAllPanels);
+      });
+
+      // Backdrop click closes everything
+      if (backdrop) backdrop.addEventListener('click', closeAllPanels);
+
+      // --- Quick Swatches (in icon bar) ---
+      function buildQuickSwatches() {
+        if (!quickSwatches) return;
+        quickSwatches.innerHTML = '';
         const grid = document.querySelector('.color-grid, .swatch-grid');
         if (!grid) return;
         const swatches = grid.querySelectorAll('.color-swatch');
@@ -5245,18 +5931,15 @@
           if (!color) return;
           const el = document.createElement('div');
           el.className = 'mobile-swatch';
-          el.style.cssText = 'width:40px;height:40px;min-width:40px;border-radius:10px;border:2px solid transparent;cursor:pointer;';
           el.style.backgroundColor = color;
-          if (appState.selectedColor === rgbToHex(color) || appState.selectedColor === color) {
+          if (typeof appState !== 'undefined' && appState.selectedColor === rgbToHex(color)) {
             el.classList.add('active');
-            el.style.borderColor = 'white';
-            el.style.transform = 'scale(1.15)';
           }
           el.addEventListener('click', () => {
             sw.click();
-            updateMobileSwatchActive();
+            updateQuickSwatchActive();
           });
-          swatchScroll.appendChild(el);
+          quickSwatches.appendChild(el);
         });
       }
 
@@ -5267,44 +5950,374 @@
         return '#' + m.slice(0,3).map(x => parseInt(x).toString(16).padStart(2,'0')).join('');
       }
 
-      function updateMobileSwatchActive() {
-        if (!swatchScroll) return;
-        swatchScroll.querySelectorAll('.mobile-swatch').forEach(el => {
+      function updateQuickSwatchActive() {
+        if (!quickSwatches) return;
+        quickSwatches.querySelectorAll('.mobile-swatch').forEach(el => {
           const c = rgbToHex(el.style.backgroundColor);
-          const isActive = c === appState.selectedColor;
+          const isActive = typeof appState !== 'undefined' && c === appState.selectedColor;
           el.classList.toggle('active', isActive);
-          el.style.borderColor = isActive ? 'white' : 'transparent';
-          el.style.transform = isActive ? 'scale(1.15)' : '';
         });
       }
 
-      // Build swatches on load and when colors change
+      // Observe color grid for changes
       const colorGrid = document.querySelector('.color-grid, .swatch-grid');
       if (colorGrid) {
         const observer = new MutationObserver(() => {
-          if (isMobile()) buildMobileSwatches();
+          if (isMobile()) buildQuickSwatches();
         });
         observer.observe(colorGrid, { childList: true, subtree: true, attributes: true });
       }
 
-      // Initialize on load, resize, and orientation change
+
+      // --- Visibility Management ---
+      function updateMobileVisibility() {
+        if (isMobile()) {
+          if (isLandscape()) {
+            if (iconBar) iconBar.style.display = 'none';
+            closeAllPanels();
+          } else {
+            if (iconBar) {
+              iconBar.style.display = 'flex';
+              iconBar.style.position = 'fixed';
+              iconBar.style.bottom = '0';
+              iconBar.style.left = '0';
+              iconBar.style.right = '0';
+              iconBar.style.zIndex = '999';
+            }
+          }
+          document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'inline');
+          buildQuickSwatches();
+        } else {
+          if (iconBar) iconBar.style.display = 'none';
+          closeAllPanels();
+          document.querySelectorAll('.mobile-hint').forEach(el => el.style.display = 'none');
+        }
+      }
+
+      // Initialize + listen
       updateMobileVisibility();
       window.addEventListener('resize', function() {
         updateMobileVisibility();
         if (typeof updateLegendPosition === 'function') updateLegendPosition();
       });
       window.addEventListener('orientationchange', function() {
-        // Small delay for iOS to finish rotating
         setTimeout(updateMobileVisibility, 100);
         setTimeout(updateMobileVisibility, 500);
-        // Recalculate legend position for new orientation
         setTimeout(function() {
           if (typeof updateLegendPosition === 'function') updateLegendPosition();
         }, 300);
       });
-      // Also try after a delay in case DOM isn't ready
       setTimeout(updateMobileVisibility, 300);
       setTimeout(updateMobileVisibility, 1000);
+
+      // --- Sync Panel State with Desktop Sidebar ---
+      function syncTapPanel() {
+        // Map title
+        var titleInput = document.getElementById('mobileTitleInput');
+        var desktopTitle = document.getElementById('mapTitle');
+        if (titleInput && desktopTitle) titleInput.value = desktopTitle.textContent || '';
+
+        // Source
+        var sourceInput = document.getElementById('mobileSourceInput');
+        var svgSource = document.getElementById('mapSource');
+        if (sourceInput && svgSource) sourceInput.value = svgSource.textContent || '';
+
+        // Display toggles
+        syncCheckbox('mobileToggleLabels', function() {
+          var labels = document.querySelectorAll('.state-label');
+          return labels.length > 0 && labels[0].style.display !== 'none';
+        });
+        syncCheckbox('mobileToggleOcean', function() {
+          return typeof appState !== 'undefined' && appState.showOcean;
+        });
+        syncCheckbox('mobileToggleNorthArrow', function() {
+          var na = document.getElementById('northArrow');
+          return na && na.style.display !== 'none';
+        });
+        syncCheckbox('mobileToggleScaleBar', function() {
+          var sb = document.getElementById('scaleBar');
+          return sb && sb.style.display !== 'none';
+        });
+        syncCheckbox('mobileToggleLogo', function() {
+          var logo = document.getElementById('logoWatermark');
+          return logo && logo.style.display !== 'none';
+        });
+
+        // Legend position
+        if (typeof appState !== 'undefined' && appState.legendPosition) {
+          document.querySelectorAll('#mobileLegendPosition .panel-sm-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-pos') === appState.legendPosition);
+          });
+        }
+      }
+
+      function syncCheckbox(id, getter) {
+        var cb = document.getElementById(id);
+        if (cb) cb.checked = getter();
+      }
+
+      function syncColorPanel() {
+        // Build palette grid
+        var grid = document.getElementById('mobilePaletteGrid');
+        if (!grid || typeof appState === 'undefined') return;
+        grid.innerHTML = '';
+        var colors = appState.presetColors || [];
+        colors.forEach(function(color) {
+          var sw = document.createElement('div');
+          sw.className = 'panel-swatch';
+          sw.style.backgroundColor = color;
+          if (appState.selectedColor === color) sw.classList.add('active');
+          sw.addEventListener('click', function() {
+            if (typeof selectColor === 'function') selectColor(color);
+            syncColorPanel();
+            updateQuickSwatchActive();
+          });
+          grid.appendChild(sw);
+        });
+
+        // Hex input
+        var hexInput = document.getElementById('mobileHexInput');
+        if (hexInput) hexInput.value = appState.selectedColor || '';
+
+        // Color picker
+        var picker = document.getElementById('mobileColorPicker');
+        if (picker) picker.value = appState.selectedColor || '#0EA5E9';
+      }
+
+      function syncAccountMenu() {
+        var statusEl = document.getElementById('mobileAccountStatus');
+        var signInBtn = document.getElementById('mobileSignIn');
+        var signOutBtn = document.getElementById('mobileSignOut');
+        var upgradeBtn = document.getElementById('mobileUpgrade');
+        if (typeof appState !== 'undefined' && appState.user) {
+          if (statusEl) statusEl.textContent = appState.user.email || 'Signed in';
+          if (signInBtn) signInBtn.style.display = 'none';
+          if (signOutBtn) signOutBtn.style.display = 'block';
+          if (upgradeBtn) upgradeBtn.style.display = appState.isPro ? 'none' : 'block';
+        } else {
+          if (statusEl) statusEl.textContent = 'Not signed in';
+          if (signInBtn) signInBtn.style.display = 'block';
+          if (signOutBtn) signOutBtn.style.display = 'none';
+          if (upgradeBtn) upgradeBtn.style.display = 'block';
+        }
+      }
+
+
+      // --- Panel Button Wiring ---
+      // TAP panel
+      wire('mobileTitleInput', 'change', function(e) {
+        var el = document.getElementById('mapTitle');
+        if (el) el.textContent = e.target.value;
+        if (typeof appState !== 'undefined') appState.mapTitle = e.target.value;
+        if (typeof updateURL === 'function') updateURL();
+      });
+      wire('mobileSourceInput', 'change', function(e) {
+        var svgSource = document.getElementById('mapSource');
+        if (svgSource) {
+          svgSource.textContent = e.target.value;
+          svgSource.style.opacity = e.target.value ? '1' : '0';
+        }
+        if (typeof appState !== 'undefined') appState.mapSource = e.target.value;
+        if (typeof updateURL === 'function') updateURL();
+      });
+            // Multi-select toggle
+      wire('mobileMultiSelect', 'change', function(e) {
+        if (typeof toggleMultiSelectMode === 'function') toggleMultiSelectMode(e.target.checked);
+      });
+      wire('mobileBrowseTemplates', 'click', function() {
+        closeAllPanels();
+        if (typeof showTemplateOverlay === 'function') showTemplateOverlay();
+        else if (typeof openTemplates === 'function') openTemplates();
+      });
+      wire('mobileToggleLabels', 'change', function(e) {
+        if (typeof toggleLabels === 'function') toggleLabels();
+        else {
+          document.querySelectorAll('.state-label').forEach(l => {
+            l.style.display = e.target.checked ? 'block' : 'none';
+          });
+        }
+      });
+      wire('mobileToggleOcean', 'change', function() {
+        if (typeof toggleOcean === 'function') toggleOcean();
+      });
+      wire('mobileToggleNorthArrow', 'change', function() {
+        if (typeof toggleNorthArrow === 'function') toggleNorthArrow();
+      });
+      wire('mobileToggleScaleBar', 'change', function() {
+        if (typeof toggleScaleBar === 'function') toggleScaleBar();
+      });
+      wire('mobileToggleLogo', 'change', function() {
+        if (typeof toggleLogo === 'function') toggleLogo();
+      });
+      // Legend position buttons
+      document.querySelectorAll('#mobileLegendPosition .panel-sm-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var pos = btn.getAttribute('data-pos');
+          if (typeof appState !== 'undefined') appState.legendPosition = pos;
+          if (typeof updateLegendPosition === 'function') updateLegendPosition();
+          document.querySelectorAll('#mobileLegendPosition .panel-sm-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+      wire('mobileCountyToggle', 'click', function() {
+        closeAllPanels();
+        if (typeof toggleCountyMode === 'function') toggleCountyMode();
+      });
+      wire('mobileThemeToggle', 'click', function() {
+        if (typeof toggleTheme === 'function') toggleTheme();
+      });
+      wire('mobileHelp', 'click', function() {
+        closeAllPanels();
+        if (typeof showHelp === 'function') showHelp();
+      });
+
+      // COLOR panel
+      wire('mobileColorPicker', 'input', function(e) {
+        if (typeof selectColor === 'function') selectColor(e.target.value);
+        var hex = document.getElementById('mobileHexInput');
+        if (hex) hex.value = e.target.value;
+        updateQuickSwatchActive();
+      });
+      wire('mobileHexInput', 'change', function(e) {
+        var val = e.target.value.trim();
+        if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+          if (typeof selectColor === 'function') selectColor(val);
+          var picker = document.getElementById('mobileColorPicker');
+          if (picker) picker.value = val;
+          updateQuickSwatchActive();
+        }
+      });
+      wire('mobileAddColor', 'click', function() {
+        var hex = document.getElementById('mobileHexInput');
+        if (hex && /^#[0-9a-fA-F]{6}$/.test(hex.value)) {
+          if (typeof addCustomColor === 'function') addCustomColor(hex.value);
+          syncColorPanel();
+          buildQuickSwatches();
+        }
+      });
+      wire('mobileDefaultPalette', 'click', function() {
+        if (typeof loadDefaultPalette === 'function') loadDefaultPalette();
+        else if (typeof setPalette === 'function') setPalette('default');
+        syncColorPanel(); buildQuickSwatches();
+      });
+      wire('mobileColorblindPalette', 'click', function() {
+        if (typeof loadColorblindPalette === 'function') loadColorblindPalette();
+        else if (typeof setPalette === 'function') setPalette('colorblind');
+        syncColorPanel(); buildQuickSwatches();
+      });
+      wire('mobileMorePalettes', 'click', function() {
+        closeAllPanels();
+        if (typeof showPaletteOverlay === 'function') showPaletteOverlay();
+      });
+      wire('mobileAutoLegend', 'click', function() {
+        if (typeof autoPopulateLegend === 'function') autoPopulateLegend();
+      });
+      wire('mobileAddLegend', 'click', function() {
+        if (typeof addLegendEntry === 'function') addLegendEntry();
+      });
+      wire('mobileSelectAll', 'click', function() {
+        if (typeof gateProFeature === 'function' && !gateProFeature('quick fill')) return;
+        if (typeof selectAll === 'function') selectAll();
+      });
+      wire('mobileFillEmpty', 'click', function() {
+        if (typeof gateProFeature === 'function' && !gateProFeature('quick fill')) return;
+        if (typeof fillUncolored === 'function') fillUncolored();
+      });
+      wire('mobileInvert', 'click', function() {
+        if (typeof gateProFeature === 'function' && !gateProFeature('quick fill')) return;
+        if (typeof invertSelection === 'function') invertSelection();
+      });
+      wire('mobileRandom', 'click', function() {
+        if (typeof gateProFeature === 'function' && !gateProFeature('quick fill')) return;
+        if (typeof randomFill === 'function') randomFill();
+      });
+      // Wire mobile toggle chips
+      document.querySelectorAll('#colorPanel .qf-toggle').forEach(function(chip) {
+        chip.addEventListener('click', function() {
+          if (typeof gateProFeature === 'function' && !gateProFeature('quick fill')) return;
+          if (typeof toggleQuickFillGroup === 'function') {
+            toggleQuickFillGroup(chip.dataset.group, chip.dataset.key, chip);
+          }
+        });
+      });
+      wire('mobileTitleColor', 'input', function(e) {
+        if (typeof setTitleColor === 'function') setTitleColor(e.target.value);
+      });
+      wire('mobileBgColor', 'input', function(e) {
+        if (typeof setBackgroundColor === 'function') setBackgroundColor(e.target.value);
+      });
+
+      // Undo buttons (in all panels)
+      ['mobileUndoTap', 'mobileUndoColor', 'mobileUndoShare'].forEach(function(id) {
+        wire(id, 'click', function() {
+          if (typeof undo === 'function') undo();
+        });
+      });
+      wire('mobileClearAll', 'click', function() {
+        if (typeof clearAll === 'function') clearAll();
+      });
+
+      // SHARE panel
+      wire('mobileExportPNG', 'click', function() {
+        closeAllPanels();
+        if (typeof exportPNG === 'function') exportPNG();
+      });
+      wire('mobileExportSVG', 'click', function() {
+        closeAllPanels();
+        if (typeof exportSVG === 'function') exportSVG();
+      });
+      wire('mobileCopyClipboard', 'click', function() {
+        closeAllPanels();
+        if (typeof copyImageToClipboard === 'function') copyImageToClipboard();
+      });
+      wire('mobileShareLink', 'click', function() {
+        if (typeof shareLink === 'function') shareLink();
+      });
+      wire('mobileSaveConfig', 'click', function() {
+        if (typeof saveConfig === 'function') saveConfig();
+      });
+      wire('mobileLoadConfig', 'click', function() {
+        closeAllPanels();
+        if (typeof loadConfig === 'function') loadConfig();
+      });
+
+      // Account
+      wire('mobileSignIn', 'click', function() {
+        closeAllPanels();
+        if (typeof showAuthModal === 'function') showAuthModal();
+      });
+      wire('mobileSignOut', 'click', function() {
+        closeAllPanels();
+        if (typeof signOut === 'function') signOut();
+      });
+      wire('mobileUpgrade', 'click', function() {
+        closeAllPanels();
+        if (typeof showUpgradeModal === 'function') showUpgradeModal();
+        else if (typeof showProOverlay === 'function') showProOverlay();
+      });
+
+      // Helper: safe event wiring
+      function wire(id, event, handler) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener(event, handler);
+      }
+
+      // Close account menu on outside click
+      document.addEventListener('click', function(e) {
+        if (accountMenu && accountMenu.classList.contains('visible')) {
+          if (!accountMenu.contains(e.target) && e.target !== accountBtn) {
+            accountMenu.classList.remove('visible');
+          }
+        }
+      });
+
+      // Tap map to close panels
+      document.querySelector('.map-container')?.addEventListener('click', function(e) {
+        if (isMobile() && activePanel) {
+          if (!e.target.closest('.state-path')) closeAllPanels();
+        }
+      });
+
 
       // --- Long-press to open symbology menu (touch devices) ---
       window._tappyLongPressTime = 0;
@@ -5318,6 +6331,10 @@
       const symStateName = document.getElementById('symStateName');
       const symColors = document.getElementById('symColors');
       const symRemove = document.getElementById('symRemove');
+      const symLabelInput = document.getElementById('symLabelInput');
+      const symUndo = document.getElementById('symUndo');
+      const symSelectAll = document.getElementById('symSelectAll');
+      const symClear = document.getElementById('symClear');
 
       function showSymbologyMenu(path, touchX, touchY) {
         if (!symMenu || !path) return;
@@ -5325,11 +6342,7 @@
         const countyFips = path.getAttribute('data-county');
         const label = stateName || ('County ' + countyFips) || 'Unknown';
         lpTargetPath = path;
-
-        // Set header
         if (symStateName) symStateName.textContent = label;
-
-        // Pre-fill legend label if one exists for current color
         if (symLabelInput && typeof appState !== 'undefined' && appState.legendEntries) {
           var currentColor = appState.selectedColor;
           var existingLabel = '';
@@ -5341,8 +6354,6 @@
           }
           symLabelInput.value = existingLabel;
         }
-
-        // Build color swatches from current palette
         if (symColors) {
           symColors.innerHTML = '';
           const colors = (typeof appState !== 'undefined' && appState.presetColors) || [];
@@ -5350,9 +6361,7 @@
             const sw = document.createElement('div');
             sw.className = 'sym-swatch';
             sw.style.backgroundColor = color;
-            if (typeof appState !== 'undefined' && appState.selectedColor === color) {
-              sw.classList.add('active');
-            }
+            if (typeof appState !== 'undefined' && appState.selectedColor === color) sw.classList.add('active');
             sw.addEventListener('click', function() {
               if (typeof saveHistory === 'function') saveHistory();
               if (stateName && typeof appState !== 'undefined') {
@@ -5370,27 +6379,20 @@
               if (typeof updateStatsBar === 'function') updateStatsBar();
               if (typeof updateURL === 'function') updateURL();
               hideSymbologyMenu();
+              updateQuickSwatchActive();
             });
             symColors.appendChild(sw);
           });
         }
-
-        // Position menu near the touch point
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
-        let left = touchX - 100;
-        let top = touchY - 220;
-        // Keep on screen
+        const vw = window.innerWidth, vh = window.innerHeight;
+        let left = touchX - 100, top = touchY - 220;
         if (left < 8) left = 8;
         if (left + 210 > vw) left = vw - 218;
         if (top < 8) top = touchY + 20;
         if (top + 200 > vh) top = vh - 208;
-
         symMenu.style.left = left + 'px';
         symMenu.style.top = top + 'px';
         symMenu.classList.add('visible');
-
-        // Haptic feedback
         if (navigator.vibrate) navigator.vibrate(30);
       }
 
@@ -5399,13 +6401,7 @@
         lpTargetPath = null;
       }
 
-      // --- Symbology Menu Actions ---
-      const symLabelInput = document.getElementById('symLabelInput');
-      const symUndo = document.getElementById('symUndo');
-      const symSelectAll = document.getElementById('symSelectAll');
-      const symClear = document.getElementById('symClear');
-
-      // Remove color button
+      // Symbology menu actions
       if (symRemove) {
         symRemove.addEventListener('click', function() {
           if (!lpTargetPath) return;
@@ -5418,8 +6414,7 @@
             if (typeof updateLabelContrast === 'function') updateLabelContrast(stateName);
             if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
           } else if (countyFips && typeof countyColors !== 'undefined') {
-            var fips = String(countyFips).padStart(5, '0');
-            delete countyColors[fips];
+            delete countyColors[String(countyFips).padStart(5, '0')];
             lpTargetPath.style.fill = '';
           }
           if (typeof updateStatsBar === 'function') updateStatsBar();
@@ -5428,111 +6423,62 @@
           hideSymbologyMenu();
         });
       }
-
-      // Legend label input - adds/updates legend entry for current color
       if (symLabelInput) {
         symLabelInput.addEventListener('change', function() {
           var label = symLabelInput.value.trim();
           if (!label || typeof appState === 'undefined') return;
           var color = appState.selectedColor;
-          // Check if legend entry for this color already exists
           var found = false;
           if (appState.legendEntries) {
             for (var i = 0; i < appState.legendEntries.length; i++) {
-              if (appState.legendEntries[i].color === color) {
-                appState.legendEntries[i].label = label;
-                found = true;
-                break;
-              }
+              if (appState.legendEntries[i].color === color) { appState.legendEntries[i].label = label; found = true; break; }
             }
-            if (!found) {
-              appState.legendEntries.push({ color: color, label: label });
-            }
+            if (!found) appState.legendEntries.push({ color: color, label: label });
           }
           if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
           if (typeof updateURL === 'function') updateURL();
           if (typeof showMessage === 'function') showMessage('Legend updated', 'success');
           hideSymbologyMenu();
         });
-        // Also handle Enter key
         symLabelInput.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') {
-            symLabelInput.blur();
-            var evt = new Event('change');
-            symLabelInput.dispatchEvent(evt);
-          }
+          if (e.key === 'Enter') { symLabelInput.blur(); symLabelInput.dispatchEvent(new Event('change')); }
         });
       }
-
-      // Undo button
-      if (symUndo) {
-        symUndo.addEventListener('click', function() {
-          if (typeof undo === 'function') undo();
-          hideSymbologyMenu();
-        });
-      }
-
-      // Select all button
+      if (symUndo) { symUndo.addEventListener('click', function() { if (typeof undo === 'function') undo(); hideSymbologyMenu(); }); }
       if (symSelectAll) {
         symSelectAll.addEventListener('click', function() {
           if (typeof saveHistory === 'function') saveHistory();
           if (typeof appState !== 'undefined') {
             document.querySelectorAll('.state-path').forEach(function(p) {
               var name = p.getAttribute('data-state');
-              if (name && typeof appState.stateColors !== 'undefined') {
-                appState.stateColors[name] = appState.selectedColor;
-                p.style.fill = appState.selectedColor;
-              }
+              if (name) { appState.stateColors[name] = appState.selectedColor; p.style.fill = appState.selectedColor; }
             });
           }
           if (typeof updateStatsBar === 'function') updateStatsBar();
           if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
           if (typeof updateURL === 'function') updateURL();
-          if (typeof showMessage === 'function') showMessage('All states selected', 'success');
           hideSymbologyMenu();
         });
       }
-
-      // Clear map button
       if (symClear) {
         symClear.addEventListener('click', function() {
           if (typeof saveHistory === 'function') saveHistory();
           if (typeof appState !== 'undefined' && appState.stateColors) {
-            var keys = Object.keys(appState.stateColors);
-            for (var i = 0; i < keys.length; i++) {
-              delete appState.stateColors[keys[i]];
-            }
+            Object.keys(appState.stateColors).forEach(k => delete appState.stateColors[k]);
           }
-          document.querySelectorAll('.state-path').forEach(function(p) {
-            p.style.fill = '';
-          });
+          document.querySelectorAll('.state-path').forEach(p => p.style.fill = '');
           if (typeof updateStatsBar === 'function') updateStatsBar();
           if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
           if (typeof updateURL === 'function') updateURL();
-          if (typeof showMessage === 'function') showMessage('Map cleared', 'success');
           hideSymbologyMenu();
         });
       }
-
-      // Export/Share button
       var symExport = document.getElementById('symExport');
-      if (symExport) {
-        symExport.addEventListener('click', function() {
-          hideSymbologyMenu();
-          // Try native share first (mobile), fall back to export PNG
-          if (typeof exportPNG === 'function') {
-            exportPNG();
-          }
-        });
-      }
+      if (symExport) { symExport.addEventListener('click', function() { hideSymbologyMenu(); if (typeof exportPNG === 'function') exportPNG(); }); }
 
-      // Tap anywhere else to close menu
+      // Close sym menu on outside click
       document.addEventListener('click', function(e) {
-        if (symMenu && symMenu.classList.contains('visible')) {
-          if (!symMenu.contains(e.target)) {
-            hideSymbologyMenu();
-          }
-        }
+        if (symMenu && symMenu.classList.contains('visible') && !symMenu.contains(e.target)) hideSymbologyMenu();
       });
 
       // Attach long-press to SVG
@@ -5543,35 +6489,22 @@
           if (!path) return;
           lpStartX = e.touches[0].clientX;
           lpStartY = e.touches[0].clientY;
-
           lpTimer = setTimeout(function() {
             lpTimer = null;
-            // Set timestamp so onStateClick skips the synthetic click
             window._tappyLongPressTime = Date.now();
             showSymbologyMenu(path, lpStartX, lpStartY);
           }, 500);
         }, { passive: true });
       }
-
       document.addEventListener('touchmove', function(e) {
         if (lpTimer && e.touches.length > 0) {
-          var dx = e.touches[0].clientX - lpStartX;
-          var dy = e.touches[0].clientY - lpStartY;
-          if (Math.sqrt(dx*dx + dy*dy) > LP_MOVE_THRESHOLD) {
-            clearTimeout(lpTimer);
-            lpTimer = null;
-          }
+          var dx = e.touches[0].clientX - lpStartX, dy = e.touches[0].clientY - lpStartY;
+          if (Math.sqrt(dx*dx + dy*dy) > LP_MOVE_THRESHOLD) { clearTimeout(lpTimer); lpTimer = null; }
         }
       }, { passive: true });
+      document.addEventListener('touchend', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
+      document.addEventListener('touchcancel', function() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } });
 
-      document.addEventListener('touchend', function() {
-        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-      });
-
-      // iOS fires touchcancel instead of touchend when native gesture takes over
-      document.addEventListener('touchcancel', function() {
-        if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; }
-      });
 
       // --- Pinch-to-Zoom ---
       const mapContainer = document.querySelector('.map-container');
@@ -5589,7 +6522,6 @@
         mapSvg.style.transformOrigin = 'center center';
         mapContainer?.classList.toggle('zoomed', currentScale > 1.05);
       }
-
       function resetZoom() {
         currentScale = 1; panX = 0; panY = 0;
         if (mapSvg) {
@@ -5598,7 +6530,6 @@
           setTimeout(() => { mapSvg.style.transition = ''; }, 300);
         }
       }
-
       function clampPan() {
         if (!mapContainer) return;
         const rect = mapContainer.getBoundingClientRect();
@@ -5606,67 +6537,43 @@
         panX = Math.max(-maxPan, Math.min(maxPan, panX));
         panY = Math.max(-maxPan, Math.min(maxPan, panY));
       }
-
       function getPinchDist(touches) {
         const dx = touches[0].clientX - touches[1].clientX;
         const dy = touches[0].clientY - touches[1].clientY;
         return Math.sqrt(dx*dx + dy*dy);
       }
-
       if (mapContainer) {
         mapContainer.addEventListener('touchstart', (e) => {
-          if (e.touches.length === 2) {
-            isPinching = true;
-            lastPinchDist = getPinchDist(e.touches);
-          } else if (e.touches.length === 1 && currentScale > 1.05) {
-            isPanning = true;
-            lastPanX = e.touches[0].clientX;
-            lastPanY = e.touches[0].clientY;
-          }
+          if (e.touches.length === 2) { isPinching = true; lastPinchDist = getPinchDist(e.touches); }
+          else if (e.touches.length === 1 && currentScale > 1.05) { isPanning = true; lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY; }
         }, { passive: true });
-
         mapContainer.addEventListener('touchmove', (e) => {
           if (isPinching && e.touches.length === 2) {
             e.preventDefault();
             const dist = getPinchDist(e.touches);
-            const delta = dist / lastPinchDist;
-            currentScale = Math.max(1, Math.min(4, currentScale * delta));
+            currentScale = Math.max(1, Math.min(4, currentScale * (dist / lastPinchDist)));
             lastPinchDist = dist;
-            clampPan();
-            applyTransform();
+            clampPan(); applyTransform();
           } else if (isPanning && e.touches.length === 1 && currentScale > 1.05) {
             e.preventDefault();
             panX += e.touches[0].clientX - lastPanX;
             panY += e.touches[0].clientY - lastPanY;
-            lastPanX = e.touches[0].clientX;
-            lastPanY = e.touches[0].clientY;
-            clampPan();
-            applyTransform();
+            lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+            clampPan(); applyTransform();
           }
         }, { passive: false });
-
         mapContainer.addEventListener('touchend', (e) => {
           if (e.touches.length < 2) isPinching = false;
           if (e.touches.length < 1) isPanning = false;
         });
-
-        // Double-tap to reset zoom
         let lastTap = 0;
         mapContainer.addEventListener('touchend', (e) => {
           if (e.touches.length > 0) return;
           const now = Date.now();
-          if (now - lastTap < 300 && currentScale > 1.05) {
-            e.preventDefault();
-            resetZoom();
-          }
+          if (now - lastTap < 300 && currentScale > 1.05) { e.preventDefault(); resetZoom(); }
           lastTap = now;
         });
       }
-
-      // --- County click toggle (same as state toggle) ---
-      // Patch inline county click to also toggle
-      const origAddEventListener = EventTarget.prototype.addEventListener;
-      // (County toggle is handled by the patched code below)
 
     })();
 </script>

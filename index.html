@@ -1791,10 +1791,7 @@
             <input type="checkbox" id="toggleLabels" checked style="accent-color: #0EA5E9; cursor: pointer;">
             Show labels
           </label>
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
-            <input type="checkbox" id="toggleBasemap" checked style="accent-color: #0EA5E9; cursor: pointer;">
-            Show ocean
-          </label>
+
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
             <input type="checkbox" id="toggleNorthArrow" checked style="accent-color: #0EA5E9; cursor: pointer;">
             North arrow
@@ -2219,7 +2216,7 @@
       scalePosition: 'bottom-left',
       scaleColor: '#ffffff',
       scaleStyle: 'ornate',
-      showBasemap: true,
+
       history: [],
       darkMode: true,
       showLabels: true,
@@ -4669,8 +4666,7 @@
         statesGroup.setAttribute('transform', '');
         statesGroup.innerHTML = '';
 
-        // Hide ocean, north arrow, scale bar in county mode and uncheck toggles
-        document.getElementById('mapContainer').classList.remove('ocean-on');
+        // Hide north arrow, scale bar in county mode and uncheck toggles
         const northArrow = document.getElementById('northArrow');
         if (northArrow) northArrow.style.display = 'none';
         document.getElementById('toggleNorthArrow').checked = false;
@@ -4835,8 +4831,7 @@
       const statesGroup = document.getElementById('statesGroup');
       statesGroup.setAttribute('transform', 'translate(5, -20) scale(0.95)');
 
-      // Restore ocean, north arrow, scale bar
-      document.getElementById('mapContainer').classList.toggle('ocean-on', appState.showBasemap);
+      // Restore north arrow, scale bar
       const northArrow = document.getElementById('northArrow');
       if (northArrow) northArrow.style.display = document.getElementById('toggleNorthArrow').checked ? '' : 'none';
       const scaleBarEl = document.getElementById('scaleBar');
@@ -5024,11 +5019,7 @@
         });
       });
 
-      // Ocean toggle
-      document.getElementById('toggleBasemap').addEventListener('change', (e) => {
-        appState.showBasemap = e.target.checked;
-        document.getElementById('mapContainer').classList.toggle('ocean-on', e.target.checked);
-      });
+
 
       // Logo toggle (hiding requires Pro)
       document.getElementById('toggleLogo').addEventListener('change', (e) => {
@@ -5701,7 +5692,6 @@
       <div class="panel-section">
         <div class="panel-section-title">Display</div>
         <label class="panel-toggle"><input type="checkbox" id="mobileToggleLabels"><span>State Labels</span></label>
-        <label class="panel-toggle"><input type="checkbox" id="mobileToggleOcean"><span>Ocean Background</span></label>
         <label class="panel-toggle"><input type="checkbox" id="mobileToggleNorthArrow"><span>North Arrow</span></label>
         <label class="panel-toggle"><input type="checkbox" id="mobileToggleScaleBar"><span>Scale Bar</span></label>
         <label class="panel-toggle"><input type="checkbox" id="mobileToggleLogo"><span>Show Logo</span></label>
@@ -6119,28 +6109,35 @@
       });
       wire('mobileBrowseTemplates', 'click', function() {
         closeAllPanels();
-        if (typeof showTemplateOverlay === 'function') showTemplateOverlay();
-        else if (typeof openTemplates === 'function') openTemplates();
+        if (typeof showTemplatePicker === 'function') showTemplatePicker();
       });
       wire('mobileToggleLabels', 'change', function(e) {
-        if (typeof toggleLabels === 'function') toggleLabels();
-        else {
-          document.querySelectorAll('.state-label').forEach(l => {
-            l.style.display = e.target.checked ? 'block' : 'none';
-          });
+        appState.showLabels = e.target.checked;
+        var disp = e.target.checked ? 'block' : 'none';
+        document.querySelectorAll('.state-label').forEach(function(l) { l.style.display = disp; });
+        document.querySelectorAll('.county-label').forEach(function(l) { l.style.display = disp; });
+        document.querySelectorAll('.leader-line').forEach(function(l) { l.style.display = disp; });
+        var desktopCb = document.getElementById('toggleLabels');
+        if (desktopCb) desktopCb.checked = e.target.checked;
+      });
+
+      wire('mobileToggleNorthArrow', 'change', function(e) {
+        var el = document.getElementById('northArrow');
+        if (el) el.style.display = e.target.checked ? '' : 'none';
+      });
+      wire('mobileToggleScaleBar', 'change', function(e) {
+        var el = document.getElementById('scaleBar');
+        if (el) el.style.display = e.target.checked ? '' : 'none';
+      });
+      wire('mobileToggleLogo', 'change', function(e) {
+        if (!e.target.checked && typeof appState !== 'undefined' && !appState.proUnlocked) {
+          e.target.checked = true;
+          if (typeof showUpgradeModal === 'function') showUpgradeModal();
+          return;
         }
-      });
-      wire('mobileToggleOcean', 'change', function() {
-        if (typeof toggleOcean === 'function') toggleOcean();
-      });
-      wire('mobileToggleNorthArrow', 'change', function() {
-        if (typeof toggleNorthArrow === 'function') toggleNorthArrow();
-      });
-      wire('mobileToggleScaleBar', 'change', function() {
-        if (typeof toggleScaleBar === 'function') toggleScaleBar();
-      });
-      wire('mobileToggleLogo', 'change', function() {
-        if (typeof toggleLogo === 'function') toggleLogo();
+        if (typeof appState !== 'undefined') appState.showLogo = e.target.checked;
+        var el = document.getElementById('logoWatermark');
+        if (el) el.style.display = e.target.checked ? '' : 'none';
       });
       // Legend position buttons
       document.querySelectorAll('#mobileLegendPosition .panel-sm-btn').forEach(function(btn) {
@@ -6154,14 +6151,14 @@
       });
       wire('mobileCountyToggle', 'click', function() {
         closeAllPanels();
-        if (typeof toggleCountyMode === 'function') toggleCountyMode();
+        if (typeof openCountySelector === 'function') openCountySelector();
       });
       wire('mobileThemeToggle', 'click', function() {
         if (typeof toggleTheme === 'function') toggleTheme();
       });
       wire('mobileHelp', 'click', function() {
         closeAllPanels();
-        if (typeof showHelp === 'function') showHelp();
+        if (typeof showOnboarding === 'function') showOnboarding();
       });
 
       // COLOR panel
@@ -6183,26 +6180,38 @@
       wire('mobileAddColor', 'click', function() {
         var hex = document.getElementById('mobileHexInput');
         if (hex && /^#[0-9a-fA-F]{6}$/.test(hex.value)) {
-          if (typeof addCustomColor === 'function') addCustomColor(hex.value);
+          var c = hex.value;
+          if (typeof presetColors !== 'undefined' && presetColors.indexOf(c) === -1) {
+            presetColors.push(c);
+          }
+          if (typeof initializeColorPalette === 'function') initializeColorPalette();
+          if (typeof selectColor === 'function') selectColor(c);
           syncColorPanel();
           buildQuickSwatches();
         }
       });
       wire('mobileDefaultPalette', 'click', function() {
-        if (typeof loadDefaultPalette === 'function') loadDefaultPalette();
-        else if (typeof setPalette === 'function') setPalette('default');
+        if (typeof resetPalette === 'function') resetPalette();
         syncColorPanel(); buildQuickSwatches();
       });
       wire('mobileColorblindPalette', 'click', function() {
-        if (typeof loadColorblindPalette === 'function') loadColorblindPalette();
-        else if (typeof setPalette === 'function') setPalette('colorblind');
+        if (typeof applyColorblindPalette === 'function') applyColorblindPalette();
         syncColorPanel(); buildQuickSwatches();
       });
       wire('mobileMorePalettes', 'click', function() {
-        closeAllPanels();
-        if (typeof showPaletteOverlay === 'function') showPaletteOverlay();
+        var panel = document.getElementById('morePalettesPanel');
+        var btn = document.getElementById('morePalettesBtn');
+        if (panel) {
+          if (panel.style.display === 'none') {
+            panel.style.display = '';
+            if (typeof buildPaletteOptions === 'function') buildPaletteOptions();
+          } else {
+            panel.style.display = 'none';
+          }
+        }
       });
       wire('mobileAutoLegend', 'click', function() {
+        if (typeof gateProFeature === 'function' && !gateProFeature('legend')) return;
         if (typeof autoPopulateLegend === 'function') autoPopulateLegend();
       });
       wire('mobileAddLegend', 'click', function() {
@@ -6234,10 +6243,17 @@
         });
       });
       wire('mobileTitleColor', 'input', function(e) {
-        if (typeof setTitleColor === 'function') setTitleColor(e.target.value);
+        if (typeof appState !== 'undefined') appState.titleColor = e.target.value;
+        var title = document.getElementById('mapTitle');
+        var sub = document.getElementById('mapSubtitle');
+        if (title) title.style.color = e.target.value;
+        if (sub) sub.style.color = e.target.value;
+        if (typeof updateURL === 'function') updateURL();
       });
       wire('mobileBgColor', 'input', function(e) {
-        if (typeof setBackgroundColor === 'function') setBackgroundColor(e.target.value);
+        if (typeof appState !== 'undefined') appState.bgColor = e.target.value;
+        var mc = document.getElementById('mapContainer');
+        if (mc) mc.style.backgroundColor = e.target.value;
       });
 
       // Undo buttons (in all panels)
@@ -6264,7 +6280,7 @@
         if (typeof copyImageToClipboard === 'function') copyImageToClipboard();
       });
       wire('mobileShareLink', 'click', function() {
-        if (typeof shareLink === 'function') shareLink();
+        if (typeof copyShareLink === 'function') copyShareLink();
       });
       wire('mobileSaveConfig', 'click', function() {
         if (typeof saveConfig === 'function') saveConfig();
@@ -6277,11 +6293,12 @@
       // Account
       wire('mobileSignIn', 'click', function() {
         closeAllPanels();
-        if (typeof showAuthModal === 'function') showAuthModal();
+        var authOverlay = document.getElementById('authOverlay');
+        if (authOverlay) authOverlay.classList.add('active');
       });
       wire('mobileSignOut', 'click', function() {
         closeAllPanels();
-        if (typeof signOut === 'function') signOut();
+        if (typeof authSignOut === 'function') authSignOut();
       });
       wire('mobileUpgrade', 'click', function() {
         closeAllPanels();

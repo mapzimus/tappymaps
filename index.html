@@ -1106,33 +1106,13 @@
         position: relative;
       }
       .sidebar {
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        width: 100%;
-        max-height: 70vh;
-        z-index: var(--z-sidebar);
-        transform: translateY(calc(100% - 0px));
-        transition: transform var(--duration-slow) cubic-bezier(0.4, 0, 0.2, 1);
-        border-right: none;
-        border-top: 1px solid var(--border);
-        border-radius: 16px 16px 0 0;
-        padding: 0 15px 15px;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        display: none !important;
       }
       .sidebar.sheet-open {
-        transform: translateY(0);
+        display: none !important;
       }
       .sheet-handle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 12px 0 8px;
-        cursor: pointer;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        background: inherit;
+        display: none !important;
       }
       .sheet-handle-bar {
         width: 40px;

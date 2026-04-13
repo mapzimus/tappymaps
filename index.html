@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net wss://*.supabase.co;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net wss://*.supabase.co https://api.census.gov https://api.bls.gov;">
     <title>Tappymaps - Tap. Color. Share.</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
+    <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.6.0/chroma.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.4.5/dist/dom-to-image-more.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 <style>
     * {
       margin: 0;
@@ -1207,6 +1210,19 @@
     .template-pro:hover { opacity: 1; }
 
     /* ===== HIDE MOBILE ELEMENTS ON DESKTOP ===== */
+
+    /* ── Data Maps Panel ─────────────────────────────── */
+    .data-maps-grid { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 8px 0; }
+    .data-map-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: pointer; transition: border-color 0.2s, transform 0.1s; }
+    .data-map-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+    .data-map-card.loading { opacity: 0.6; pointer-events: none; }
+    .data-map-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .data-map-card-desc { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+    .data-map-card-source { font-size: 10px; color: var(--text-muted); opacity: 0.7; margin-top: 6px; }
+    .data-map-card .template-pro-badge { float: right; margin-top: -2px; }
+    .data-map-legend-preview { display: flex; gap: 2px; margin-top: 8px; height: 6px; border-radius: 3px; overflow: hidden; }
+    .data-map-legend-preview span { flex: 1; }
+
     @media (min-width: 901px) {
       .mobile-icon-bar, .mobile-panel, .mobile-panel-backdrop, .mobile-account-menu { display: none !important; }
     }
@@ -1924,6 +1940,11 @@
 
       <!-- Legend Builder -->
       <div class="section" id="legendSection">
+        <div class="section-title" style="cursor:pointer;" onclick="var s=document.getElementById('dataMapSection');s.style.display=s.style.display==='none'?'block':'none';">Data Maps <span class="pro-badge-inline" onclick="event.stopPropagation();showUpgradeModal()">PRO</span></div>
+        <div id="dataMapSection" style="display: none;">
+          <div id="dataMapCards" class="data-maps-grid"></div>
+        </div>
+
         <div class="section-title">Legend <span class="pro-badge-inline" onclick="showUpgradeModal()">PRO</span></div>
         <div class="section-content" id="legendContent">
           <div style="margin-bottom: 8px;">
@@ -2429,6 +2450,9 @@
       updateProGates();
       await initializeAuth();
       handleCheckoutReturn();
+      // Initialize Data Maps cards
+      renderDataMapCards('dataMapCards');
+      renderDataMapCards('mobileDataMapCards');
     }
 
     // ============================================================================
@@ -3100,6 +3124,7 @@
       updateLegendDisplay();
       updateStatsBar();
       updateURL();
+      checkConfetti();
     }
 
     function onStateRightClick(e, stateName) {
@@ -4829,7 +4854,259 @@
     // COUNTY VIEW (PRO)
     // ============================================================================
 
-    let countyMode = false;
+
+    // ============================================================================
+    // DATA MAPS — Census & BLS API choropleth generator (Pro feature)
+    // ============================================================================
+
+
+    // ============================================================================
+    // CONFETTI — celebrate when all 50 states are colored
+    // ============================================================================
+    var _confettiFiredForSession = false;
+    function checkConfetti() {
+      if (_confettiFiredForSession) return;
+      if (typeof confetti !== 'function') return;
+      var coloredCount = Object.keys(appState.stateColors).filter(function(s) { return !nonColorable.has(s); }).length;
+      if (coloredCount >= 50) {
+        _confettiFiredForSession = true;
+        confetti({ particleCount: 80, spread: 70, origin: { x: 0.2, y: 0.6 } });
+        setTimeout(function() { confetti({ particleCount: 80, spread: 70, origin: { x: 0.8, y: 0.6 } }); }, 200);
+        showMessage('All 50 states colored!', 'success');
+        trackEvent('all_50_colored');
+      }
+    }
+
+
+    // ============================================================================
+    // DOM-TO-IMAGE — alternative capture engine (available for future use)
+    // ============================================================================
+    async function captureWithDomToImage() {
+      if (typeof domtoimage === 'undefined') return null;
+      var mapContainer = document.querySelector('.map-container');
+      if (!mapContainer) return null;
+      try {
+        var dataUrl = await domtoimage.toPng(mapContainer, {
+          width: 1010 * 3, height: 710 * 3,
+          style: { transform: 'scale(3)', transformOrigin: 'top left' }
+        });
+        var img = new Image();
+        return new Promise(function(resolve, reject) {
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.width; canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            resolve(canvas);
+          };
+          img.onerror = reject;
+          img.src = dataUrl;
+        });
+      } catch (err) {
+        console.error('dom-to-image failed:', err);
+        return null;
+      }
+    }
+
+    const DATA_MAP_DATASETS = [
+      {
+        id: 'population', title: 'Population', desc: 'Total population by state',
+        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
+        variables: ['B01003_001E'], format: 'number',
+        colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true
+      },
+      {
+        id: 'income', title: 'Median Household Income', desc: 'Median household income in dollars',
+        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
+        variables: ['B19013_001E'], format: 'currency',
+        colorScale: ['#eff3ff','#bdd7e7','#6baed6','#2171b5','#08306b'], pro: true
+      },
+      {
+        id: 'poverty', title: 'Poverty Rate', desc: 'Percent of population below the poverty line',
+        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
+        variables: ['B17001_002E','B01003_001E'],
+        compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); },
+        format: 'percent',
+        colorScale: ['#fee5d9','#fcae91','#fb6a4a','#de2d26','#a50f15'], pro: true
+      },
+      {
+        id: 'education', title: "Bachelor's Degree+", desc: 'Adults 25+ with a bachelors degree or higher',
+        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
+        variables: ['B15003_022E','B15003_023E','B15003_024E','B15003_025E','B15003_001E'],
+        compute: function(v) { return (((v[0]+v[1]+v[2]+v[3]) / v[4]) * 100).toFixed(1); },
+        format: 'percent',
+        colorScale: ['#f2f0f7','#cbc9e2','#9e9ac8','#756bb1','#54278f'], pro: true
+      },
+      {
+        id: 'unemployment', title: 'Unemployment Rate', desc: 'Seasonally adjusted unemployment rate',
+        source: 'U.S. Bureau of Labor Statistics, 2024', type: 'bls',
+        format: 'percent',
+        colorScale: ['#ffffcc','#c7e9b4','#7fcdbb','#1d91c0','#0c2c84'], pro: true
+      },
+      {
+        id: 'homevalue', title: 'Median Home Value', desc: 'Median value of owner-occupied housing',
+        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
+        variables: ['B25077_001E'], format: 'currency',
+        colorScale: ['#ffffd4','#fed98e','#fe9929','#d95f0e','#993404'], pro: true
+      }
+    ];
+
+    const FIPS_TO_STATE = {
+      '01':'Alabama','02':'Alaska','04':'Arizona','05':'Arkansas','06':'California',
+      '08':'Colorado','09':'Connecticut','10':'Delaware','11':'District of Columbia',
+      '12':'Florida','13':'Georgia','15':'Hawaii','16':'Idaho','17':'Illinois',
+      '18':'Indiana','19':'Iowa','20':'Kansas','21':'Kentucky','22':'Louisiana',
+      '23':'Maine','24':'Maryland','25':'Massachusetts','26':'Michigan','27':'Minnesota',
+      '28':'Mississippi','29':'Missouri','30':'Montana','31':'Nebraska','32':'Nevada',
+      '33':'New Hampshire','34':'New Jersey','35':'New Mexico','36':'New York',
+      '37':'North Carolina','38':'North Dakota','39':'Ohio','40':'Oklahoma',
+      '41':'Oregon','42':'Pennsylvania','44':'Rhode Island','45':'South Carolina',
+      '46':'South Dakota','47':'Tennessee','48':'Texas','49':'Utah','50':'Vermont',
+      '51':'Virginia','53':'Washington','54':'West Virginia','55':'Wisconsin','56':'Wyoming'
+    };
+
+    const BLS_SERIES = {
+      'Alabama':'LASST010000000000003','Alaska':'LASST020000000000003',
+      'Arizona':'LASST040000000000003','Arkansas':'LASST050000000000003',
+      'California':'LASST060000000000003','Colorado':'LASST080000000000003',
+      'Connecticut':'LASST090000000000003','Delaware':'LASST100000000000003',
+      'District of Columbia':'LASST110000000000003','Florida':'LASST120000000000003',
+      'Georgia':'LASST130000000000003','Hawaii':'LASST150000000000003',
+      'Idaho':'LASST160000000000003','Illinois':'LASST170000000000003',
+      'Indiana':'LASST180000000000003','Iowa':'LASST190000000000003',
+      'Kansas':'LASST200000000000003','Kentucky':'LASST210000000000003',
+      'Louisiana':'LASST220000000000003','Maine':'LASST230000000000003',
+      'Maryland':'LASST240000000000003','Massachusetts':'LASST250000000000003',
+      'Michigan':'LASST260000000000003','Minnesota':'LASST270000000000003',
+      'Mississippi':'LASST280000000000003','Missouri':'LASST290000000000003',
+      'Montana':'LASST300000000000003','Nebraska':'LASST310000000000003',
+      'Nevada':'LASST320000000000003','New Hampshire':'LASST330000000000003',
+      'New Jersey':'LASST340000000000003','New Mexico':'LASST350000000000003',
+      'New York':'LASST360000000000003','North Carolina':'LASST370000000000003',
+      'North Dakota':'LASST380000000000003','Ohio':'LASST390000000000003',
+      'Oklahoma':'LASST400000000000003','Oregon':'LASST410000000000003',
+      'Pennsylvania':'LASST420000000000003','Rhode Island':'LASST440000000000003',
+      'South Carolina':'LASST450000000000003','South Dakota':'LASST460000000000003',
+      'Tennessee':'LASST470000000000003','Texas':'LASST480000000000003',
+      'Utah':'LASST490000000000003','Vermont':'LASST500000000000003',
+      'Virginia':'LASST510000000000003','Washington':'LASST530000000000003',
+      'West Virginia':'LASST540000000000003','Wisconsin':'LASST550000000000003',
+      'Wyoming':'LASST560000000000003'
+    };
+
+    async function fetchCensusData(dataset) {
+      var vars = dataset.variables.join(',');
+      var url = 'https://api.census.gov/data/2023/acs/acs1?get=NAME,' + vars + '&for=state:*';
+      var resp = await fetch(url);
+      if (!resp.ok) throw new Error('Census API returned ' + resp.status);
+      var rows = await resp.json();
+      var header = rows[0];
+      var result = {};
+      for (var i = 1; i < rows.length; i++) {
+        var row = rows[i];
+        var fips = row[row.length - 1];
+        var stateName = FIPS_TO_STATE[fips];
+        if (!stateName) continue;
+        var values = dataset.variables.map(function(v, vi) { return parseFloat(row[header.indexOf(v)]); });
+        if (values.some(function(v) { return isNaN(v) || v < 0; })) continue;
+        var val = dataset.compute ? parseFloat(dataset.compute(values)) : values[0];
+        if (!isNaN(val)) result[stateName] = val;
+      }
+      return result;
+    }
+
+    async function fetchBLSData() {
+      var seriesIds = Object.values(BLS_SERIES);
+      var resp = await fetch('https://api.bls.gov/publicAPI/v2/timeseries/data/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seriesid: seriesIds, startyear: '2024', endyear: '2024' })
+      });
+      if (!resp.ok) throw new Error('BLS API returned ' + resp.status);
+      var json = await resp.json();
+      if (json.status !== 'REQUEST_SUCCEEDED') throw new Error('BLS request failed');
+      var stateToSeries = {};
+      Object.entries(BLS_SERIES).forEach(function(e) { stateToSeries[e[1]] = e[0]; });
+      var result = {};
+      json.Results.series.forEach(function(s) {
+        var stateName = stateToSeries[s.seriesID];
+        if (!stateName) return;
+        var latest = s.data.find(function(d) { return d.period !== 'M13'; });
+        if (latest) result[stateName] = parseFloat(latest.value);
+      });
+      return result;
+    }
+
+    function applyDataMap(dataset, data) {
+      if (!window.chroma) { showMessage('chroma.js not loaded — refresh the page', 'error'); return; }
+      var values = Object.values(data).filter(function(v) { return !isNaN(v); });
+      if (values.length === 0) { showMessage('No data returned', 'error'); return; }
+      var mn = Math.min.apply(null, values);
+      var mx = Math.max.apply(null, values);
+      var scale = chroma.scale(dataset.colorScale).domain([mn, mx]);
+      saveHistory();
+      var numClasses = 5;
+      var breaks = [];
+      for (var i = 0; i <= numClasses; i++) breaks.push(mn + (mx - mn) * (i / numClasses));
+      Object.entries(data).forEach(function(e) { appState.stateColors[e[0]] = scale(e[1]).hex(); });
+      appState.legendEntries = [];
+      for (var i = 0; i < numClasses; i++) {
+        var lo = breaks[i], hi = breaks[i + 1];
+        var midColor = scale((lo + hi) / 2).hex();
+        var label;
+        if (dataset.format === 'currency') label = '$' + Math.round(lo).toLocaleString() + ' – $' + Math.round(hi).toLocaleString();
+        else if (dataset.format === 'percent') label = lo.toFixed(1) + '% – ' + hi.toFixed(1) + '%';
+        else label = Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString();
+        appState.legendEntries.push({ label: label, color: midColor });
+      }
+      appState.legendTitle = dataset.title;
+      appState.mapSource = dataset.source;
+      var si = document.getElementById('sourceInput'); if (si) si.value = dataset.source;
+      var msi = document.getElementById('mobileSourceInput'); if (msi) msi.value = dataset.source;
+      renderMap(); updateLegendBuilder(); updateLegendDisplay(); updateStatsBar(); updateURL();
+      showMessage(dataset.title + ' data loaded for ' + Object.keys(data).length + ' states', 'success');
+      trackEvent('data_map_loaded', { dataset: dataset.id });
+    }
+
+    async function loadDataMap(datasetId) {
+      var dataset = DATA_MAP_DATASETS.find(function(d) { return d.id === datasetId; });
+      if (!dataset) return;
+      if (dataset.pro && !isPro()) {
+        showMessage('Data Maps require Pro. Sign up to unlock!', 'info');
+        showUpgradeModal(); return;
+      }
+      document.querySelectorAll('.data-map-card').forEach(function(c) { c.classList.remove('loading'); });
+      var cards = document.querySelectorAll('[data-dataset="' + datasetId + '"]');
+      cards.forEach(function(c) { c.classList.add('loading'); });
+      try {
+        var data = dataset.type === 'bls' ? await fetchBLSData() : await fetchCensusData(dataset);
+        applyDataMap(dataset, data);
+      } catch (err) {
+        console.error('Data map error:', err);
+        showMessage('Failed to load data: ' + err.message, 'error');
+      } finally {
+        cards.forEach(function(c) { c.classList.remove('loading'); });
+      }
+    }
+
+    function renderDataMapCards(containerId) {
+      var container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = '';
+      DATA_MAP_DATASETS.forEach(function(ds) {
+        var card = document.createElement('div');
+        card.className = 'data-map-card';
+        card.setAttribute('data-dataset', ds.id);
+        var proTag = ds.pro ? '<span class="template-pro-badge">PRO</span>' : '';
+        var preview = ds.colorScale ? ds.colorScale.map(function(c) { return '<span style="background:' + c + '"></span>'; }).join('') : '';
+        card.innerHTML = '<div class="data-map-card-title">' + escapeHTML(ds.title) + ' ' + proTag + '</div>'
+          + '<div class="data-map-card-desc">' + escapeHTML(ds.desc) + '</div>'
+          + '<div class="data-map-legend-preview">' + preview + '</div>'
+          + '<div class="data-map-card-source">' + escapeHTML(ds.source) + '</div>';
+        card.addEventListener('click', function() { loadDataMap(ds.id); });
+        container.appendChild(card);
+      });
+    }
+\n    let countyMode = false;
     let countyStateName = null;
     let countyTotal = 0;
     let countyTopology = null;
@@ -8157,6 +8434,10 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
         <span>Share</span>
       </button>
+      <button class="icon-bar-btn" id="iconBarData" data-panel="dataPanel" aria-label="Data maps">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        <span>Data</span>
+      </button>
       <button class="icon-bar-btn icon-bar-account" id="iconBarAccount" aria-label="Account">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
       </button>
@@ -8306,6 +8587,17 @@
     </div>
   </div>
 
+  <!-- DATA Panel -->
+  <div class="mobile-panel" id="dataPanel">
+    <div class="panel-header"><span class="panel-title">Data Maps</span><button class="panel-close" aria-label="Close">&times;</button></div>
+    <div class="panel-body">
+      <div class="panel-section">
+        <div class="panel-section-title">Auto-generate maps from real data</div>
+        <div id="mobileDataMapCards" class="data-maps-grid"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Account Menu -->
   <div class="mobile-account-menu" id="mobileAccountMenu">
     <div id="mobileAccountStatus" style="padding:6px 10px;font-size:12px;color:var(--text-muted);"></div>
@@ -8328,12 +8620,14 @@
       const panels = {
         tapPanel: document.getElementById('tapPanel'),
         colorPanel: document.getElementById('colorPanel'),
-        sharePanel: document.getElementById('sharePanel')
+        sharePanel: document.getElementById('sharePanel'),
+        dataPanel: document.getElementById('dataPanel')
       };
       const iconBtns = {
         tapPanel: document.getElementById('iconBarTap'),
         colorPanel: document.getElementById('iconBarColor'),
-        sharePanel: document.getElementById('iconBarShare')
+        sharePanel: document.getElementById('iconBarShare'),
+        dataPanel: document.getElementById('iconBarData')
       };
       const accountBtn = document.getElementById('iconBarAccount');
 

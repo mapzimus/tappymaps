@@ -3092,6 +3092,7 @@
 
     function reapplyDataMapWithRamp() {
       if (!window._activeDataMap) return;
+      if (countyMode) backToStateView();
       var rampColors = getCurrentRampColors();
       if (!rampColors || rampColors.length < 2) return;
       var dm = window._activeDataMap;
@@ -5131,6 +5132,10 @@
       if (dataset.pro && !isPro()) {
         showMessage('Data Maps require Pro. Sign up to unlock!', 'info');
         showUpgradeModal(); return;
+      }
+      // Data maps are state-level — exit county view if active
+      if (countyMode) {
+        backToStateView();
       }
       document.querySelectorAll('.data-map-card').forEach(function(c) { c.classList.remove('loading'); });
       var cards = document.querySelectorAll('[data-dataset="' + datasetId + '"]');

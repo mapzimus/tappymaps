@@ -1221,6 +1221,8 @@
     .data-map-card .template-pro-badge { float: right; margin-top: -2px; }
     .data-map-legend-preview { display: flex; gap: 2px; margin-top: 8px; height: 6px; border-radius: 3px; overflow: hidden; }
     .data-map-legend-preview span { flex: 1; }
+    .data-map-more-btn { width: 100%; padding: 10px; border-radius: 8px; border: 1px dashed var(--border); background: transparent; color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .data-map-more-btn:hover { border-color: var(--accent); background: rgba(14, 165, 233, 0.06); }
 
     @media (min-width: 901px) {
       .mobile-icon-bar, .mobile-panel, .mobile-panel-backdrop, .mobile-account-menu { display: none !important; }
@@ -1766,12 +1768,13 @@
     .template-categories {
       display: flex;
       gap: 6px;
-      padding: 0 24px 12px;
+      padding: 4px 24px 14px;
       overflow-x: auto;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
-      mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 32px), transparent 100%);
-      -webkit-mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 32px), transparent 100%);
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
     }
     .template-categories::-webkit-scrollbar { display: none; }
     .template-cat-pill {
@@ -1943,8 +1946,8 @@
 
       <!-- Legend Builder -->
       <div class="section" id="legendSection">
-        <div class="section-title" style="cursor:pointer;" onclick="var s=document.getElementById('dataMapSection');s.style.display=s.style.display==='none'?'block':'none';">Data Maps <span class="pro-badge-inline" onclick="event.stopPropagation();showUpgradeModal()">PRO</span></div>
-        <div id="dataMapSection" style="display: none;">
+        <div class="section-title">Data Maps <span class="pro-badge-inline" onclick="event.stopPropagation();showUpgradeModal()">PRO</span></div>
+        <div id="dataMapSection">
           <div id="dataMapCards" class="data-maps-grid"></div>
         </div>
 
@@ -5096,10 +5099,14 @@
       var container = document.getElementById(containerId);
       if (!container) return;
       container.innerHTML = '';
-      DATA_MAP_DATASETS.forEach(function(ds) {
+      var previewCount = 3;
+      var remaining = DATA_MAP_DATASETS.length - previewCount;
+      DATA_MAP_DATASETS.forEach(function(ds, idx) {
         var card = document.createElement('div');
         card.className = 'data-map-card';
         card.setAttribute('data-dataset', ds.id);
+        if (idx >= previewCount) card.style.display = 'none';
+        if (idx >= previewCount) card.classList.add('data-map-extra');
         var proTag = ds.pro ? '<span class="template-pro-badge">PRO</span>' : '';
         var preview = ds.colorScale ? ds.colorScale.map(function(c) { return '<span style="background:' + c + '"></span>'; }).join('') : '';
         card.innerHTML = '<div class="data-map-card-title">' + escapeHTML(ds.title) + ' ' + proTag + '</div>'
@@ -5109,6 +5116,16 @@
         card.addEventListener('click', function() { loadDataMap(ds.id); });
         container.appendChild(card);
       });
+      if (remaining > 0) {
+        var moreBtn = document.createElement('button');
+        moreBtn.className = 'data-map-more-btn';
+        moreBtn.innerHTML = '+ ' + remaining + ' more datasets';
+        moreBtn.addEventListener('click', function() {
+          container.querySelectorAll('.data-map-extra').forEach(function(c) { c.style.display = ''; });
+          moreBtn.remove();
+        });
+        container.appendChild(moreBtn);
+      }
     }
 
     let countyMode = false;

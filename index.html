@@ -1769,6 +1769,9 @@
       padding: 0 24px 12px;
       overflow-x: auto;
       scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 32px), transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0, black 24px, black calc(100% - 32px), transparent 100%);
     }
     .template-categories::-webkit-scrollbar { display: none; }
     .template-cat-pill {
@@ -1781,6 +1784,7 @@
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
+      flex-shrink: 0;
       transition: all var(--duration-fast);
     }
     .template-cat-pill.active {
@@ -2242,8 +2246,8 @@
           <input type="email" id="authEmail" placeholder="Email address" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #3a3a5a; background: #1a1a2e; color: #e0e0e0; font-size: 12px; margin-bottom: 6px; box-sizing: border-box;">
           <input type="password" id="authPassword" placeholder="Password (min 6 characters)" style="width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #3a3a5a; background: #1a1a2e; color: #e0e0e0; font-size: 12px; margin-bottom: 8px; box-sizing: border-box;">
           <div style="display: flex; gap: 8px; margin-bottom: 6px;">
-            <button class="btn" id="authSignUpBtn" style="flex: 1; padding: 10px; font-size: 12px; background: linear-gradient(135deg, #F97316, #EA580C);">Sign Up</button>
-            <button class="btn secondary" id="authSignInBtn" style="flex: 1; padding: 10px; font-size: 12px;">Sign In</button>
+            <button class="btn" id="authSignInBtn" style="flex: 1; padding: 10px; font-size: 12px; background: linear-gradient(135deg, #F97316, #EA580C);">Sign In</button>
+            <button class="btn secondary" id="authSignUpBtn" style="flex: 1; padding: 10px; font-size: 12px;">Sign Up</button>
           </div>
           <div id="authMessage" style="font-size: 11px; text-align: center; min-height: 16px;"></div>
         </div>

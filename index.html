@@ -4955,46 +4955,27 @@
     }
 
     const DATA_MAP_DATASETS = [
-      {
-        id: 'population', title: 'Population', desc: 'Total population by state',
-        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
-        variables: ['B01003_001E'], format: 'number',
-        colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true
-      },
-      {
-        id: 'income', title: 'Median Household Income', desc: 'Median household income in dollars',
-        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
-        variables: ['B19013_001E'], format: 'currency',
-        colorScale: ['#eff3ff','#bdd7e7','#6baed6','#2171b5','#08306b'], pro: true
-      },
-      {
-        id: 'poverty', title: 'Poverty Rate', desc: 'Percent of population below the poverty line',
-        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
-        variables: ['B17001_002E','B01003_001E'],
-        compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); },
-        format: 'percent',
-        colorScale: ['#fee5d9','#fcae91','#fb6a4a','#de2d26','#a50f15'], pro: true
-      },
-      {
-        id: 'education', title: "Bachelor's Degree+", desc: 'Adults 25+ with a bachelors degree or higher',
-        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
-        variables: ['B15003_022E','B15003_023E','B15003_024E','B15003_025E','B15003_001E'],
-        compute: function(v) { return (((v[0]+v[1]+v[2]+v[3]) / v[4]) * 100).toFixed(1); },
-        format: 'percent',
-        colorScale: ['#f2f0f7','#cbc9e2','#9e9ac8','#756bb1','#54278f'], pro: true
-      },
-      {
-        id: 'unemployment', title: 'Unemployment Rate', desc: 'Seasonally adjusted unemployment rate',
-        source: 'U.S. Bureau of Labor Statistics, 2024', type: 'bls',
-        format: 'percent',
-        colorScale: ['#ffffcc','#c7e9b4','#7fcdbb','#1d91c0','#0c2c84'], pro: true
-      },
-      {
-        id: 'homevalue', title: 'Median Home Value', desc: 'Median value of owner-occupied housing',
-        source: 'U.S. Census Bureau, ACS 2023', type: 'census',
-        variables: ['B25077_001E'], format: 'currency',
-        colorScale: ['#ffffd4','#fed98e','#fe9929','#d95f0e','#993404'], pro: true
-      }
+      { id: 'population', title: 'Population', desc: 'Total population by state', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01003_001E'], format: 'number', colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true },
+      { id: 'income', title: 'Median Household Income', desc: 'Median household income in dollars', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19013_001E'], format: 'currency', colorScale: ['#eff3ff','#bdd7e7','#6baed6','#2171b5','#08306b'], pro: true },
+      { id: 'poverty', title: 'Poverty Rate', desc: 'Percent of population below the poverty line', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B17001_002E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fee5d9','#fcae91','#fb6a4a','#de2d26','#a50f15'], pro: true },
+      { id: 'education', title: "Bachelor's Degree+", desc: 'Adults 25+ with a bachelors degree or higher', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B15003_022E','B15003_023E','B15003_024E','B15003_025E','B15003_001E'], compute: function(v) { return (((v[0]+v[1]+v[2]+v[3]) / v[4]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f2f0f7','#cbc9e2','#9e9ac8','#756bb1','#54278f'], pro: true },
+      { id: 'unemployment', title: 'Unemployment Rate', desc: 'Civilian labor force unemployment rate', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B23025_005E','B23025_002E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffcc','#c7e9b4','#7fcdbb','#1d91c0','#0c2c84'], pro: true },
+      { id: 'homevalue', title: 'Median Home Value', desc: 'Median value of owner-occupied housing', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25077_001E'], format: 'currency', colorScale: ['#ffffd4','#fed98e','#fe9929','#d95f0e','#993404'], pro: true },
+      { id: 'median_age', title: 'Median Age', desc: 'Median age of the population', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01002_001E'], format: 'number', colorScale: ['#feebe2','#fbb4b9','#f768a1','#c51b8a','#7a0177'], pro: true },
+      { id: 'per_capita_income', title: 'Per Capita Income', desc: 'Per capita income in the past 12 months', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19301_001E'], format: 'currency', colorScale: ['#edf8fb','#b3cde3','#8c96c6','#8856a7','#810f7c'], pro: true },
+      { id: 'gini', title: 'Income Inequality (Gini)', desc: 'Gini index of income inequality (0=equal, 1=unequal)', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19083_001E'], format: 'decimal', colorScale: ['#f7f7f7','#cccccc','#969696','#636363','#252525'], pro: true },
+      { id: 'homeownership', title: 'Homeownership Rate', desc: 'Percent of occupied housing that is owner-occupied', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25003_002E','B25003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#eff3ff','#bdd7e7','#6baed6','#3182bd','#08519c'], pro: true },
+      { id: 'median_rent', title: 'Median Gross Rent', desc: 'Median monthly gross rent', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25064_001E'], format: 'currency', colorScale: ['#fff7ec','#fee8c8','#fdd49e','#fdbb84','#e34a33'], pro: true },
+      { id: 'rent_burden', title: 'Rent Burden', desc: 'Median gross rent as percentage of household income', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25071_001E'], format: 'percent', colorScale: ['#f1eef6','#d7b5d8','#df65b0','#dd1c77','#980043'], pro: true },
+      { id: 'uninsured', title: 'Uninsured Rate', desc: 'Percent of population without health insurance', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B27010_017E','B27010_033E','B27010_050E','B27010_066E','B27010_001E'], compute: function(v) { return (((v[0]+v[1]+v[2]+v[3]) / v[4]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fee5d9','#fcbba1','#fc9272','#fb6a4a','#cb181d'], pro: true },
+      { id: 'foreign_born', title: 'Foreign-Born Population', desc: 'Percent of population born outside the U.S.', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B05002_013E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcfd','#ccece6','#66c2a4','#238b45','#00441b'], pro: true },
+      { id: 'veterans', title: 'Veteran Population', desc: 'Percent of civilian adults who are veterans', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B21001_002E','B21001_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fbff','#c6dbef','#6baed6','#2171b5','#084594'], pro: true },
+      { id: 'commute_time', title: 'Mean Commute Time', desc: 'Mean travel time to work in minutes', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08136_001E','B08301_001E'], compute: function(v) { return (v[0] / v[1]).toFixed(1); }, format: 'number', colorScale: ['#ffffb2','#fed976','#feb24c','#fd8d3c','#e31a1c'], pro: true },
+      { id: 'pop_65plus', title: 'Population 65+', desc: 'Percent of population aged 65 and older', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01001_020E','B01001_021E','B01001_022E','B01001_023E','B01001_024E','B01001_025E','B01001_044E','B01001_045E','B01001_046E','B01001_047E','B01001_048E','B01001_049E','B01003_001E'], compute: function(v) { var s=0; for(var i=0;i<v.length-1;i++) s+=v[i]; return ((s/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#feedde','#fdbe85','#fd8d3c','#e6550d','#a63603'], pro: true },
+      { id: 'pop_under18', title: 'Population Under 18', desc: 'Percent of population under age 18', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B09001_001E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081'], pro: true },
+      { id: 'broadband', title: 'Broadband Internet', desc: 'Percent of households with broadband internet', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B28002_004E','B28002_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7f7f7','#d9d9d9','#bdbdbd','#737373','#252525'], pro: true },
+      { id: 'snap', title: 'SNAP/Food Stamps', desc: 'Percent of households receiving SNAP benefits', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B22010_002E','B22010_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff5f0','#fcbba1','#fb6a4a','#cb181d','#67000d'], pro: true },
+      { id: 'disability', title: 'Disability Rate', desc: 'Percent of civilian population with a disability', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B18101_004E','B18101_007E','B18101_010E','B18101_013E','B18101_016E','B18101_019E','B18101_023E','B18101_026E','B18101_029E','B18101_032E','B18101_035E','B18101_038E','B01003_001E'], compute: function(v) { var d=0; for(var i=0;i<v.length-1;i++) d+=v[i]; return ((d/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#fff7f3','#fde0dd','#fcc5c0','#f768a1','#ae017e'], pro: true }
     ];
 
     const FIPS_TO_STATE = {
@@ -5011,34 +4992,6 @@
       '51':'Virginia','53':'Washington','54':'West Virginia','55':'Wisconsin','56':'Wyoming'
     };
 
-    const BLS_SERIES = {
-      'Alabama':'LASST010000000000003','Alaska':'LASST020000000000003',
-      'Arizona':'LASST040000000000003','Arkansas':'LASST050000000000003',
-      'California':'LASST060000000000003','Colorado':'LASST080000000000003',
-      'Connecticut':'LASST090000000000003','Delaware':'LASST100000000000003',
-      'District of Columbia':'LASST110000000000003','Florida':'LASST120000000000003',
-      'Georgia':'LASST130000000000003','Hawaii':'LASST150000000000003',
-      'Idaho':'LASST160000000000003','Illinois':'LASST170000000000003',
-      'Indiana':'LASST180000000000003','Iowa':'LASST190000000000003',
-      'Kansas':'LASST200000000000003','Kentucky':'LASST210000000000003',
-      'Louisiana':'LASST220000000000003','Maine':'LASST230000000000003',
-      'Maryland':'LASST240000000000003','Massachusetts':'LASST250000000000003',
-      'Michigan':'LASST260000000000003','Minnesota':'LASST270000000000003',
-      'Mississippi':'LASST280000000000003','Missouri':'LASST290000000000003',
-      'Montana':'LASST300000000000003','Nebraska':'LASST310000000000003',
-      'Nevada':'LASST320000000000003','New Hampshire':'LASST330000000000003',
-      'New Jersey':'LASST340000000000003','New Mexico':'LASST350000000000003',
-      'New York':'LASST360000000000003','North Carolina':'LASST370000000000003',
-      'North Dakota':'LASST380000000000003','Ohio':'LASST390000000000003',
-      'Oklahoma':'LASST400000000000003','Oregon':'LASST410000000000003',
-      'Pennsylvania':'LASST420000000000003','Rhode Island':'LASST440000000000003',
-      'South Carolina':'LASST450000000000003','South Dakota':'LASST460000000000003',
-      'Tennessee':'LASST470000000000003','Texas':'LASST480000000000003',
-      'Utah':'LASST490000000000003','Vermont':'LASST500000000000003',
-      'Virginia':'LASST510000000000003','Washington':'LASST530000000000003',
-      'West Virginia':'LASST540000000000003','Wisconsin':'LASST550000000000003',
-      'Wyoming':'LASST560000000000003'
-    };
 
     async function fetchCensusData(dataset) {
       var vars = dataset.variables.join(',');
@@ -5061,27 +5014,6 @@
       return result;
     }
 
-    async function fetchBLSData() {
-      var seriesIds = Object.values(BLS_SERIES);
-      var resp = await fetch('https://api.bls.gov/publicAPI/v2/timeseries/data/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ seriesid: seriesIds, startyear: '2024', endyear: '2024' })
-      });
-      if (!resp.ok) throw new Error('BLS API returned ' + resp.status);
-      var json = await resp.json();
-      if (json.status !== 'REQUEST_SUCCEEDED') throw new Error('BLS request failed');
-      var stateToSeries = {};
-      Object.entries(BLS_SERIES).forEach(function(e) { stateToSeries[e[1]] = e[0]; });
-      var result = {};
-      json.Results.series.forEach(function(s) {
-        var stateName = stateToSeries[s.seriesID];
-        if (!stateName) return;
-        var latest = s.data.find(function(d) { return d.period !== 'M13'; });
-        if (latest) result[stateName] = parseFloat(latest.value);
-      });
-      return result;
-    }
 
     function applyDataMap(dataset, data) {
       if (!window.chroma) { showMessage('chroma.js not loaded — refresh the page', 'error'); return; }
@@ -5102,6 +5034,7 @@
         var label;
         if (dataset.format === 'currency') label = '$' + Math.round(lo).toLocaleString() + ' – $' + Math.round(hi).toLocaleString();
         else if (dataset.format === 'percent') label = lo.toFixed(1) + '% – ' + hi.toFixed(1) + '%';
+        else if (dataset.format === 'decimal') label = lo.toFixed(3) + ' – ' + hi.toFixed(3);
         else label = Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString();
         appState.legendEntries.push({ label: label, color: midColor });
       }
@@ -5126,23 +5059,102 @@
       trackEvent('data_map_loaded', { dataset: dataset.id });
     }
 
-    async function loadDataMap(datasetId) {
+    // === Data Map Ramp Picker ===
+    const DATA_MAP_RAMPS = {
+      recommended: [
+        { name: 'Teal', colors: ['#e0f4f4','#b2e4e4','#7ccfc8','#4bb5a9','#2B9A8C','#1D7A6A','#0F5C4E'] },
+        { name: 'Blue', colors: ['#e3f0fc','#b3d4f5','#7ab5eb','#4a94dd','#2070c4','#15529e','#0b3672'] },
+        { name: 'Red', colors: ['#fde8e8','#f5b8b8','#ed8585','#e35555','#d63031','#a82424','#7a1a1a'] }
+      ],
+      more: [
+        { name: 'Green', colors: ['#e8f5e9','#b9e0b9','#85c985','#56b156','#339933','#267326','#194d19'] },
+        { name: 'Orange', colors: ['#fff3e0','#ffd9a0','#ffbc61','#ff9f2e','#f57c00','#c56200','#8c4600'] },
+        { name: 'Purple', colors: ['#f3e5f5','#d1a8e0','#af6dca','#8e3db4','#6c1d98','#501574','#350e4f'] },
+        { name: 'Grey', colors: ['#f5f5f5','#d9d9d9','#bdbdbd','#969696','#737373','#525252','#252525'] },
+        { name: 'Red\u2013Blue', colors: ['#d63031','#e87272','#f5b0b0','#f0f0f0','#a8c5e2','#5a9bc8','#2070c4'] },
+        { name: 'Brown\u2013Green', colors: ['#8c510a','#bf8040','#dfc27d','#f5f5dc','#80cdc1','#35978f','#01665e'] },
+        { name: 'Orange\u2013Purple', colors: ['#e66101','#f1a44a','#fddba0','#f7f7f7','#c2a5cf','#9970ab','#5e3c99'] }
+      ]
+    };
+
+    function showDataMapRampPicker(datasetId) {
       var dataset = DATA_MAP_DATASETS.find(function(d) { return d.id === datasetId; });
       if (!dataset) return;
       if (dataset.pro && !isPro()) {
         showMessage('Data Maps require Pro. Sign up to unlock!', 'info');
         showUpgradeModal(); return;
       }
-      // Data maps are state-level — exit county view if active
-      if (countyMode) {
-        backToStateView();
+      var existing = document.getElementById('dataMapRampModal');
+      if (existing) existing.remove();
+      var modal = document.createElement('div');
+      modal.id = 'dataMapRampModal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
+      var box = document.createElement('div');
+      box.style.cssText = 'background:var(--bg-primary,#1a1a2e);border-radius:16px;padding:24px;max-width:380px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);max-height:80vh;overflow-y:auto;';
+      var titleEl = document.createElement('div');
+      titleEl.style.cssText = 'font-size:16px;font-weight:600;color:var(--text-primary,#fff);margin-bottom:4px;';
+      titleEl.textContent = dataset.title;
+      box.appendChild(titleEl);
+      var sub = document.createElement('div');
+      sub.style.cssText = 'font-size:12px;color:var(--text-muted,#888);margin-bottom:16px;';
+      sub.textContent = 'Choose a color palette';
+      box.appendChild(sub);
+      var recLabel = document.createElement('div');
+      recLabel.style.cssText = 'font-size:11px;font-weight:600;color:var(--text-muted,#888);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;';
+      recLabel.textContent = 'Recommended';
+      box.appendChild(recLabel);
+      function makeRow(ramp, isDefault) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:background 0.15s;margin-bottom:4px;';
+        row.addEventListener('mouseenter', function() { row.style.background = 'rgba(255,255,255,0.08)'; });
+        row.addEventListener('mouseleave', function() { row.style.background = 'none'; });
+        var swatch = document.createElement('div');
+        swatch.style.cssText = 'display:flex;height:24px;border-radius:6px;overflow:hidden;flex:1;';
+        ramp.colors.forEach(function(c) { var s = document.createElement('div'); s.style.cssText = 'flex:1;background:' + c + ';'; swatch.appendChild(s); });
+        row.appendChild(swatch);
+        var label = document.createElement('span');
+        label.style.cssText = 'font-size:12px;color:var(--text-secondary,#ccc);white-space:nowrap;min-width:80px;text-align:right;';
+        label.textContent = ramp.name + (isDefault ? ' \u2605' : '');
+        row.appendChild(label);
+        row.addEventListener('click', function() { modal.remove(); executeDataMapLoad(datasetId, ramp.colors); });
+        return row;
       }
+      box.appendChild(makeRow({ name: 'Default', colors: dataset.colorScale }, true));
+      DATA_MAP_RAMPS.recommended.forEach(function(r) { box.appendChild(makeRow(r, false)); });
+      var moreContainer = document.createElement('div');
+      moreContainer.style.display = 'none';
+      var moreLabel2 = document.createElement('div');
+      moreLabel2.style.cssText = 'font-size:11px;font-weight:600;color:var(--text-muted,#888);text-transform:uppercase;letter-spacing:0.5px;margin:12px 0 8px;';
+      moreLabel2.textContent = 'More palettes';
+      moreContainer.appendChild(moreLabel2);
+      DATA_MAP_RAMPS.more.forEach(function(r) { moreContainer.appendChild(makeRow(r, false)); });
+      box.appendChild(moreContainer);
+      var moreBtn = document.createElement('button');
+      moreBtn.style.cssText = 'width:100%;padding:8px;margin-top:8px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text-secondary,#ccc);font-size:12px;cursor:pointer;';
+      moreBtn.textContent = '+ More palettes';
+      moreBtn.addEventListener('click', function() { moreContainer.style.display = 'block'; moreBtn.remove(); });
+      box.appendChild(moreBtn);
+      var cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'width:100%;padding:8px;margin-top:8px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text-muted,#888);font-size:12px;cursor:pointer;';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', function() { modal.remove(); });
+      box.appendChild(cancelBtn);
+      modal.appendChild(box);
+      modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
+    }
+
+    async function executeDataMapLoad(datasetId, rampColors) {
+      var dataset = DATA_MAP_DATASETS.find(function(d) { return d.id === datasetId; });
+      if (!dataset) return;
+      if (countyMode) backToStateView();
       document.querySelectorAll('.data-map-card').forEach(function(c) { c.classList.remove('loading'); });
       var cards = document.querySelectorAll('[data-dataset="' + datasetId + '"]');
       cards.forEach(function(c) { c.classList.add('loading'); });
       try {
-        var data = dataset.type === 'bls' ? await fetchBLSData() : await fetchCensusData(dataset);
-        applyDataMap(dataset, data);
+        var data = await fetchCensusData(dataset);
+        var modifiedDataset = Object.assign({}, dataset, { colorScale: rampColors });
+        applyDataMap(modifiedDataset, data);
       } catch (err) {
         console.error('Data map error:', err);
         showMessage('Failed to load data: ' + err.message, 'error');
@@ -5151,11 +5163,15 @@
       }
     }
 
+    function loadDataMap(datasetId) {
+      showDataMapRampPicker(datasetId);
+    }
+
     function renderDataMapCards(containerId) {
       var container = document.getElementById(containerId);
       if (!container) return;
       container.innerHTML = '';
-      var previewCount = 3;
+      var previewCount = 6;
       var remaining = DATA_MAP_DATASETS.length - previewCount;
       DATA_MAP_DATASETS.forEach(function(ds, idx) {
         var card = document.createElement('div');

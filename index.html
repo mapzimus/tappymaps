@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co https://cdn.jsdelivr.net wss://*.supabase.co;">
     <title>Tappymaps - Tap. Color. Share.</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
 <style>
@@ -2752,7 +2753,7 @@
         if (data.count > 0) {
           const itemEl = document.createElement('div');
           itemEl.className = 'stats-item';
-          itemEl.innerHTML = `<div class="stats-color" style="background-color: ${data.color};"></div><span>${label}: ${data.count}</span>`;
+          itemEl.innerHTML = `<div class="stats-color" style="background-color: ${data.color};"></div><span>${escapeHTML(label)}: ${data.count}</span>`;
           breakdownEl.appendChild(itemEl);
         }
       });
@@ -3295,7 +3296,7 @@
       }
 
       legendDisplay.style.display = 'block';
-      legendDisplay.innerHTML = '<div class="legend-title">' + (appState.legendTitle || 'Legend') + '</div>';
+      legendDisplay.innerHTML = '<div class="legend-title">' + escapeHTML(appState.legendTitle || 'Legend') + '</div>';
       updateLegendPosition();
 
       appState.legendEntries.forEach(entry => {
@@ -3549,6 +3550,10 @@
       clearTimeout(appState.urlUpdateTimeout);
       appState.urlUpdateTimeout = setTimeout(() => {
         const encoded = encodeStateToURL();
+        if (encoded.length > 8000) {
+          console.error('URL state too large (' + encoded.length + ' chars), skipping hash update');
+          return;
+        }
         window.history.replaceState(null, '', `#${encoded}`);
       }, 1000);
     }
@@ -3768,6 +3773,10 @@
             cancelUrl: window.location.origin + '?checkout=cancel'
           })
         });
+        if (!res.ok) {
+          showMessage('Checkout error: server returned ' + res.status, 'error');
+          return;
+        }
         const result = await res.json();
         if (result.url) {
           window.location.href = result.url;
@@ -3832,16 +3841,31 @@
     // ── Export tracking (server-side enforced) ──────────────────────
 
     // ============================================================================
+    // HTML ESCAPING — prevent XSS in user-supplied text
+    // ============================================================================
+    function escapeHTML(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
     // ANALYTICS — lightweight event tracking
     // ============================================================================
     function trackEvent(event, meta = {}) {
       try {
         const entry = { event, ts: new Date().toISOString(), ...meta };
         // Append to localStorage log (capped at 500 entries)
-        const log = JSON.parse(localStorage.getItem('tappymaps_events') || '[]');
-        log.push(entry);
-        if (log.length > 500) log.splice(0, log.length - 500);
-        localStorage.setItem('tappymaps_events', JSON.stringify(log));
+        // Debounce: batch writes to avoid parsing full log on rapid events
+        if (!trackEvent._pending) trackEvent._pending = [];
+        trackEvent._pending.push(entry);
+        clearTimeout(trackEvent._flushTimer);
+        trackEvent._flushTimer = setTimeout(() => {
+          const log = JSON.parse(localStorage.getItem('tappymaps_events') || '[]');
+          log.push(...trackEvent._pending);
+          trackEvent._pending = [];
+          if (log.length > 500) log.splice(0, log.length - 500);
+          localStorage.setItem('tappymaps_events', JSON.stringify(log));
+        }, 2000);
         // Fire-and-forget to Supabase if table exists
         if (supabaseClient) {
           supabaseClient.from('analytics').insert([{

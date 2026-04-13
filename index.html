@@ -314,6 +314,122 @@
       --shadow-lg: 0 10px 40px rgba(50, 30, 10, 0.12);
       --shadow-xl: 0 20px 60px rgba(50, 30, 10, 0.15);
     }
+    /* Dracula */
+    [data-theme="dracula"] {
+      --bg: #282a36;
+      --surface: #2d2f3d;
+      --surface-raised: #383a4a;
+      --border: #44475a;
+      --border-subtle: #44475a;
+      --border-muted: #44475a;
+      --border-faint: #383a4a;
+      --text: #f8f8f2;
+      --text-muted: #b0b0c8;
+      --text-dim: #9090a8;
+      --text-strong: #ffffff;
+      --state-fill: #383a4a;
+      --state-stroke: #44475a;
+      --ocean-bg: #1e1f29;
+      --surface-hover: #44475a;
+      --accent: #bd93f9;
+      --accent-hover: #a070e0;
+    }
+
+    /* Solarized */
+    [data-theme="solarized"] {
+      --bg: #fdf6e3;
+      --surface: #fef8e8;
+      --surface-raised: #fff;
+      --border: #d0c5a0;
+      --border-subtle: #ddd4b0;
+      --border-muted: #c4b890;
+      --border-faint: #e4dcc4;
+      --text: #586e75;
+      --text-muted: #839496;
+      --text-dim: #93a1a1;
+      --text-strong: #073642;
+      --state-fill: #eee8d5;
+      --state-stroke: #c0b490;
+      --ocean-bg: #ddd4b4;
+      --surface-hover: #eee8d5;
+      --accent: #268bd2;
+      --accent-hover: #1a6db0;
+      --shadow-sm: 0 2px 8px rgba(0, 43, 54, 0.06);
+      --shadow-md: 0 4px 16px rgba(0, 43, 54, 0.08);
+      --shadow-lg: 0 10px 40px rgba(0, 43, 54, 0.1);
+      --shadow-xl: 0 20px 60px rgba(0, 43, 54, 0.12);
+    }
+
+    /* Lavender */
+    [data-theme="lavender"] {
+      --bg: #f0ecf8;
+      --surface: #f5f0fc;
+      --surface-raised: #fff;
+      --border: #c8b8e0;
+      --border-subtle: #d4c8e8;
+      --border-muted: #b8a4d4;
+      --border-faint: #e0d8f0;
+      --text: #2e1e4a;
+      --text-muted: #6a5088;
+      --text-dim: #5a4278;
+      --text-strong: #1a0e30;
+      --state-fill: #d4c8e8;
+      --state-stroke: #a890c8;
+      --ocean-bg: #ccc0dc;
+      --surface-hover: #e8e0f4;
+      --accent: #8b5cf6;
+      --accent-hover: #7c3aed;
+      --shadow-sm: 0 2px 8px rgba(40, 20, 60, 0.08);
+      --shadow-md: 0 4px 16px rgba(40, 20, 60, 0.1);
+      --shadow-lg: 0 10px 40px rgba(40, 20, 60, 0.12);
+      --shadow-xl: 0 20px 60px rgba(40, 20, 60, 0.15);
+    }
+
+    /* Mint */
+    [data-theme="mint"] {
+      --bg: #ecf8f4;
+      --surface: #f0fcf7;
+      --surface-raised: #fff;
+      --border: #a8d8c4;
+      --border-subtle: #b8e4d0;
+      --border-muted: #98ccb8;
+      --border-faint: #d0f0e0;
+      --text: #1a3a2e;
+      --text-muted: #4a7a68;
+      --text-dim: #3a6a58;
+      --text-strong: #0e2a20;
+      --state-fill: #b8e4d0;
+      --state-stroke: #80c4a8;
+      --ocean-bg: #c0dcd0;
+      --surface-hover: #d8f4e8;
+      --accent: #10b981;
+      --accent-hover: #059669;
+      --shadow-sm: 0 2px 8px rgba(10, 40, 30, 0.06);
+      --shadow-md: 0 4px 16px rgba(10, 40, 30, 0.08);
+      --shadow-lg: 0 10px 40px rgba(10, 40, 30, 0.1);
+      --shadow-xl: 0 20px 60px rgba(10, 40, 30, 0.12);
+    }
+
+    /* Cherry */
+    [data-theme="cherry"] {
+      --bg: #1a0a0e;
+      --surface: #241014;
+      --surface-raised: #36181e;
+      --border: #5c2030;
+      --border-subtle: #5c2030;
+      --border-muted: #5c2030;
+      --border-faint: #36181e;
+      --text: #f0d0d8;
+      --text-muted: #c07888;
+      --text-dim: #b06878;
+      --text-strong: #ffe8ee;
+      --state-fill: #36181e;
+      --state-stroke: #5c2030;
+      --ocean-bg: #100608;
+      --surface-hover: #3e1c24;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+    }
 
 
 
@@ -4765,17 +4881,22 @@
     }
 
     const themeList = [
-      { id: 'dark',      label: 'Midnight',  icon: '🌙', isLight: false, preview: '#1a1a2e' },
-      { id: 'light',     label: 'Light',     icon: '☀️', isLight: true,  preview: '#e8ecf1' },
-      { id: 'slate',     label: 'Slate',     icon: '🪨', isLight: false, preview: '#1e293b' },
-      { id: 'warm',      label: 'Warm',      icon: '🏖️', isLight: true,  preview: '#faf5ef' },
-      { id: 'forest',    label: 'Forest',    icon: '🌲', isLight: false, preview: '#1a2e1a' },
-      { id: 'ocean',     label: 'Ocean',     icon: '🌊', isLight: false, preview: '#0c1929' },
-      { id: 'rose',      label: 'Rose',      icon: '🌹', isLight: false, preview: '#2a1520' },
-      { id: 'sunset',    label: 'Sunset',    icon: '🌅', isLight: true,  preview: '#fef3e2' },
-      { id: 'cyberpunk', label: 'Cyberpunk', icon: '🔮', isLight: false, preview: '#0a0a1a' },
-      { id: 'nord',      label: 'Nord',      icon: '❄️', isLight: false, preview: '#2e3440' },
-      { id: 'sepia',     label: 'Sepia',     icon: '📜', isLight: true,  preview: '#f4ecd8' }
+      { id: 'dark',      label: 'Midnight',   icon: '\u{1F319}', isLight: false, preview: '#1a1a2e' },
+      { id: 'light',     label: 'Light',      icon: '\u{2600}\u{FE0F}', isLight: true,  preview: '#e8ecf1' },
+      { id: 'slate',     label: 'Slate',      icon: '\u{1FAA8}', isLight: false, preview: '#1e293b' },
+      { id: 'warm',      label: 'Warm',       icon: '\u{1F3D6}\u{FE0F}', isLight: true,  preview: '#faf5ef' },
+      { id: 'forest',    label: 'Forest',     icon: '\u{1F332}', isLight: false, preview: '#1a2e1a' },
+      { id: 'ocean',     label: 'Ocean',      icon: '\u{1F30A}', isLight: false, preview: '#0c1929' },
+      { id: 'rose',      label: 'Rose',       icon: '\u{1F339}', isLight: false, preview: '#2a1520' },
+      { id: 'sunset',    label: 'Sunset',     icon: '\u{1F305}', isLight: true,  preview: '#fef3e2' },
+      { id: 'cyberpunk', label: 'Cyberpunk',  icon: '\u{1F52E}', isLight: false, preview: '#0a0a1a' },
+      { id: 'nord',      label: 'Nord',       icon: '\u{2744}\u{FE0F}', isLight: false, preview: '#2e3440' },
+      { id: 'sepia',     label: 'Sepia',      icon: '\u{1F4DC}', isLight: true,  preview: '#f4ecd8' },
+      { id: 'dracula',   label: 'Dracula',    icon: '\u{1F9DB}', isLight: false, preview: '#282a36' },
+      { id: 'solarized', label: 'Solarized',  icon: '\u{1F31E}', isLight: true,  preview: '#fdf6e3' },
+      { id: 'lavender',  label: 'Lavender',   icon: '\u{1F33C}', isLight: true,  preview: '#f0ecf8' },
+      { id: 'mint',      label: 'Mint',       icon: '\u{1F33F}', isLight: true,  preview: '#ecf8f4' },
+      { id: 'cherry',    label: 'Cherry',     icon: '\u{1F352}', isLight: false, preview: '#1a0a0e' }
     ];
     let currentThemeIndex = 0;
 
@@ -4804,65 +4925,60 @@
     }
 
     function toggleTheme() {
-      // Show theme picker modal instead of cycling
-      var existing = document.getElementById('themePickerModal');
+      // Show dropdown panel anchored below the Themes button
+      var existing = document.getElementById('themeDropdown');
       if (existing) { existing.remove(); return; }
 
-      var modal = document.createElement('div');
-      modal.id = 'themePickerModal';
-      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
+      var btn = document.getElementById('themeToggle');
+      var rect = btn.getBoundingClientRect();
 
-      var box = document.createElement('div');
-      box.style.cssText = 'background:var(--bg-primary,#1a1a2e);border-radius:16px;padding:24px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);max-height:80vh;overflow-y:auto;';
+      // Backdrop to catch outside clicks
+      var backdrop = document.createElement('div');
+      backdrop.id = 'themeDropdown';
+      backdrop.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;';
+      backdrop.addEventListener('click', function() { backdrop.remove(); });
 
+      // Dropdown panel
+      var panel = document.createElement('div');
+      panel.style.cssText = 'position:fixed;top:' + (rect.bottom + 6) + 'px;right:' + (window.innerWidth - rect.right) + 'px;width:280px;max-height:60vh;overflow-y:auto;background:var(--surface,#1e1e3a);border:1px solid var(--border,#333);border-radius:12px;padding:10px;box-shadow:0 12px 40px rgba(0,0,0,0.4);z-index:10000;';
+      panel.addEventListener('click', function(e) { e.stopPropagation(); });
+
+      // Title
       var title = document.createElement('div');
-      title.style.cssText = 'font-size:16px;font-weight:600;color:var(--text-primary,#fff);margin-bottom:16px;';
-      title.textContent = 'Choose a Theme';
-      box.appendChild(title);
+      title.style.cssText = 'font-size:12px;font-weight:700;color:var(--text-muted,#888);text-transform:uppercase;letter-spacing:0.8px;padding:4px 6px 8px;';
+      title.textContent = 'Themes';
+      panel.appendChild(title);
 
+      // Grid of theme cards
       var grid = document.createElement('div');
-      grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
 
       themeList.forEach(function(theme) {
         var card = document.createElement('div');
         var isActive = themeList[currentThemeIndex].id === theme.id;
-        card.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:all 0.15s;border:2px solid ' + (isActive ? 'var(--accent,#2B9A8C)' : 'rgba(255,255,255,0.08)') + ';background:' + (isActive ? 'rgba(43,154,140,0.12)' : 'rgba(255,255,255,0.03)') + ';';
-        card.addEventListener('mouseenter', function() { if (!isActive) card.style.background = 'rgba(255,255,255,0.08)'; });
-        card.addEventListener('mouseleave', function() { if (!isActive) card.style.background = 'rgba(255,255,255,0.03)'; });
+        card.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:all 0.15s;border:1.5px solid ' + (isActive ? 'var(--accent,#0EA5E9)' : 'transparent') + ';background:' + (isActive ? 'rgba(14,165,233,0.1)' : 'transparent') + ';';
+        card.addEventListener('mouseenter', function() { if (!isActive) card.style.background = 'var(--surface-hover,rgba(255,255,255,0.06))'; });
+        card.addEventListener('mouseleave', function() { if (!isActive) card.style.background = isActive ? 'rgba(14,165,233,0.1)' : 'transparent'; });
 
         var swatch = document.createElement('div');
-        swatch.style.cssText = 'width:28px;height:28px;border-radius:8px;background:' + theme.preview + ';border:1px solid rgba(255,255,255,0.15);flex-shrink:0;';
+        swatch.style.cssText = 'width:24px;height:24px;border-radius:6px;background:' + theme.preview + ';border:1px solid rgba(128,128,128,0.25);flex-shrink:0;';
         card.appendChild(swatch);
 
-        var info = document.createElement('div');
         var nameEl = document.createElement('div');
-        nameEl.style.cssText = 'font-size:13px;font-weight:600;color:var(--text-primary,#fff);';
+        nameEl.style.cssText = 'font-size:12px;font-weight:' + (isActive ? '700' : '500') + ';color:var(--text,#fff);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
         nameEl.textContent = theme.icon + ' ' + theme.label;
-        info.appendChild(nameEl);
-        var tagEl = document.createElement('div');
-        tagEl.style.cssText = 'font-size:10px;color:var(--text-muted,#888);margin-top:1px;';
-        tagEl.textContent = theme.isLight ? 'Light' : 'Dark';
-        info.appendChild(tagEl);
-        card.appendChild(info);
+        card.appendChild(nameEl);
 
         card.addEventListener('click', function() {
           applyTheme(theme.id);
-          modal.remove();
+          backdrop.remove();
         });
         grid.appendChild(card);
       });
 
-      box.appendChild(grid);
-
-      var cancelBtn = document.createElement('button');
-      cancelBtn.style.cssText = 'width:100%;padding:8px;margin-top:12px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text-muted,#888);font-size:12px;cursor:pointer;';
-      cancelBtn.textContent = 'Cancel';
-      cancelBtn.addEventListener('click', function() { modal.remove(); });
-      box.appendChild(cancelBtn);
-
-      modal.appendChild(box);
-      modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
-      document.body.appendChild(modal);
+      panel.appendChild(grid);
+      backdrop.appendChild(panel);
+      document.body.appendChild(backdrop);
     }
 
     // ============================================================================

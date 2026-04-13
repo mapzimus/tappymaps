@@ -202,6 +202,119 @@
       --accent-hover: #0ea5e9;
     }
 
+    /* Rose */
+    [data-theme="rose"] {
+      --bg: #2a1520;
+      --surface: #351a28;
+      --surface-raised: #4a2538;
+      --border: #6b3550;
+      --border-subtle: #6b3550;
+      --border-muted: #6b3550;
+      --border-faint: #4a2538;
+      --text: #f0d4e0;
+      --text-muted: #c88aa8;
+      --text-dim: #c88aa8;
+      --text-strong: #ffe8f0;
+      --state-fill: #4a2538;
+      --state-stroke: #6b3550;
+      --ocean-bg: #1a0c14;
+      --surface-hover: #4a2538;
+      --accent: #f472b6;
+      --accent-hover: #ec4899;
+    }
+
+    /* Sunset */
+    [data-theme="sunset"] {
+      --bg: #fef3e2;
+      --surface: #fff8ee;
+      --surface-raised: #fff;
+      --border: #e8c9a0;
+      --border-subtle: #f0d8b8;
+      --border-muted: #ddb88a;
+      --border-faint: #f4e0c8;
+      --text: #4a2810;
+      --text-muted: #8a6040;
+      --text-dim: #7a5535;
+      --text-strong: #2e1808;
+      --state-fill: #f0d8b8;
+      --state-stroke: #d4a878;
+      --ocean-bg: #e8d0b0;
+      --surface-hover: #f8ead0;
+      --accent: #f97316;
+      --accent-hover: #ea580c;
+      --shadow-sm: 0 2px 8px rgba(80, 40, 0, 0.08);
+      --shadow-md: 0 4px 16px rgba(80, 40, 0, 0.1);
+      --shadow-lg: 0 10px 40px rgba(80, 40, 0, 0.12);
+      --shadow-xl: 0 20px 60px rgba(80, 40, 0, 0.15);
+    }
+
+    /* Cyberpunk */
+    [data-theme="cyberpunk"] {
+      --bg: #0a0a1a;
+      --surface: #0e0e24;
+      --surface-raised: #161638;
+      --border: #2a1a5e;
+      --border-subtle: #2a1a5e;
+      --border-muted: #2a1a5e;
+      --border-faint: #161638;
+      --text: #e0d0ff;
+      --text-muted: #9080cc;
+      --text-dim: #9080cc;
+      --text-strong: #f0e8ff;
+      --state-fill: #161638;
+      --state-stroke: #2a1a5e;
+      --ocean-bg: #050510;
+      --surface-hover: #1c1c48;
+      --accent: #a855f7;
+      --accent-hover: #9333ea;
+    }
+
+    /* Nord */
+    [data-theme="nord"] {
+      --bg: #2e3440;
+      --surface: #3b4252;
+      --surface-raised: #434c5e;
+      --border: #4c566a;
+      --border-subtle: #4c566a;
+      --border-muted: #4c566a;
+      --border-faint: #434c5e;
+      --text: #eceff4;
+      --text-muted: #d8dee9;
+      --text-dim: #b0b8c8;
+      --text-strong: #eceff4;
+      --state-fill: #434c5e;
+      --state-stroke: #4c566a;
+      --ocean-bg: #242933;
+      --surface-hover: #434c5e;
+      --accent: #88c0d0;
+      --accent-hover: #81a1c1;
+    }
+
+    /* Sepia */
+    [data-theme="sepia"] {
+      --bg: #f4ecd8;
+      --surface: #faf4e4;
+      --surface-raised: #fff;
+      --border: #c8b898;
+      --border-subtle: #d8ccb0;
+      --border-muted: #b8a888;
+      --border-faint: #e0d8c4;
+      --text: #3c2f1e;
+      --text-muted: #6b5a42;
+      --text-dim: #5a4a35;
+      --text-strong: #2a1e10;
+      --state-fill: #d8ccb0;
+      --state-stroke: #a89878;
+      --ocean-bg: #ccc4ae;
+      --surface-hover: #ede4cc;
+      --accent: #8b6914;
+      --accent-hover: #6b5010;
+      --shadow-sm: 0 2px 8px rgba(50, 30, 10, 0.08);
+      --shadow-md: 0 4px 16px rgba(50, 30, 10, 0.1);
+      --shadow-lg: 0 10px 40px rgba(50, 30, 10, 0.12);
+      --shadow-xl: 0 20px 60px rgba(50, 30, 10, 0.15);
+    }
+
 
 
 
@@ -1906,7 +2019,7 @@
         <div class="sidebar-title">Tappymaps</div>
         <div style="display: flex; gap: 4px; align-items: center;">
           <button class="theme-toggle" id="helpBtn" title="How to use" style="font-size: 15px;">?</button>
-          <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+          <button class="theme-toggle" id="themeToggle" title="Change theme" style="font-size: 11px; gap: 3px; letter-spacing: 0.3px;"><span id="themeIcon">🌙</span> Themes</button>
         </div>
       </div>
 
@@ -4652,12 +4765,17 @@
     }
 
     const themeList = [
-      { id: 'dark',   label: 'Midnight', icon: '🌙', isLight: false },
-      { id: 'light',  label: 'Light',    icon: '☀️', isLight: true },
-      { id: 'slate',  label: 'Slate',    icon: '🪨', isLight: false },
-      { id: 'warm',   label: 'Warm',     icon: '🏖️', isLight: true },
-      { id: 'forest', label: 'Forest',   icon: '🌲', isLight: false },
-      { id: 'ocean',  label: 'Ocean',    icon: '🌊', isLight: false }
+      { id: 'dark',      label: 'Midnight',  icon: '🌙', isLight: false, preview: '#1a1a2e' },
+      { id: 'light',     label: 'Light',     icon: '☀️', isLight: true,  preview: '#e8ecf1' },
+      { id: 'slate',     label: 'Slate',     icon: '🪨', isLight: false, preview: '#1e293b' },
+      { id: 'warm',      label: 'Warm',      icon: '🏖️', isLight: true,  preview: '#faf5ef' },
+      { id: 'forest',    label: 'Forest',    icon: '🌲', isLight: false, preview: '#1a2e1a' },
+      { id: 'ocean',     label: 'Ocean',     icon: '🌊', isLight: false, preview: '#0c1929' },
+      { id: 'rose',      label: 'Rose',      icon: '🌹', isLight: false, preview: '#2a1520' },
+      { id: 'sunset',    label: 'Sunset',    icon: '🌅', isLight: true,  preview: '#fef3e2' },
+      { id: 'cyberpunk', label: 'Cyberpunk', icon: '🔮', isLight: false, preview: '#0a0a1a' },
+      { id: 'nord',      label: 'Nord',      icon: '❄️', isLight: false, preview: '#2e3440' },
+      { id: 'sepia',     label: 'Sepia',     icon: '📜', isLight: true,  preview: '#f4ecd8' }
     ];
     let currentThemeIndex = 0;
 
@@ -4678,15 +4796,73 @@
         document.body.classList.remove('light-mode');
         appState.darkMode = true;
       }
-      document.getElementById('themeToggle').textContent = theme.icon;
+      var iconEl = document.getElementById('themeIcon');
+      if (iconEl) iconEl.textContent = theme.icon;
       document.getElementById('themeToggle').title = theme.label + ' theme';
       if (save !== false) localStorage.setItem('tappymaps-theme', themeId);
       updateProGates();
     }
 
     function toggleTheme() {
-      currentThemeIndex = (currentThemeIndex + 1) % themeList.length;
-      applyTheme(themeList[currentThemeIndex].id);
+      // Show theme picker modal instead of cycling
+      var existing = document.getElementById('themePickerModal');
+      if (existing) { existing.remove(); return; }
+
+      var modal = document.createElement('div');
+      modal.id = 'themePickerModal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;';
+
+      var box = document.createElement('div');
+      box.style.cssText = 'background:var(--bg-primary,#1a1a2e);border-radius:16px;padding:24px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);max-height:80vh;overflow-y:auto;';
+
+      var title = document.createElement('div');
+      title.style.cssText = 'font-size:16px;font-weight:600;color:var(--text-primary,#fff);margin-bottom:16px;';
+      title.textContent = 'Choose a Theme';
+      box.appendChild(title);
+
+      var grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+
+      themeList.forEach(function(theme) {
+        var card = document.createElement('div');
+        var isActive = themeList[currentThemeIndex].id === theme.id;
+        card.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:all 0.15s;border:2px solid ' + (isActive ? 'var(--accent,#2B9A8C)' : 'rgba(255,255,255,0.08)') + ';background:' + (isActive ? 'rgba(43,154,140,0.12)' : 'rgba(255,255,255,0.03)') + ';';
+        card.addEventListener('mouseenter', function() { if (!isActive) card.style.background = 'rgba(255,255,255,0.08)'; });
+        card.addEventListener('mouseleave', function() { if (!isActive) card.style.background = 'rgba(255,255,255,0.03)'; });
+
+        var swatch = document.createElement('div');
+        swatch.style.cssText = 'width:28px;height:28px;border-radius:8px;background:' + theme.preview + ';border:1px solid rgba(255,255,255,0.15);flex-shrink:0;';
+        card.appendChild(swatch);
+
+        var info = document.createElement('div');
+        var nameEl = document.createElement('div');
+        nameEl.style.cssText = 'font-size:13px;font-weight:600;color:var(--text-primary,#fff);';
+        nameEl.textContent = theme.icon + ' ' + theme.label;
+        info.appendChild(nameEl);
+        var tagEl = document.createElement('div');
+        tagEl.style.cssText = 'font-size:10px;color:var(--text-muted,#888);margin-top:1px;';
+        tagEl.textContent = theme.isLight ? 'Light' : 'Dark';
+        info.appendChild(tagEl);
+        card.appendChild(info);
+
+        card.addEventListener('click', function() {
+          applyTheme(theme.id);
+          modal.remove();
+        });
+        grid.appendChild(card);
+      });
+
+      box.appendChild(grid);
+
+      var cancelBtn = document.createElement('button');
+      cancelBtn.style.cssText = 'width:100%;padding:8px;margin-top:12px;background:none;border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:var(--text-muted,#888);font-size:12px;cursor:pointer;';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', function() { modal.remove(); });
+      box.appendChild(cancelBtn);
+
+      modal.appendChild(box);
+      modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+      document.body.appendChild(modal);
     }
 
     // ============================================================================

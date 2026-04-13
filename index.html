@@ -4127,15 +4127,53 @@
 
       let canvas;
       try {
-        canvas = await html2canvas(mapContainer, {
-          backgroundColor: bgColor,
-          scrollX: 0,
-          scrollY: 0,
-          scale: 3,
-          useCORS: true,
-          width: captureWidth,
-          height: captureHeight
-        });
+        // Primary: dom-to-image-more (native SVG rendering = sharper maps)
+        if (typeof domtoimage !== 'undefined') {
+          try {
+            const dtiScale = 3;
+            const dtiWidth = captureWidth * dtiScale;
+            const dtiHeight = captureHeight * dtiScale;
+            const dataUrl = await domtoimage.toPng(mapContainer, {
+              width: dtiWidth,
+              height: dtiHeight,
+              style: {
+                transform: 'scale(' + dtiScale + ')',
+                transformOrigin: 'top left',
+                width: captureWidth + 'px',
+                height: captureHeight + 'px'
+              },
+              bgcolor: bgColor
+            });
+            const img = new Image();
+            canvas = await new Promise(function(resolve, reject) {
+              img.onload = function() {
+                var c = document.createElement('canvas');
+                c.width = dtiWidth; c.height = dtiHeight;
+                c.getContext('2d').drawImage(img, 0, 0);
+                resolve(c);
+              };
+              img.onerror = function() { reject(new Error('dom-to-image decode failed')); };
+              img.src = dataUrl;
+            });
+            console.log('Export: dom-to-image-more (' + dtiWidth + 'x' + dtiHeight + ')');
+          } catch (dtiErr) {
+            console.warn('dom-to-image failed, falling back to html2canvas:', dtiErr);
+            canvas = null;
+          }
+        }
+        // Fallback: html2canvas (rasterizes DOM, less sharp for SVG)
+        if (!canvas) {
+          canvas = await html2canvas(mapContainer, {
+            backgroundColor: bgColor,
+            scrollX: 0,
+            scrollY: 0,
+            scale: 3,
+            useCORS: true,
+            width: captureWidth,
+            height: captureHeight
+          });
+          console.log('Export: html2canvas fallback (' + (captureWidth*3) + 'x' + (captureHeight*3) + ')');
+        }
       } finally {
         // Restore everything
         window.scrollTo(0, origScrollY);
@@ -4925,34 +4963,7 @@
     }
 
 
-    // ============================================================================
-    // DOM-TO-IMAGE — alternative capture engine (available for future use)
-    // ============================================================================
-    async function captureWithDomToImage() {
-      if (typeof domtoimage === 'undefined') return null;
-      var mapContainer = document.querySelector('.map-container');
-      if (!mapContainer) return null;
-      try {
-        var dataUrl = await domtoimage.toPng(mapContainer, {
-          width: 1010 * 3, height: 710 * 3,
-          style: { transform: 'scale(3)', transformOrigin: 'top left' }
-        });
-        var img = new Image();
-        return new Promise(function(resolve, reject) {
-          img.onload = function() {
-            var canvas = document.createElement('canvas');
-            canvas.width = img.width; canvas.height = img.height;
-            canvas.getContext('2d').drawImage(img, 0, 0);
-            resolve(canvas);
-          };
-          img.onerror = reject;
-          img.src = dataUrl;
-        });
-      } catch (err) {
-        console.error('dom-to-image failed:', err);
-        return null;
-      }
-    }
+    // dom-to-image-more is now integrated into captureMapImage() as the primary renderer
 
     const DATA_MAP_DATASETS = [
       { id: 'population', title: 'Population', desc: 'Total population by state', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01003_001E'], format: 'number', colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true },

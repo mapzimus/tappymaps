@@ -72,6 +72,12 @@ export default async function handler(req, res) {
           session.subscription
         );
 
+        // Stripe API 2024+ moved period fields onto subscription.items[0].
+        // Fall back through both locations so this works on any API version.
+        const firstItem = subscription.items.data[0];
+        const periodStart = subscription.current_period_start ?? firstItem.current_period_start;
+        const periodEnd = subscription.current_period_end ?? firstItem.current_period_end;
+
         // Upsert into user_subscriptions table
         const { error: upsertError } = await supabase
           .from('user_subscriptions')
@@ -81,13 +87,9 @@ export default async function handler(req, res) {
               stripe_subscription_id: subscription.id,
               stripe_customer_id: subscription.customer,
               status: subscription.status,
-              current_period_start: new Date(
-                subscription.current_period_start * 1000
-              ).toISOString(),
-              current_period_end: new Date(
-                subscription.current_period_end * 1000
-              ).toISOString(),
-              price_id: subscription.items.data[0].price.id,
+              current_period_start: new Date(periodStart * 1000).toISOString(),
+              current_period_end: new Date(periodEnd * 1000).toISOString(),
+              price_id: firstItem.price.id,
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'user_id' }
@@ -104,18 +106,19 @@ export default async function handler(req, res) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
 
+        // See note in checkout.session.completed: period fields moved in 2024+ API.
+        const firstItem = subscription.items.data[0];
+        const periodStart = subscription.current_period_start ?? firstItem.current_period_start;
+        const periodEnd = subscription.current_period_end ?? firstItem.current_period_end;
+
         // Update in user_subscriptions table
         const { error: updateError } = await supabase
           .from('user_subscriptions')
           .update({
             status: subscription.status,
-            current_period_start: new Date(
-              subscription.current_period_start * 1000
-            ).toISOString(),
-            current_period_end: new Date(
-              subscription.current_period_end * 1000
-            ).toISOString(),
-            price_id: subscription.items.data[0].price.id,
+            current_period_start: new Date(periodStart * 1000).toISOString(),
+            current_period_end: new Date(periodEnd * 1000).toISOString(),
+            price_id: firstItem.price.id,
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_subscription_id', subscription.id);

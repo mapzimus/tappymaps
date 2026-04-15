@@ -4290,14 +4290,16 @@
 
         if (!resp.ok) {
           console.error('Export check failed:', resp.status);
-          if (resp.status >= 500) return { allowed: true, isPro: false, remaining: 1 };
-          return { allowed: false, isPro: false, remaining: 0 };
+          // Fail closed: don't grant free exports when the server is unreachable.
+          // Previously fail-open allowed unlimited exports if a user blocked /api/stripe/track-export.
+          return { allowed: false, isPro: false, remaining: 0, serverError: true };
         }
 
         return await resp.json();
       } catch (err) {
         console.error('Export permission check error:', err);
-        return { allowed: true, isPro: false, remaining: 1 };
+        // Fail closed (see above).
+        return { allowed: false, isPro: false, remaining: 0, serverError: true };
       }
     }
 
@@ -4507,6 +4509,11 @@
         return;
       }
 
+      if (perm.serverError) {
+        showMessage('Could not verify export quota — please check your connection and try again', 'error');
+        return;
+      }
+
       if (!perm.allowed) {
         showUpgradeModal();
         showMessage('Free export limit reached this month', 'error');
@@ -4617,6 +4624,7 @@
     async function copyImageToClipboard() {
       const perm = await checkExportPermission();
       if (perm.needsSignUp) { showUpgradeModal(); showMessage('Sign up for a free account to continue exporting', 'info'); return; }
+      if (perm.serverError) { showMessage('Could not verify export quota — please check your connection and try again', 'error'); return; }
       if (!perm.allowed) { showUpgradeModal(); showMessage('Free export limit reached this month', 'error'); return; }
 
       showMessage('Copying image...', 'info');
@@ -4698,6 +4706,11 @@
       if (perm.needsSignUp) {
         showUpgradeModal();
         showMessage('Sign up for a free account to continue exporting', 'info');
+        return;
+      }
+
+      if (perm.serverError) {
+        showMessage('Could not verify export quota — please check your connection and try again', 'error');
         return;
       }
 

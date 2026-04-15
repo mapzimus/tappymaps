@@ -1,0 +1,23 @@
+# Claude session helper scripts (temp, single-use)
+_*.py
+_*.js
+_*.bat
+_*.txt
+patch_*.py
+
+# Commit message staging file (used by CMD workflow)
+.gitmsg
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# Dependencies
+node_modules/
+
+# Env / secrets
+.env
+.env.local
+.vercel

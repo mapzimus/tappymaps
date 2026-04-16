@@ -132,6 +132,89 @@ The full workflow lives at `C:\Users\mhowe\Downloads\mapparatus-playbook.md`. Re
 
 Before shipping a new map, list one of these folders and confirm the topic hasn't already been posted. File names are kebab-case topic slugs — easy to scan.
 
+## Color Strategy — Pick Colors With Purpose
+
+Every color on the map must mean something. "A nice blue" is not a color choice. The goal is for the viewer to understand the *topic* from the colors alone, before they read the title.
+
+### Principle 1: Thematic colors
+Colors should connect to the topic, not be generic. Examples:
+
+| Topic archetype | Good palette | Why |
+|---|---|---|
+| Historical / archival (mottos, founders, presidents) | Deep brown + warm tan, on Sepia theme | Reads as "old document" |
+| Civil War / political-historical | Navy + slate gray (NOT red/blue — too partisan-coded) | Union vs. Confederate without party baggage |
+| Food / regional cuisine | Warm saturated tones (terracotta, mustard, deep green, cream) | Feels edible |
+| Weather / climate | Cool for cold things, warm for hot things, single-hue gradient | Intuitive temperature mapping |
+| Sports / fandom | Bold primary colors, high saturation | Matches jersey / team energy |
+| Nature / ecology | Greens, browns, earth tones | Natural world |
+| Infrastructure / economics | Neutral slates + one accent color | Information-dense, professional |
+| Pop culture / fun trivia | Playful bright palette, can break thematic rules deliberately | The energy IS the point |
+
+### Principle 2: Highlight the minority, recede the majority
+When one category is the "yes/has/does" and the other is "no/hasn't/doesn't," and the groups are uneven:
+- **Saturated, warm, eye-catching color** for the smaller or more interesting group — this is what the eye goes to
+- **Desaturated, cooler, or thematically supportive tone** for the majority — visible, not dead
+
+Do NOT use pure gray for the null category unless it genuinely means "data unavailable." Gray reads as "missing," not as "meaningful no." Pick a low-saturation color that belongs to the same family as the highlight.
+
+### Principle 3: Theme-pairing is part of the palette
+Tappymaps has 16 themes (see `themeList` in `index.html` or the Themes dropdown). The theme sets the background, ocean color, default state fill, and text color. Your palette choice is INCOMPLETE without a theme recommendation.
+
+Quick theme cheat sheet:
+
+| Theme | Vibe | Ocean `--ocean-bg` | Best for |
+|---|---|---|---|
+| Midnight | Dark navy default | `#161f33` | Saturated highlights, tech/data topics |
+| Light | Clean off-white | `#c9d4e0` | Professional, infographic-y |
+| Slate | Cool corporate dark | `#0f172a` | Business / geopolitical |
+| Warm | Cream + camel | `#d4cabb` | Food, regional culture |
+| Forest | Mossy dark green | `#122012` | Nature, environment, rural |
+| Ocean | Deep blue-teal dark | `#081220` | Water/coast topics |
+| Rose | Plum-mauve dark | `#1a0c14` | Romance, soft topics, pink-coded content |
+| Sunset | Peach + amber light | `#e8d0b0` | Travel, summer, warmth |
+| Cyberpunk | Deep purple dark | `#050510` | Tech, gaming, neon |
+| Nord | Cool icy dark | `#242933` | Minimal, Scandinavian |
+| Sepia | Aged parchment light | `#ccc4ae` | **Historical, archival, old-document aesthetic** |
+| Dracula | Purple dev-classic | `#1e1f29` | Tech/code content |
+| Solarized | Warm paper light | `#ddd4b4` | Elegant, readable, academic |
+| Lavender | Pale purple light | `#ccc0dc` | Soft, feminine, wellness |
+| Mint | Cool mint light | `#c0dcd0` | Fresh, health, produce |
+| Cherry | Dark wine dark | `#100608` | Bold, dramatic, warm |
+
+### Principle 4: Contrast & accessibility
+- On DARK themes: highlight colors should be saturated and light enough to pop. Avoid dark fills that blend into the background.
+- On LIGHT themes: highlight colors should be saturated and dark enough to read as intentional. Avoid pale pastels unless the topic is explicitly soft.
+- Blue-orange is the safest colorblind-friendly high-contrast pair. Red-green is the worst.
+- Avoid pure yellow on dark themes — state labels become unreadable.
+- Test at thumbnail size: squint at the plan. If you can't tell categories apart, neither can your audience.
+
+### Principle 5: Avoid
+- Political red/blue for non-political topics — readers WILL infer partisan meaning
+- More than 2 adjacent warm colors (gets muddy)
+- Two shades of the same color for different categories at thumbnail size (indistinguishable)
+- Rainbow for anything that isn't a true qualitative spread of 5+ unrelated categories
+
+### Required in every plan
+Every map plan MUST include:
+- Hex codes for every category
+- A `THEME:` recommendation (one of the 16)
+- A 1–2 sentence `COLOR RATIONALE` explaining why this palette fits this topic
+- A contrast note if any color choice could be flagged (e.g. "gold might be borderline readable for state labels — eyeball first")
+
+## Setting the Theme
+
+Theme is stored in `localStorage.tappymaps-theme`, NOT the URL hash. Users opening your URL will see the map in whatever theme they last used, which may or may not match your plan.
+
+**Mode 2 (plan-only):** Tell Max: "Click the Themes button in the header and pick [theme name] before opening this URL."
+
+**Mode 3 (automation):** Before navigating, set localStorage via Claude-in-Chrome:
+```js
+localStorage.setItem('tappymaps-theme', '<theme-id>');
+```
+Then navigate. On page load, Tappymaps reads the theme from localStorage and applies it.
+
+**Engineering follow-up:** Adding `theme` to the URL hash schema in `encodeStateToURL()` would solve this permanently. If you find yourself explaining the "set theme first" dance more than twice, propose the enhancement.
+
 ## Topic Selection Heuristics (from the playbook)
 
 A good topic passes three tests:
@@ -157,6 +240,8 @@ TITLE: <≤50 chars, title case, hook-shaped>
 SUBTITLE: <≤60 chars, sentence case>
 LEGEND TITLE: <topic-specific, not just "Legend">
 
+THEME: <one of: Midnight, Light, Slate, Warm, Forest, Ocean, Rose, Sunset, Cyberpunk, Nord, Sepia, Dracula, Solarized, Lavender, Mint, Cherry>
+
 CATEGORIES (N):
   - <Label 1> → <HEX> — <which states, rough count>
   - <Label 2> → <HEX> — <which states>
@@ -167,7 +252,10 @@ STATE-TO-COLOR MAPPING:
   Alaska: <HEX>
   ... (all 50 + optionally DC)
 
-COLOR RATIONALE: <one sentence — why these colors fit this topic>
+COLOR RATIONALE: <1–2 sentences — why this palette and this theme fit this topic.
+  Call out the story the colors tell.>
+CONTRAST NOTE: <any flag about thumbnail readability or state-label contrast, or "none">
+THEME-SET REMINDER: "Set theme to <X> before opening URL" (plan-only mode)
 
 LAYOUT:
   - North arrow: ORNATE, top right

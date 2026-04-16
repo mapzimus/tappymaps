@@ -239,6 +239,20 @@ const url = `https://tappymaps.com/#${hash}`;
 
 Hand that URL to Max and he opens a fully-configured map ready to export.
 
+## Save Location for Generated Maps
+
+**Chrome saves downloads to `C:\Users\mhowe\Downloads\` by default.** To keep agent output separate from Max's personal downloads and from the production batch folders (`batch0_hd`, `batch1_hd`), move files to the dedicated agent-output folder after download:
+
+```
+C:\Users\mhowe\Downloads\tappymaps-agent-exports\
+```
+
+Use a consistent filename convention: `<kebab-case-slug>_<YYYY-MM-DD>.png`. Example: `firefly-vs-lightning-bug_2026-04-15.png`.
+
+For planning-only runs (no export), save the map plan as a sibling `.md` file: `firefly-vs-lightning-bug_2026-04-15.md`. This keeps the plan and the PNG paired.
+
+Do NOT save exports to the `batch0_hd` / `batch1_hd` / `batch1_unzipped` folders — those are Max's curated production batches.
+
 ## Full End-to-End via Claude-in-Chrome
 
 When Max wants "build and export this map for me," the flow is:
@@ -247,8 +261,9 @@ When Max wants "build and export this map for me," the flow is:
 2. **Construct the URL** with the recipe above.
 3. **Open the URL** via `mcp__Claude_in_Chrome__navigate`.
 4. **Verify the render** with `mcp__Claude_in_Chrome__read_page` — check the title, subtitle, legend count, and sample a few states. If wrong, diagnose (typically a misspelled state name in `colors` — must match exactly).
-5. **Click Export PNG** or run `exportPNG()` directly via `mcp__Claude_in_Chrome__javascript_tool`. The file downloads to Max's default Downloads folder.
-6. **Report back** with: URL, local file path of export, verification that the render matched the plan.
+5. **Click Export PNG** or run `exportPNG()` directly via `mcp__Claude_in_Chrome__javascript_tool`. The file downloads to `C:\Users\mhowe\Downloads\` by default.
+6. **Move the file** to `C:\Users\mhowe\Downloads\tappymaps-agent-exports\` with the naming convention above, via `mcp__Desktop_Commander__move_file`.
+7. **Report back** with: URL, final file path, verification that the render matched the plan.
 
 **Caveats you must flag, not ignore:**
 - Watermark will be present unless Max is signed in as Pro on the session Claude-in-Chrome is using. If you need a clean export, Max must sign in manually first.

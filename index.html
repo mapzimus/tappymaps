@@ -3589,6 +3589,51 @@
       }
     }
 
+    // Bulk-recolor: change a legend entry's color AND all states/counties that
+    // currently use that color. Prevents the decoupling where the legend
+    // swatch changes but the map doesn't follow.
+    function recolorLegendEntry(index, newColor) {
+      if (!appState.legendEntries[index]) return;
+      const oldColor = appState.legendEntries[index].color;
+      if (!oldColor || oldColor.toLowerCase() === newColor.toLowerCase()) return;
+      const oldLower = oldColor.toLowerCase();
+      let regionCount = 0;
+
+      // Recolor matching states
+      Object.keys(appState.stateColors).forEach(state => {
+        if (appState.stateColors[state] && appState.stateColors[state].toLowerCase() === oldLower) {
+          appState.stateColors[state] = newColor;
+          regionCount++;
+        }
+      });
+      // Recolor matching counties (county mode)
+      if (appState.countyColors) {
+        Object.keys(appState.countyColors).forEach(fips => {
+          if (appState.countyColors[fips] && appState.countyColors[fips].toLowerCase() === oldLower) {
+            appState.countyColors[fips] = newColor;
+            regionCount++;
+          }
+        });
+      }
+      // Update selected paint color if it matched
+      if (appState.selectedColor && appState.selectedColor.toLowerCase() === oldLower) {
+        appState.selectedColor = newColor;
+      }
+      // Update the legend entry itself
+      appState.legendEntries[index].color = newColor;
+
+      // Re-render everything that touches color
+      updateLegendBuilder();
+      updateLegendDisplay();
+      renderMap();
+      updateURL();
+      if (typeof updateStatsBar === 'function') updateStatsBar();
+
+      if (regionCount > 0) {
+        showMessage(`Recolored ${regionCount} region${regionCount !== 1 ? 's' : ''}`, 'success');
+      }
+    }
+
     function removeLegendEntry(index) {
       appState.legendEntries.splice(index, 1);
       updateLegendBuilder();
@@ -3616,9 +3661,14 @@
         entryColorPicker.type = 'color';
         entryColorPicker.value = entry.color;
         entryColorPicker.style.cssText = 'position:absolute;width:0;height:0;opacity:0;pointer-events:none;';
+        // Live-preview the swatch as the user drags the color picker
         entryColorPicker.addEventListener('input', (e) => {
-          updateLegendEntry(index, 'color', e.target.value);
           colorEl.style.backgroundColor = e.target.value;
+        });
+        // On commit (picker closes), cascade the color change to every
+        // state/county currently using the old legend color.
+        entryColorPicker.addEventListener('change', (e) => {
+          recolorLegendEntry(index, e.target.value);
         });
         // Click to select as painting color
         colorEl.addEventListener('click', () => {

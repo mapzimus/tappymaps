@@ -1,7 +1,7 @@
 # Tappymaps
 
 ## What It Is
-Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in one file (`index.html`, ~5,706 lines). No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
+Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in one file (`index.html`, ~9,900 lines). No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
 
 Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella overseeing three products:
 - **Tappymaps** (tappymaps.com): This app. Consumer map-making. Casual, playful, approachable.
@@ -68,6 +68,46 @@ All work is tracked in Notion under the Tappymaps project page.
 - `exportPNG()` (~line 3647) -- calls captureMapImage(), adds watermark if non-Pro. Mobile: tries Web Share API first, falls back to in-app overlay with hold-to-save instructions.
 - `copyImageToClipboard()` (~line 3714) -- calls captureMapImage(), writes to clipboard via ClipboardItem API
 - `trackEvent()` -- localStorage + optional Supabase fire-and-forget analytics
+
+## Theme System (16 themes)
+- Themes defined via CSS `[data-theme="x"]` selectors with full token overrides
+- JS `themeList` array holds metadata: `{ id, name, preview }` (preview = hex swatch color)
+- `applyTheme(id)` sets `data-theme` attribute + saves to `localStorage['tappymaps-theme']`
+- Theme picker: dropdown panel anchored below "Themes" button, 280px wide, 2-column grid with color swatches
+- **16 themes:** Default (dark), Light, Rose, Sunset, Cyberpunk, Nord, Sepia, Dracula, Solarized, Lavender, Mint, Cherry, Midnight, Ocean, Forest, Slate
+- **Theme is NOT in URL hash** -- stored in localStorage only. Shared URLs inherit the viewer's theme.
+
+## Data Maps System (22 datasets)
+- `DATA_MAP_DATASETS` array: 22 Census ACS datasets across categories (demographics, economics, education, housing, health)
+- `executeDataMapLoad(dataset)` fetches Census API, maps FIPS to state names, applies color ramp
+- Auto-fills title, subtitle, source, and legend from dataset metadata
+- Color ramp picker modal for changing ramp after load
+- Census API key: hardcoded in client (ACS data is public, key is for rate limiting only)
+- **Pending data source:** DataUSA.io API (https://datausa.io/about/api) -- not yet integrated, flagged for unlimited datamap expansion
+
+## Legend Bulk Recolor
+- `recolorLegendEntry(index, newColor)` cascades color changes from legend to all matching states/counties
+- Triggered by `change` event on legend entry color pickers (not `input` -- only on commit)
+- `input` event provides live swatch preview while dragging the picker
+- Updates stateColors, countyColors, selectedColor, legend entry, then rebuilds map + URL
+
+## Cartographer Subagent
+- Definition: `.claude/agents/tappymaps-cartographer.md`
+- 3 modes: Engineering (code changes), Editorial (content strategy + map planning), Automation (URL construction + Chrome automation)
+- Encodes all tribal knowledge: captureMapImage single-source, git workflow, validation, Notion log IDs
+- COLOR STRATEGY section with 16-theme cheat sheet (ocean-bg values for each), complementary pair guidance, anti-patterns
+- Save location: `C:\Users\mhowe\Downloads\tappymaps-agent-exports\` with `<slug>_<YYYY-MM-DD>.ext` naming
+- Ideas backlog: `C:\Users\mhowe\Downloads\tappy_ideas_1500` (9,151 lines / 1,523 ideas)
+- Playbook: `C:\Users\mhowe\Downloads\mapparatus-playbook.md`
+
+## Export Hardening (April 2026)
+- `checkExportPermission()` is fail-closed: server errors return `{ allowed: false, serverError: true }`
+- All export functions (PNG, clipboard, SVG) show "check your connection" message on serverError
+- Anonymous users: 1 export (localStorage counter, bypassable)
+- Free signed-in: 3/month (server-enforced via `export_counts` table)
+- Pro: unlimited, no watermark
+- `track-export.js` uses `SUPABASE_URL` env var (not `NEXT_PUBLIC_SUPABASE_URL`)
+- Webhook handles both old and new Stripe API versions for period fields (`subscription.current_period_start ?? firstItem.current_period_start`)
 
 ## Design Token System
 - CSS custom properties defined in `:root` block (30+ tokens)
@@ -141,7 +181,8 @@ North arrow: ORNATE style, top right near Maine. Scale bar: ORNATE style, bottom
 | Subtitle | No | Yes |
 | Legend builder | No | Yes |
 | North arrow, scale bar, ocean toggle | No | Yes |
-| Dark/light theme | Yes | Yes |
+| 16 themes (dropdown picker) | Yes | Yes |
+| Data maps (22 Census ACS datasets) | Yes | Yes |
 | PNG export | 3/month | Unlimited |
 | SVG export | No | Yes |
 | Watermark | Always | None |
@@ -152,17 +193,30 @@ North arrow: ORNATE style, top right near Maine. Scale bar: ORNATE style, bottom
 | Copy to clipboard | Yes | Yes |
 
 ## Known Issues
-- Upgrade modal button event propagation (modal closes instead of triggering checkout)
-- Webhook returns 200 on DB failure (should return 500)
-- Hardcoded promo codes bypass payment (remove before real launch)
-- Export counter is localStorage-only (bypassable)
+- Export counter for anonymous users is localStorage-only (bypassable; signed-in users have server-side enforcement)
 - Mobile UX needs real-device testing (touch interactions, pinch-zoom, bottom sheet)
+- Theme selection stored in localStorage only, NOT in URL hash -- shared URLs don't carry theme
+- County colors NOT persisted in URL hash (state colors are)
+- dom-to-image-more is primary export renderer; html2canvas is fallback -- both paths need testing on Safari
 
 ## Naming History
 - Original name: CakeMapper (cakemapper)
 - Second name: Mapparatus (mapparatus.org)
 - Current name: Tappymaps (tappymaps.com)
 - Full audit and rename completed April 2026. All CakeMapper and Mapparatus references removed from codebase.
+
+## Current HEAD
+- Commit: `b56314d` (April 16, 2026)
+- Last 9 commits this session: themes expansion, dropdown picker, .gitignore cleanup, monetization fixes, cartographer agent (4 iterations), legend bulk-recolor
+- Vercel no-cache headers active on `/` and `/index.html`
+- Admin Pro access for `max@mapparatus.org` and `mhowe.gis@gmail.com`
+
+## Pending Work
+- **More themes** -- user wants additional themes beyond current 16
+- **More data maps** -- expand beyond 22 Census ACS datasets
+- **DataUSA.io API integration** -- user-discovered data source for unlimited state-level data
+- **PWA** -- service worker + manifest for install-to-homescreen (next step in mobile strategy)
+- **Real-device mobile testing** -- touch interactions, exports, pinch-zoom
 
 ## User Preferences
 - Max is a systematic thinker and over-planner with a complex for restarting tasks if they aren't perfect

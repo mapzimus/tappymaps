@@ -5393,6 +5393,7 @@
     const DATA_MAP_DATASETS = [
       { id: 'population', title: 'Population', desc: 'Total population by state', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01003_001E'], format: 'number', colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true },
       { id: 'income', title: 'Median Household Income', desc: 'Median household income in dollars', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19013_001E'], format: 'currency', colorScale: ['#eff3ff','#bdd7e7','#6baed6','#2171b5','#08306b'], pro: true },
+      { id: 'income_growth_13_23', title: 'Median Income Growth (2013 → 2023)', desc: 'Percent change in median household income, 2013 vs 2023', source: 'U.S. Census Bureau, ACS 1-year (2013 vs 2023)', type: 'census', variables: ['B19013_001E'], years: [2013, 2023], format: 'percent', colorScale: ['#f7fbff','#c6dbef','#6baed6','#2171b5','#084594'], pro: true },
       { id: 'poverty', title: 'Poverty Rate', desc: 'Percent of population below the poverty line', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B17001_002E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fee5d9','#fcae91','#fb6a4a','#de2d26','#a50f15'], pro: true },
       { id: 'education', title: "Bachelor's Degree+", desc: 'Adults 25+ with a bachelors degree or higher', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B15003_022E','B15003_023E','B15003_024E','B15003_025E','B15003_001E'], compute: function(v) { return (((v[0]+v[1]+v[2]+v[3]) / v[4]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f2f0f7','#cbc9e2','#9e9ac8','#756bb1','#54278f'], pro: true },
       { id: 'unemployment', title: 'Unemployment Rate', desc: 'Civilian labor force unemployment rate', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B23025_005E','B23025_002E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffcc','#c7e9b4','#7fcdbb','#1d91c0','#0c2c84'], pro: true },
@@ -5430,24 +5431,40 @@
 
 
     async function fetchCensusData(dataset) {
-      var vars = dataset.variables.join(',');
-      var url = 'https://api.census.gov/data/2023/acs/acs1?get=NAME,' + vars + '&for=state:*';
-      var resp = await fetch(url);
-      if (!resp.ok) throw new Error('Census API returned ' + resp.status);
-      var rows = await resp.json();
-      var header = rows[0];
-      var result = {};
-      for (var i = 1; i < rows.length; i++) {
-        var row = rows[i];
-        var fips = row[row.length - 1];
-        var stateName = FIPS_TO_STATE[fips];
-        if (!stateName) continue;
-        var values = dataset.variables.map(function(v, vi) { return parseFloat(row[header.indexOf(v)]); });
-        if (values.some(function(v) { return isNaN(v) || v < 0; })) continue;
-        var val = dataset.compute ? parseFloat(dataset.compute(values)) : values[0];
-        if (!isNaN(val)) result[stateName] = val;
+      async function fetchYear(year) {
+        var vars = dataset.variables.join(',');
+        var url = 'https://api.census.gov/data/' + year + '/acs/acs1?get=NAME,' + vars + '&for=state:*';
+        var resp = await fetch(url);
+        if (!resp.ok) throw new Error('Census API returned ' + resp.status + ' for year ' + year);
+        var rows = await resp.json();
+        var header = rows[0];
+        var result = {};
+        for (var i = 1; i < rows.length; i++) {
+          var row = rows[i];
+          var fips = row[row.length - 1];
+          var stateName = FIPS_TO_STATE[fips];
+          if (!stateName) continue;
+          var values = dataset.variables.map(function(v, vi) { return parseFloat(row[header.indexOf(v)]); });
+          if (values.some(function(v) { return isNaN(v) || v < 0; })) continue;
+          var val = dataset.compute ? parseFloat(dataset.compute(values)) : values[0];
+          if (!isNaN(val)) result[stateName] = val;
+        }
+        return result;
       }
-      return result;
+      if (dataset.years && dataset.years.length === 2) {
+        var pair = await Promise.all([fetchYear(dataset.years[0]), fetchYear(dataset.years[1])]);
+        var a = pair[0], b = pair[1];
+        var trend = {};
+        Object.keys(a).forEach(function(state) {
+          if (b[state] !== undefined && a[state] !== 0) {
+            var val = dataset.computeTrend ? dataset.computeTrend(a[state], b[state]) : ((b[state] - a[state]) / a[state] * 100);
+            var num = parseFloat(val);
+            if (!isNaN(num)) trend[state] = num;
+          }
+        });
+        return trend;
+      }
+      return fetchYear(dataset.year || 2023);
     }
 
 

@@ -931,6 +931,7 @@
       overflow-y: auto;
       backdrop-filter: blur(6px);
       box-shadow: var(--shadow-md);
+      pointer-events: none;
     }
 
     body.light-mode .legend-group {
@@ -1286,9 +1287,6 @@
       .legend-title {
         font-size: 9px;
         margin-bottom: 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
         line-height: 1.2;
       }
       .legend-item {

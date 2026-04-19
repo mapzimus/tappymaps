@@ -927,6 +927,8 @@
       border-radius: var(--radius-md);
       padding: 16px 20px;
       max-width: 320px;
+      max-height: 70%;
+      overflow-y: auto;
       backdrop-filter: blur(6px);
       box-shadow: var(--shadow-md);
     }
@@ -2617,6 +2619,10 @@
     const ERROR_COLOR = '#ef4444';
     const SUCCESS_COLOR = '#22c55e';
 
+    // Cap on legend entries — past this, the legend overflows the map and
+    // becomes unreadable. Mutation entry points should respect this cap.
+    const MAX_LEGEND_ENTRIES = 12;
+
     // ============================================================================
     // APP STATE & MANAGEMENT
     // ============================================================================
@@ -3385,12 +3391,14 @@
         return;
       }
 
+      saveHistory();
       appState.presetColors = [...colors];
       initializeColorPalette();
       selectColor(colors[0]);
 
-      // Auto-populate legend entries from the ramp
-      appState.legendEntries = colors.map((c, i) => ({
+      // Auto-populate legend entries from the ramp, capped to MAX_LEGEND_ENTRIES
+      const cappedColors = colors.slice(0, MAX_LEGEND_ENTRIES);
+      appState.legendEntries = cappedColors.map((c) => ({
         color: c,
         label: ''
       }));
@@ -3541,6 +3549,10 @@
     // ============================================================================
 
     function addLegendEntry() {
+      if (appState.legendEntries.length >= MAX_LEGEND_ENTRIES) {
+        showMessage('Legend is full (max ' + MAX_LEGEND_ENTRIES + ' entries) — remove one to add another', 'info');
+        return;
+      }
       saveHistory();
       // Auto-populate from colors actually used on the map
       const usedColors = [...new Set(Object.values(appState.stateColors))];
@@ -3576,13 +3588,19 @@
       // Add entries for all colors used on the map that aren't in the legend yet
       const usedColors = [...new Set(Object.values(appState.stateColors))];
       const legendColors = appState.legendEntries.map(e => e.color.toLowerCase());
-      const toAdd = usedColors.filter(c => !legendColors.includes(c.toLowerCase()));
+      const candidates = usedColors.filter(c => !legendColors.includes(c.toLowerCase()));
+      const room = Math.max(0, MAX_LEGEND_ENTRIES - appState.legendEntries.length);
+      const toAdd = candidates.slice(0, room);
       if (toAdd.length > 0) {
         saveHistory();
         toAdd.forEach(color => appState.legendEntries.push({ color, label: '' }));
         updateLegendBuilder();
         updateLegendDisplay();
-        showMessage(`Added ${toAdd.length} color${toAdd.length > 1 ? 's' : ''} from the map`, 'success');
+        const skipped = candidates.length - toAdd.length;
+        const baseMsg = `Added ${toAdd.length} color${toAdd.length > 1 ? 's' : ''} from the map`;
+        showMessage(skipped > 0 ? `${baseMsg} (${skipped} skipped — legend cap is ${MAX_LEGEND_ENTRIES})` : baseMsg, 'success');
+      } else if (candidates.length > 0 && room === 0) {
+        showMessage('Legend is full (max ' + MAX_LEGEND_ENTRIES + ' entries) — remove some to add more', 'info');
       } else if (usedColors.length === 0) {
         showMessage('Color some states first, then build your legend', 'info');
       } else {
@@ -4552,8 +4570,28 @@
         legendEl.querySelectorAll('.legend-item-color').forEach(c => { c.style.width = '14px'; c.style.height = '14px'; });
       }
 
-      // Recalculate legend position for the forced landscape layout
-      updateLegendPosition();
+      // ── EXPORT-ONLY LEGEND CLAMP ──
+      // Override updateLegendPosition() with hard-coded coordinates relative
+      // to the forced capture frame. The live position calc was dependent on
+      // viewport state (matchMedia, isMobile) and could land the legend
+      // outside the capture box on mobile portrait — see error1 audit.
+      // Here we anchor the legend to the chosen corner of the EXPORT frame
+      // and cap its height so it can never overflow.
+      if (legendEl && legendEl.style.display !== 'none') {
+        const corner = appState.legendPosition || 'bottom-right';
+        const inset = 12;
+        const titleClearance = 50;
+        legendEl.style.top = 'auto';
+        legendEl.style.bottom = 'auto';
+        legendEl.style.left = 'auto';
+        legendEl.style.right = 'auto';
+        if (corner === 'bottom-right') { legendEl.style.bottom = inset + 'px'; legendEl.style.right = inset + 'px'; }
+        else if (corner === 'bottom-left') { legendEl.style.bottom = inset + 'px'; legendEl.style.left = inset + 'px'; }
+        else if (corner === 'top-right') { legendEl.style.top = titleClearance + 'px'; legendEl.style.right = inset + 'px'; }
+        else if (corner === 'top-left') { legendEl.style.top = titleClearance + 'px'; legendEl.style.left = inset + 'px'; }
+        legendEl.style.maxHeight = (captureHeight - titleClearance - inset) + 'px';
+        legendEl.style.overflow = 'hidden';
+      }
 
       const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
 
@@ -9502,11 +9540,13 @@
         var signInBtn = document.getElementById('mobileSignIn');
         var signOutBtn = document.getElementById('mobileSignOut');
         var upgradeBtn = document.getElementById('mobileUpgrade');
-        if (typeof appState !== 'undefined' && appState.user) {
-          if (statusEl) statusEl.textContent = appState.user.email || 'Signed in';
+        var signedIn = typeof appState !== 'undefined' && !!appState.currentUser;
+        var pro = typeof isPro === 'function' ? isPro() : !!(appState && appState.proUnlocked);
+        if (signedIn) {
+          if (statusEl) statusEl.textContent = appState.currentUser.email || 'Signed in';
           if (signInBtn) signInBtn.style.display = 'none';
           if (signOutBtn) signOutBtn.style.display = 'block';
-          if (upgradeBtn) upgradeBtn.style.display = appState.isPro ? 'none' : 'block';
+          if (upgradeBtn) upgradeBtn.style.display = pro ? 'none' : 'block';
         } else {
           if (statusEl) statusEl.textContent = 'Not signed in';
           if (signInBtn) signInBtn.style.display = 'block';

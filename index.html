@@ -5400,26 +5400,35 @@
 
     function updateLegendPosition() {
       const legend = document.getElementById('legendDisplay');
-      if (!legend) return;
+      const container = document.getElementById('mapContainer');
+      const svg = document.getElementById('mapSVG');
+      if (!legend || !container || !svg) return;
 
-      const isMobile = window.innerWidth <= 900;
-      const isMobileLandscape = isMobile &&
-        window.matchMedia('(orientation: landscape)').matches;
+      // Anchor the legend to the actual rendered SVG content bounds, not the
+      // container bounds. Necessary because the SVG (viewBox 1010x710 with
+      // preserveAspectRatio="xMidYMid meet") letterboxes inside the container
+      // when the container's aspect ratio differs — most extreme on mobile
+      // portrait, where the bottom letterbox can be 200+px tall and a
+      // bottom-anchored legend would float in empty space below the actual map.
+      const containerRect = container.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
 
-      // Compute where the SVG actually starts (below title + subtitle)
-      // In landscape, title/subtitle are hidden via CSS — use minimal offset
-      const titleEl = document.getElementById('mapTitle');
-      const subtitleEl = document.getElementById('mapSubtitle');
-      const svgTopOffset = isMobileLandscape ? 10 :
-        (titleEl ? titleEl.offsetHeight : 80) +
-        (subtitleEl ? subtitleEl.offsetHeight : 30) + 14;
+      // Bail if SVG hasn't rendered yet — caller will re-fire later
+      if (svgRect.width === 0 || svgRect.height === 0) return;
 
-      // In landscape, color bar + stats bar are hidden — use small offset
-      // In portrait mobile, 65px clears the 56px color bar
-      // On desktop, 65px clears the stats bar at the bottom of the container
-      const bottomOffset = isMobileLandscape ? '15px' : (isMobile ? '110px' : '65px');
+      const VB_W = 1010, VB_H = 710;
+      const scale = Math.min(svgRect.width / VB_W, svgRect.height / VB_H);
+      const contentW = VB_W * scale;
+      const contentH = VB_H * scale;
 
-      // Reset all position properties cleanly before applying new ones
+      // Map content rect, expressed as offsets from each container edge
+      const offsetLeft = (svgRect.left - containerRect.left) + (svgRect.width - contentW) / 2;
+      const offsetTop = (svgRect.top - containerRect.top) + (svgRect.height - contentH) / 2;
+      const offsetRight = containerRect.width - (offsetLeft + contentW);
+      const offsetBottom = containerRect.height - (offsetTop + contentH);
+
+      const inset = 12;
+
       legend.style.top = 'auto';
       legend.style.bottom = 'auto';
       legend.style.left = 'auto';
@@ -5427,20 +5436,20 @@
 
       switch (appState.legendPosition) {
         case 'bottom-right':
-          legend.style.bottom = bottomOffset;
-          legend.style.right = '20px';
+          legend.style.bottom = (offsetBottom + inset) + 'px';
+          legend.style.right = (offsetRight + inset) + 'px';
           break;
         case 'bottom-left':
-          legend.style.bottom = bottomOffset;
-          legend.style.left = '20px';
+          legend.style.bottom = (offsetBottom + inset) + 'px';
+          legend.style.left = (offsetLeft + inset) + 'px';
           break;
         case 'top-right':
-          legend.style.top = svgTopOffset + 'px';
-          legend.style.right = '20px';
+          legend.style.top = (offsetTop + inset) + 'px';
+          legend.style.right = (offsetRight + inset) + 'px';
           break;
         case 'top-left':
-          legend.style.top = svgTopOffset + 'px';
-          legend.style.left = '20px';
+          legend.style.top = (offsetTop + inset) + 'px';
+          legend.style.left = (offsetLeft + inset) + 'px';
           break;
       }
     }

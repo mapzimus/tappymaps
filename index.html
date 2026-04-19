@@ -652,6 +652,13 @@
       opacity: 1;
     }
 
+    /* Touch devices have no hover — keep the pencil always visible */
+    @media (hover: none) {
+      .legend-color-edit {
+        opacity: 1;
+      }
+    }
+
     .legend-inputs {
       flex: 1;
       display: flex;
@@ -2349,7 +2356,10 @@
       <div class="section">
         <div class="section-title">Actions</div>
         <div class="section-content">
-          <button class="btn" id="undoBtn">↶ Undo</button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn" id="undoBtn" style="flex: 1;">↶ Undo</button>
+            <button class="btn" id="redoBtn" style="flex: 1;">↷ Redo</button>
+          </div>
           <button class="btn danger" id="clearAllBtn">🗑 Clear All</button>
         </div>
       </div>
@@ -2634,6 +2644,7 @@
       scaleStyle: 'ornate',
 
       history: [],
+      redoStack: [],
       darkMode: true,
       showLabels: true,
       showLogo: true,
@@ -3530,6 +3541,7 @@
     // ============================================================================
 
     function addLegendEntry() {
+      saveHistory();
       // Auto-populate from colors actually used on the map
       const usedColors = [...new Set(Object.values(appState.stateColors))];
       const legendColors = appState.legendEntries.map(e => e.color.toLowerCase());
@@ -3564,17 +3576,13 @@
       // Add entries for all colors used on the map that aren't in the legend yet
       const usedColors = [...new Set(Object.values(appState.stateColors))];
       const legendColors = appState.legendEntries.map(e => e.color.toLowerCase());
-      let added = 0;
-      usedColors.forEach(color => {
-        if (!legendColors.includes(color.toLowerCase())) {
-          appState.legendEntries.push({ color, label: '' });
-          added++;
-        }
-      });
-      if (added > 0) {
+      const toAdd = usedColors.filter(c => !legendColors.includes(c.toLowerCase()));
+      if (toAdd.length > 0) {
+        saveHistory();
+        toAdd.forEach(color => appState.legendEntries.push({ color, label: '' }));
         updateLegendBuilder();
         updateLegendDisplay();
-        showMessage(`Added ${added} color${added > 1 ? 's' : ''} from the map`, 'success');
+        showMessage(`Added ${toAdd.length} color${toAdd.length > 1 ? 's' : ''} from the map`, 'success');
       } else if (usedColors.length === 0) {
         showMessage('Color some states first, then build your legend', 'info');
       } else {
@@ -3584,6 +3592,8 @@
 
     function updateLegendEntry(index, field, value) {
       if (appState.legendEntries[index]) {
+        if (appState.legendEntries[index][field] === value) return;
+        saveHistory();
         appState.legendEntries[index][field] = value;
         updateLegendDisplay();
       }
@@ -3596,6 +3606,7 @@
       if (!appState.legendEntries[index]) return;
       const oldColor = appState.legendEntries[index].color;
       if (!oldColor || oldColor.toLowerCase() === newColor.toLowerCase()) return;
+      saveHistory();
       const oldLower = oldColor.toLowerCase();
       let regionCount = 0;
 
@@ -3635,77 +3646,83 @@
     }
 
     function removeLegendEntry(index) {
+      if (!appState.legendEntries[index]) return;
+      saveHistory();
       appState.legendEntries.splice(index, 1);
       updateLegendBuilder();
       updateLegendDisplay();
     }
 
     function updateLegendBuilder() {
-      const container = document.getElementById('legendEntries');
-      container.innerHTML = '';
+      ['legendEntries', 'mobileLegendEntries'].forEach(containerId => {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
 
-      appState.legendEntries.forEach((entry, index) => {
-        const entryEl = document.createElement('div');
-        entryEl.className = 'legend-entry';
+        appState.legendEntries.forEach((entry, index) => {
+          const entryEl = document.createElement('div');
+          entryEl.className = 'legend-entry';
 
-        const colorEl = document.createElement('div');
-        colorEl.className = 'legend-color';
-        colorEl.style.backgroundColor = entry.color;
-        colorEl.style.cursor = 'pointer';
-        colorEl.title = 'Select this color';
-        if (entry.color.toLowerCase() === appState.selectedColor.toLowerCase()) {
-          colorEl.classList.add('selected-paint');
-        }
-        // Hidden color picker for this entry
-        const entryColorPicker = document.createElement('input');
-        entryColorPicker.type = 'color';
-        entryColorPicker.value = entry.color;
-        entryColorPicker.style.cssText = 'position:absolute;width:0;height:0;opacity:0;pointer-events:none;';
-        // Live-preview the swatch as the user drags the color picker
-        entryColorPicker.addEventListener('input', (e) => {
-          colorEl.style.backgroundColor = e.target.value;
+          const colorEl = document.createElement('div');
+          colorEl.className = 'legend-color';
+          colorEl.style.backgroundColor = entry.color;
+          colorEl.style.cursor = 'pointer';
+          colorEl.title = 'Select this color';
+          if (entry.color.toLowerCase() === appState.selectedColor.toLowerCase()) {
+            colorEl.classList.add('selected-paint');
+          }
+          // Hidden color picker for this entry
+          const entryColorPicker = document.createElement('input');
+          entryColorPicker.type = 'color';
+          entryColorPicker.value = entry.color;
+          entryColorPicker.style.cssText = 'position:absolute;width:0;height:0;opacity:0;pointer-events:none;';
+          // Live-preview the swatch as the user drags the color picker
+          entryColorPicker.addEventListener('input', (e) => {
+            colorEl.style.backgroundColor = e.target.value;
+          });
+          // On commit (picker closes), cascade the color change to every
+          // state/county currently using the old legend color.
+          entryColorPicker.addEventListener('change', (e) => {
+            recolorLegendEntry(index, e.target.value);
+          });
+          // Click to select as painting color
+          colorEl.addEventListener('click', () => {
+            selectColor(entry.color);
+            // Update selected-paint indicators across both containers
+            document.querySelectorAll('#legendEntries .legend-color, #mobileLegendEntries .legend-color')
+              .forEach(el => el.classList.remove('selected-paint'));
+            colorEl.classList.add('selected-paint');
+          });
+          // Small edit button to change the legend entry color
+          const editBtn = document.createElement('div');
+          editBtn.className = 'legend-color-edit';
+          editBtn.textContent = '✎';
+          editBtn.title = 'Change this color';
+          editBtn.addEventListener('click', (e) => { e.stopPropagation(); entryColorPicker.click(); });
+          colorEl.appendChild(editBtn);
+
+          const inputsEl = document.createElement('div');
+          inputsEl.className = 'legend-inputs';
+
+          const labelInput = document.createElement('input');
+          labelInput.type = 'text';
+          labelInput.className = 'legend-label-input';
+          labelInput.value = entry.label;
+          labelInput.placeholder = 'Type a label...';
+          labelInput.addEventListener('change', (e) => updateLegendEntry(index, 'label', e.target.value));
+
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'legend-remove';
+          removeBtn.textContent = '×';
+          removeBtn.addEventListener('click', () => removeLegendEntry(index));
+
+          inputsEl.appendChild(labelInput);
+          entryEl.appendChild(entryColorPicker);
+          entryEl.appendChild(colorEl);
+          entryEl.appendChild(inputsEl);
+          entryEl.appendChild(removeBtn);
+          container.appendChild(entryEl);
         });
-        // On commit (picker closes), cascade the color change to every
-        // state/county currently using the old legend color.
-        entryColorPicker.addEventListener('change', (e) => {
-          recolorLegendEntry(index, e.target.value);
-        });
-        // Click to select as painting color
-        colorEl.addEventListener('click', () => {
-          selectColor(entry.color);
-          // Update selected-paint indicators
-          container.querySelectorAll('.legend-color').forEach(el => el.classList.remove('selected-paint'));
-          colorEl.classList.add('selected-paint');
-        });
-        // Small edit button to change the legend entry color
-        const editBtn = document.createElement('div');
-        editBtn.className = 'legend-color-edit';
-        editBtn.textContent = '✎';
-        editBtn.title = 'Change this color';
-        editBtn.addEventListener('click', (e) => { e.stopPropagation(); entryColorPicker.click(); });
-        colorEl.appendChild(editBtn);
-
-        const inputsEl = document.createElement('div');
-        inputsEl.className = 'legend-inputs';
-
-        const labelInput = document.createElement('input');
-        labelInput.type = 'text';
-        labelInput.className = 'legend-label-input';
-        labelInput.value = entry.label;
-        labelInput.placeholder = 'Type a label...';
-        labelInput.addEventListener('change', (e) => updateLegendEntry(index, 'label', e.target.value));
-
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'legend-remove';
-        removeBtn.textContent = '×';
-        removeBtn.addEventListener('click', () => removeLegendEntry(index));
-
-        inputsEl.appendChild(labelInput);
-        entryEl.appendChild(entryColorPicker);
-        entryEl.appendChild(colorEl);
-        entryEl.appendChild(inputsEl);
-        entryEl.appendChild(removeBtn);
-        container.appendChild(entryEl);
       });
     }
 
@@ -3862,22 +3879,85 @@
     // HISTORY & UNDO
     // ============================================================================
 
+    // History captures a broader snapshot than just state colors so undo
+    // covers legend edits, title/subtitle changes, county colors, etc.
+    function captureHistorySnapshot() {
+      return {
+        stateColors: Object.assign({}, appState.stateColors),
+        countyColors: Object.assign({}, appState.countyColors || {}),
+        legendEntries: appState.legendEntries.map(function(e) { return Object.assign({}, e); }),
+        selectedColor: appState.selectedColor,
+        mapTitle: appState.mapTitle,
+        mapSubtitle: appState.mapSubtitle,
+        mapSource: appState.mapSource,
+        legendTitle: appState.legendTitle
+      };
+    }
+
+    function applyHistorySnapshot(snap) {
+      if (!snap) return;
+      appState.stateColors = snap.stateColors || {};
+      appState.countyColors = snap.countyColors || {};
+      appState.legendEntries = (snap.legendEntries || []).map(function(e) { return Object.assign({}, e); });
+      if (snap.selectedColor) appState.selectedColor = snap.selectedColor;
+      appState.mapTitle = snap.mapTitle || 'My US Map';
+      appState.mapSubtitle = snap.mapSubtitle || '';
+      appState.mapSource = snap.mapSource || '';
+      appState.legendTitle = snap.legendTitle || 'Legend';
+      // Sync DOM
+      var titleEl = document.getElementById('mapTitle');
+      if (titleEl) titleEl.textContent = appState.mapTitle;
+      var subEl = document.getElementById('mapSubtitle');
+      if (subEl) subEl.textContent = appState.mapSubtitle;
+      var srcEl = document.getElementById('mapSource');
+      if (srcEl) { srcEl.textContent = appState.mapSource; srcEl.style.opacity = appState.mapSource ? '1' : '0'; }
+      var si = document.getElementById('sourceInput'); if (si) si.value = appState.mapSource;
+      var msi = document.getElementById('mobileSourceInput'); if (msi) msi.value = appState.mapSource;
+      // Re-render
+      if (typeof renderMap === 'function') renderMap();
+      updateLegendBuilder();
+      updateLegendDisplay();
+      updateStatsBar();
+      updateURL();
+    }
+
+    function updateUndoRedoButtons() {
+      var canUndo = appState.history.length > 0;
+      var canRedo = appState.redoStack.length > 0;
+      ['undoBtn', 'mobileUndoTap', 'mobileUndoColor', 'mobileUndoShare'].forEach(function(id) {
+        var b = document.getElementById(id); if (b) b.disabled = !canUndo;
+      });
+      ['redoBtn', 'mobileRedoTap', 'mobileRedoColor', 'mobileRedoShare'].forEach(function(id) {
+        var b = document.getElementById(id); if (b) b.disabled = !canRedo;
+      });
+    }
+
     function saveHistory() {
-      appState.history.push(JSON.stringify(appState.stateColors));
-      if (appState.history.length > 50) {
-        appState.history.shift();
-      }
+      appState.history.push(JSON.stringify(captureHistorySnapshot()));
+      if (appState.history.length > 50) appState.history.shift();
+      // Any new action invalidates the redo stack
+      appState.redoStack = [];
+      updateUndoRedoButtons();
     }
 
     function undo() {
-      if (appState.history.length > 0) {
-        appState.stateColors = JSON.parse(appState.history.pop());
-        renderMap();
-        updateLegendDisplay();
-        updateStatsBar();
-        updateURL();
-        showMessage('Undone', 'success');
-      }
+      if (appState.history.length === 0) return;
+      appState.redoStack.push(JSON.stringify(captureHistorySnapshot()));
+      if (appState.redoStack.length > 50) appState.redoStack.shift();
+      applyHistorySnapshot(JSON.parse(appState.history.pop()));
+      updateUndoRedoButtons();
+      showMessage('Undone', 'success');
+    }
+
+    function redo() {
+      if (appState.redoStack.length === 0) return;
+      appState.history.push(JSON.stringify(captureHistorySnapshot()));
+      if (appState.history.length > 50) appState.history.shift();
+      applyHistorySnapshot(JSON.parse(appState.redoStack.pop()));
+      updateUndoRedoButtons();
+      showMessage('Redone', 'success');
+    }
+
     // --- Multi-Select Mode ---
     function updateMultiSelectBar() {
       const bar = document.getElementById('multiSelectBar');
@@ -3936,10 +4016,6 @@
     document.getElementById('desktopMultiSelect')?.addEventListener('change', function(e) {
       toggleMultiSelectMode(e.target.checked);
     });
-
-
-
-    }
 
     // ============================================================================
     // URL STATE MANAGEMENT
@@ -4426,9 +4502,13 @@
       const origSvgMinH = svg.style.minHeight;
       const origSvgH = svg.style.height;
       const origSvgW = svg.style.width;
+      const origSvgTransform = svg.style.transform;
+      const origSvgTransition = svg.style.transition;
       const origContainerW = mapContainer.style.width;
       const origContainerH = mapContainer.style.height;
       const origContainerPos = mapContainer.style.position;
+      const origContainerFlex = mapContainer.style.flex;
+      const origContainerFlexBasis = mapContainer.style.flexBasis;
       const origLegendStyle = legendEl ? legendEl.style.cssText : '';
       const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
 
@@ -4444,6 +4524,11 @@
       const EXPORT_RATIO = 1010 / 710; // ~1.4225
       const captureWidth = Math.max(mapContainer.offsetWidth, 800);
       const captureHeight = Math.round(captureWidth / EXPORT_RATIO);
+      // Opt out of parent flex sizing — .map-container has `flex: 1` which
+      // overrides inline height via flex-basis. Without this, mobile portrait
+      // keeps its real ~844px height and the capture crops the bottom.
+      mapContainer.style.flex = 'none';
+      mapContainer.style.flexBasis = 'auto';
       mapContainer.style.width = captureWidth + 'px';
       mapContainer.style.height = captureHeight + 'px';
       mapContainer.style.overflow = 'hidden';
@@ -4453,6 +4538,9 @@
       svg.style.minHeight = 'auto';
       svg.style.height = '100%';
       svg.style.width = '100%';
+      // Clear pinch-zoom transform so export captures the neutral map
+      svg.style.transition = 'none';
+      svg.style.transform = '';
 
       // Shrink legend for mobile export
       const isMobileExport = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -4535,11 +4623,15 @@
         mapContainer.style.width = origContainerW;
         mapContainer.style.height = origContainerH;
         mapContainer.style.overflow = origOverflow;
+        mapContainer.style.flex = origContainerFlex;
+        mapContainer.style.flexBasis = origContainerFlexBasis;
 
         svg.style.flex = origSvgFlex;
         svg.style.minHeight = origSvgMinH;
         svg.style.height = origSvgH;
         svg.style.width = origSvgW;
+        svg.style.transform = origSvgTransform;
+        svg.style.transition = origSvgTransition;
         if (legendEl) {
           legendEl.style.cssText = origLegendStyle;
           updateLegendDisplay();
@@ -6007,7 +6099,9 @@
 
       // Actions
       document.getElementById('undoBtn').addEventListener('click', undo);
+      document.getElementById('redoBtn')?.addEventListener('click', redo);
       document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+      updateUndoRedoButtons();
       document.getElementById('clearConfirmBtn').addEventListener('click', confirmClearAll);
 
       // Export
@@ -8826,6 +8920,11 @@
       appState.selectedColor = tpl.presetColors[0];
       appState.legendEntries = tpl.legendEntries.map(e => ({...e}));
 
+      // Clear any active data map context — otherwise the ramp picker and
+      // legend builder stay tied to the previous data map's state.
+      window._activeDataMap = null;
+      appState.legendTitle = tpl.title;
+
       // Update title display
       const titleEl = document.getElementById('mapTitle');
       if (titleEl) titleEl.textContent = tpl.title;
@@ -8834,6 +8933,11 @@
 
       // Rebuild color palette
       initializeColorPalette();
+
+      // Rebuild legend builder so edit closures bind to the new entries —
+      // without this, stale rows from the previous map-type linger and
+      // edits appear to do nothing.
+      updateLegendBuilder();
 
       // Update everything
       updateLegendDisplay();
@@ -9028,14 +9132,11 @@
         </div>
       </div>
       <div class="panel-section">
-        <button class="panel-btn" id="mobileCountyToggle">County View <span class="pro-badge">PRO</span></button>
-      </div>
-      <div class="panel-section">
-        <button class="panel-btn" id="mobileThemeToggle">Toggle Theme</button>
         <button class="panel-btn" id="mobileHelp">Help</button>
       </div>
       <div class="panel-section panel-undo-row">
         <button class="panel-btn panel-undo" id="mobileUndoTap">&#x21A9; Undo</button>
+        <button class="panel-btn panel-undo" id="mobileRedoTap">&#x21AA; Redo</button>
       </div>
     </div>
   </div>
@@ -9106,8 +9207,13 @@
         <div class="panel-row"><label>Title Color</label><input type="color" id="mobileTitleColor" class="panel-color-picker"></div>
         <div class="panel-row"><label>Background</label><input type="color" id="mobileBgColor" class="panel-color-picker"></div>
       </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Theme</div>
+        <button class="panel-btn" id="mobileThemeToggle">Toggle Theme</button>
+      </div>
       <div class="panel-section panel-undo-row">
         <button class="panel-btn panel-undo" id="mobileUndoColor">&#x21A9; Undo</button>
+        <button class="panel-btn panel-undo" id="mobileRedoColor">&#x21AA; Redo</button>
         <button class="panel-btn panel-danger" id="mobileClearAll">Clear All</button>
       </div>
     </div>
@@ -9130,6 +9236,7 @@
       </div>
       <div class="panel-section panel-undo-row">
         <button class="panel-btn panel-undo" id="mobileUndoShare">&#x21A9; Undo</button>
+        <button class="panel-btn panel-undo" id="mobileRedoShare">&#x21AA; Redo</button>
       </div>
     </div>
   </div>
@@ -9472,10 +9579,6 @@
           btn.classList.add('active');
         });
       });
-      wire('mobileCountyToggle', 'click', function() {
-        closeAllPanels();
-        if (typeof openCountySelector === 'function') openCountySelector();
-      });
       wire('mobileThemeToggle', 'click', function() {
         if (typeof toggleTheme === 'function') toggleTheme();
       });
@@ -9579,10 +9682,15 @@
         if (mc) mc.style.backgroundColor = e.target.value;
       });
 
-      // Undo buttons (in all panels)
+      // Undo / Redo buttons (in all panels)
       ['mobileUndoTap', 'mobileUndoColor', 'mobileUndoShare'].forEach(function(id) {
         wire(id, 'click', function() {
           if (typeof undo === 'function') undo();
+        });
+      });
+      ['mobileRedoTap', 'mobileRedoColor', 'mobileRedoShare'].forEach(function(id) {
+        wire(id, 'click', function() {
+          if (typeof redo === 'function') redo();
         });
       });
       wire('mobileClearAll', 'click', function() {
@@ -9616,8 +9724,7 @@
       // Account
       wire('mobileSignIn', 'click', function() {
         closeAllPanels();
-        var authOverlay = document.getElementById('authOverlay');
-        if (authOverlay) authOverlay.classList.add('active');
+        if (typeof showUpgradeModal === 'function') showUpgradeModal();
       });
       wire('mobileSignOut', 'click', function() {
         closeAllPanels();

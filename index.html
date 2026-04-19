@@ -1279,21 +1279,28 @@
         font-size: var(--text-xxs);
       }
       .legend-group {
-        max-width: 180px;
-        padding: 10px 12px;
+        max-width: 150px;
+        max-height: 45%;
+        padding: 6px 8px;
       }
       .legend-title {
-        font-size: var(--text-xs);
-        margin-bottom: 6px;
+        font-size: 9px;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
       }
       .legend-item {
-        gap: 6px;
-        margin-bottom: 5px;
-        font-size: var(--text-xs);
+        gap: 5px;
+        margin-bottom: 3px;
+        font-size: 9px;
+        line-height: 1.2;
       }
       .legend-item-color {
-        width: 14px;
-        height: 14px;
+        width: 10px;
+        height: 10px;
+        flex-shrink: 0;
       }
     }
     /* Onboarding Overlay */
@@ -1815,6 +1822,15 @@
     .multi-select-bar.visible { display: flex; }
     .multi-select-bar .ms-count {
       font-size: 12px; color: var(--text-muted); font-weight: 600;
+    }
+    .multi-select-bar .ms-swatch {
+      width: 28px; height: 28px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--border-subtle);
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      background: var(--accent);
     }
     .multi-select-bar .ms-btn {
       padding: 6px 14px; border-radius: var(--radius-sm);
@@ -3980,11 +3996,17 @@
     function updateMultiSelectBar() {
       const bar = document.getElementById('multiSelectBar');
       const countEl = document.getElementById('msCount');
+      const swatch = document.getElementById('msSwatch');
+      const picker = document.getElementById('msColorPicker');
       if (!bar) return;
       const count = appState.multiSelected.size;
       if (count > 0) {
         bar.classList.add('visible');
         if (countEl) countEl.textContent = count + ' selected';
+        // Always sync swatch + picker to whatever paint color is currently
+        // active so users can SEE what will be applied.
+        if (swatch) swatch.style.background = appState.selectedColor;
+        if (picker) picker.value = appState.selectedColor;
       } else {
         bar.classList.remove('visible');
       }
@@ -4030,6 +4052,22 @@
     // Wire multi-select bar buttons
     document.getElementById('msApply')?.addEventListener('click', applyMultiSelect);
     document.getElementById('msClear')?.addEventListener('click', clearMultiSelect);
+    // Tapping the swatch opens the hidden color picker
+    document.getElementById('msSwatch')?.addEventListener('click', function() {
+      const p = document.getElementById('msColorPicker');
+      if (p) p.click();
+    });
+    // Live preview as user drags the picker
+    document.getElementById('msColorPicker')?.addEventListener('input', function(e) {
+      const sw = document.getElementById('msSwatch');
+      if (sw) sw.style.background = e.target.value;
+    });
+    // Commit the chosen color so Apply uses it
+    document.getElementById('msColorPicker')?.addEventListener('change', function(e) {
+      if (typeof selectColor === 'function') selectColor(e.target.value);
+      const sw = document.getElementById('msSwatch');
+      if (sw) sw.style.background = e.target.value;
+    });
     // Desktop multi-select toggle
     document.getElementById('desktopMultiSelect')?.addEventListener('change', function(e) {
       toggleMultiSelectMode(e.target.checked);
@@ -4530,6 +4568,7 @@
       const statsBar = document.getElementById('statsBar');
       const watermarkEl = document.getElementById('freeWatermark');
       const subtitleEl = document.getElementById('mapSubtitle');
+      const titleEl = document.getElementById('mapTitle');
       const mapContainer = document.getElementById('mapContainer');
       const svg = document.getElementById('mapSVG');
       const legendEl = document.getElementById('legendDisplay');
@@ -4537,6 +4576,7 @@
       // Save original styles
       const origStatsDisplay = statsBar.style.display;
       const origStatsVis = statsBar.style.visibility;
+      const origTitleDisplay = titleEl ? titleEl.style.display : '';
       const origOverflow = mapContainer.style.overflow;
       const origSvgFlex = svg.style.flex;
       const origSvgMinH = svg.style.minHeight;
@@ -4557,6 +4597,9 @@
       statsBar.style.visibility = 'hidden';
       if (watermarkEl) watermarkEl.style.display = 'none';
       if (subtitleWasEmpty) subtitleEl.style.display = 'none';
+      // Force title visible — landscape-orientation media query hides it on
+      // mobile, but exports always force landscape framing and need the title.
+      if (titleEl) titleEl.style.display = 'block';
 
       // ── FORCE LANDSCAPE ASPECT RATIO ──
       // SVG viewBox is 1010x710 (~1.42:1). Force container to this ratio
@@ -4680,6 +4723,7 @@
         statsBar.style.visibility = origStatsVis;
         if (watermarkEl && !isPro()) watermarkEl.style.display = '';
         if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
+        if (titleEl) titleEl.style.display = origTitleDisplay;
         mapContainer.style.width = origContainerW;
         mapContainer.style.height = origContainerH;
         mapContainer.style.overflow = origOverflow;
@@ -6873,7 +6917,10 @@
   <!-- Multi-Select Floating Bar -->
   <div class="multi-select-bar" id="multiSelectBar">
     <span class="ms-count" id="msCount">0 selected</span>
-    <button class="ms-btn ms-apply" id="msApply">Apply Color</button>
+    <label class="ms-swatch" id="msSwatch" title="Tap to change the color that will be applied">
+      <input type="color" id="msColorPicker" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none;">
+    </label>
+    <button class="ms-btn ms-apply" id="msApply">Apply</button>
     <button class="ms-btn" id="msClear">Clear</button>
   </div>
 

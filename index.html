@@ -922,20 +922,26 @@
 
     .legend-group {
       position: absolute;
+      /* Fallback for older browsers that don't support color-mix */
       background: var(--surface);
+      /* Translucent so the map shows through subtly. Pairs with the
+         existing backdrop-filter blur for a frosted-glass effect that
+         keeps states behind the legend faintly visible. */
+      background: color-mix(in srgb, var(--surface) 78%, transparent);
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       padding: 16px 20px;
       max-width: 320px;
       max-height: 70%;
       overflow-y: auto;
-      backdrop-filter: blur(6px);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       box-shadow: var(--shadow-md);
       pointer-events: none;
     }
 
     body.light-mode .legend-group {
-      background: rgba(255, 255, 255, 0.94);
+      background: rgba(255, 255, 255, 0.85);
       border-color: var(--border-muted);
       box-shadow: var(--shadow-md);
     }
@@ -948,6 +954,11 @@
       text-transform: uppercase;
       letter-spacing: 1px;
     }
+    /* Auto-shrink classes applied by JS based on title length. Keeps the
+       title on as few lines as possible so the legend stays compact even
+       when a template name is long. */
+    .legend-title.title-long { font-size: calc(var(--text-h3) * 0.82); letter-spacing: 0.5px; }
+    .legend-title.title-very-long { font-size: calc(var(--text-h3) * 0.7); letter-spacing: 0.3px; }
 
     .legend-item {
       display: flex;
@@ -1289,6 +1300,8 @@
         margin-bottom: 4px;
         line-height: 1.2;
       }
+      .legend-title.title-long { font-size: 8px; letter-spacing: 0.3px; }
+      .legend-title.title-very-long { font-size: 7px; letter-spacing: 0.2px; }
       .legend-item {
         gap: 5px;
         margin-bottom: 3px;
@@ -3766,7 +3779,14 @@
       }
 
       legendDisplay.style.display = 'block';
-      legendDisplay.innerHTML = '<div class="legend-title">' + escapeHTML(appState.legendTitle || 'Legend') + '</div>';
+      const titleText = appState.legendTitle || 'Legend';
+      // Auto-shrink class based on title length so long template names
+      // (e.g., "MOST WALKABLE / MOST DRIVEABLE") shrink rather than wrap
+      // or truncate. Thresholds tuned for the legend-group max-widths.
+      let titleClass = 'legend-title';
+      if (titleText.length > 28) titleClass += ' title-very-long';
+      else if (titleText.length > 18) titleClass += ' title-long';
+      legendDisplay.innerHTML = '<div class="' + titleClass + '">' + escapeHTML(titleText) + '</div>';
       updateLegendPosition();
 
       appState.legendEntries.forEach(entry => {
@@ -4623,14 +4643,15 @@
       svg.style.transition = 'none';
       svg.style.transform = '';
 
-      // Shrink legend for mobile export
+      // Shrink legend for mobile export — tighter than the live UI so the
+      // legend covers less of the bottom-right of the map (typically Florida).
       const isMobileExport = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (legendEl && legendEl.style.display !== 'none' && isMobileExport) {
-        legendEl.style.maxWidth = '160px';
-        legendEl.style.padding = '8px 10px';
-        legendEl.querySelectorAll('.legend-title').forEach(t => t.style.fontSize = '11px');
-        legendEl.querySelectorAll('.legend-item').forEach(i => { i.style.fontSize = '11px'; i.style.gap = '6px'; i.style.marginBottom = '4px'; });
-        legendEl.querySelectorAll('.legend-item-color').forEach(c => { c.style.width = '14px'; c.style.height = '14px'; });
+        legendEl.style.maxWidth = '130px';
+        legendEl.style.padding = '6px 8px';
+        legendEl.querySelectorAll('.legend-title').forEach(t => { t.style.fontSize = '10px'; t.style.marginBottom = '4px'; });
+        legendEl.querySelectorAll('.legend-item').forEach(i => { i.style.fontSize = '10px'; i.style.gap = '5px'; i.style.marginBottom = '3px'; });
+        legendEl.querySelectorAll('.legend-item-color').forEach(c => { c.style.width = '11px'; c.style.height = '11px'; });
       }
 
       // ── EXPORT-ONLY LEGEND CLAMP ──

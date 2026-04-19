@@ -2465,10 +2465,10 @@
   <!-- Modals -->
   <div class="modal-overlay" id="upgradeModal">
     <div class="modal" style="max-width: 420px;">
-      <div class="modal-title" style="font-size: 20px; text-align: center;">Upgrade to Pro</div>
-      <div class="modal-subtitle" style="text-align: center; margin-bottom: 16px;">Make maps that look professional</div>
+      <div class="modal-title" id="upgradeModalTitle" style="font-size: 20px; text-align: center;">Upgrade to Pro</div>
+      <div class="modal-subtitle" id="upgradeModalSubtitle" style="text-align: center; margin-bottom: 16px;">Make maps that look professional</div>
       <div class="modal-content">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
+        <div id="upgradeFeatureGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
           <div style="background: rgba(43, 122, 140, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
             <div style="font-size: 20px; margin-bottom: 4px;">🏷</div>
             <div style="font-size: 11px; font-weight: 600; color: #0EA5E9;">Legend Builder</div>
@@ -2517,8 +2517,8 @@
           <button class="btn secondary" id="authSignOutBtn" style="width: 100%; font-size: 10px; padding: 6px;">Sign Out</button>
         </div>
 
-        <!-- Legacy access code (always visible) -->
-        <div style="text-align: center; margin-top: 12px; border-top: 1px solid rgba(43,122,140,0.2); padding-top: 10px;">
+        <!-- Legacy access code (hidden in auth-only mode) -->
+        <div id="upgradeAccessCodeSection" style="text-align: center; margin-top: 12px; border-top: 1px solid rgba(43,122,140,0.2); padding-top: 10px;">
           <div style="font-size: 10px; color: var(--text-dim); margin-bottom: 8px;">Have an access code?</div>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="proCodeInput" placeholder="Enter access code" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #3a3a5a; background: #1a1a2e; color: #e0e0e0; font-size: 12px;">
@@ -2527,7 +2527,7 @@
         </div>
       </div>
       <div class="modal-actions">
-        <button class="btn secondary" onclick="closeUpgradeModal()">Maybe Later</button>
+        <button class="btn secondary" id="upgradeCancelBtn" onclick="closeUpgradeModal()">Maybe Later</button>
       </div>
     </div>
   </div>
@@ -4135,7 +4135,29 @@
       return appState.proUnlocked;
     }
 
-    function showUpgradeModal() {
+    // Opens the auth/upgrade modal. Pass mode='auth' to render as a pure
+    // sign-in / sign-up surface (hides upgrade framing). Default mode='upgrade'
+    // shows the full pricing + features UI.
+    function showUpgradeModal(mode) {
+      mode = mode === 'auth' ? 'auth' : 'upgrade';
+      const titleEl = document.getElementById('upgradeModalTitle');
+      const subtitleEl = document.getElementById('upgradeModalSubtitle');
+      const featureGrid = document.getElementById('upgradeFeatureGrid');
+      const accessCode = document.getElementById('upgradeAccessCodeSection');
+      const cancelBtn = document.getElementById('upgradeCancelBtn');
+      if (mode === 'auth') {
+        if (titleEl) titleEl.textContent = 'Sign In or Sign Up';
+        if (subtitleEl) subtitleEl.textContent = 'Save your maps and sync across devices';
+        if (featureGrid) featureGrid.style.display = 'none';
+        if (accessCode) accessCode.style.display = 'none';
+        if (cancelBtn) cancelBtn.textContent = 'Cancel';
+      } else {
+        if (titleEl) titleEl.textContent = 'Upgrade to Pro';
+        if (subtitleEl) subtitleEl.textContent = 'Make maps that look professional';
+        if (featureGrid) featureGrid.style.display = '';
+        if (accessCode) accessCode.style.display = '';
+        if (cancelBtn) cancelBtn.textContent = 'Maybe Later';
+      }
       updateUpgradeModalUI();
       document.getElementById('upgradeModal').classList.add('active');
     }
@@ -9764,7 +9786,7 @@
       // Account
       wire('mobileSignIn', 'click', function() {
         closeAllPanels();
-        if (typeof showUpgradeModal === 'function') showUpgradeModal();
+        if (typeof showUpgradeModal === 'function') showUpgradeModal('auth');
       });
       wire('mobileSignOut', 'click', function() {
         closeAllPanels();

@@ -3167,8 +3167,9 @@
       'CB Sequential': ['#F7FBFF', '#DEEBF7', '#C6DBEF', '#9ECAE1', '#6BAED6', '#4292C6', '#2171B5', '#08519C', '#08306B', '#3182BD', '#6BAED6', '#9ECAE1']
     };
 
-    function buildPaletteOptions() {
-      const container = document.getElementById('paletteOptions');
+    function buildPaletteOptions(containerId) {
+      const container = document.getElementById(containerId || 'paletteOptions');
+      if (!container) return;
       container.innerHTML = '';
 
       // Group extra palettes by category using name prefixes
@@ -7138,6 +7139,14 @@
     </div>
   </div>
 
+  <!-- Mobile More-Palettes sub-panel (overlays Color panel; standalone, not in the panels map) -->
+  <div class="mobile-panel" id="morePalettesMobilePanel" style="z-index:1002;">
+    <div class="panel-header"><span class="panel-title">More Palettes</span><button class="panel-close" aria-label="Close">&times;</button></div>
+    <div class="panel-body">
+      <div id="mobilePaletteOptions" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 4px;"></div>
+    </div>
+  </div>
+
   <!-- Account Menu -->
   <div class="mobile-account-menu" id="mobileAccountMenu">
     <div id="mobileAccountStatus" style="padding:6px 10px;font-size:12px;color:var(--text-muted);"></div>
@@ -7193,6 +7202,9 @@
         Object.values(iconBtns).forEach(b => { if (b) b.classList.remove('active'); });
         if (backdrop) backdrop.classList.remove('visible');
         if (accountMenu) accountMenu.classList.remove('visible');
+        // Close any standalone secondary overlays (e.g., mobile more-palettes sub-panel).
+        var morePalettesSub = document.getElementById('morePalettesMobilePanel');
+        if (morePalettesSub) morePalettesSub.classList.remove('panel-open');
         activePanel = null;
       }
 
@@ -7513,16 +7525,12 @@
         syncColorPanel(); buildQuickSwatches();
       });
       wire('mobileMorePalettes', 'click', function() {
-        var panel = document.getElementById('morePalettesPanel');
-        var btn = document.getElementById('morePalettesBtn');
-        if (panel) {
-          if (panel.style.display === 'none') {
-            panel.style.display = '';
-            if (typeof buildPaletteOptions === 'function') buildPaletteOptions();
-          } else {
-            panel.style.display = 'none';
-          }
-        }
+        // Open the standalone mobile palette-picker sub-panel (overlays Color panel at z-index:1002).
+        // Historical bug: used to toggle #morePalettesPanel inside the desktop sidebar,
+        // which is display:none on mobile — see audit-2026-04-18.md §3.
+        if (typeof buildPaletteOptions === 'function') buildPaletteOptions('mobilePaletteOptions');
+        var sub = document.getElementById('morePalettesMobilePanel');
+        if (sub) sub.classList.add('panel-open');
       });
       wire('mobileAutoLegend', 'click', function() {
         if (typeof gateProFeature === 'function' && !gateProFeature('legend')) return;

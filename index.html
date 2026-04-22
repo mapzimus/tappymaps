@@ -3253,6 +3253,9 @@
               }
             }
             showMessage(`Loaded "${name}" palette`, 'success');
+            // Notify mobile IIFE so it can re-sync its Color panel grid and auto-dismiss
+            // the More-Palettes sub-panel. Desktop listeners are a no-op.
+            try { window.dispatchEvent(new CustomEvent('tappy:palette-applied', { detail: { name: name } })); } catch (e) {}
           });
           container.appendChild(row);
         });
@@ -7139,10 +7142,12 @@
     </div>
   </div>
 
-  <!-- Mobile More-Palettes sub-panel (overlays Color panel; standalone, not in the panels map) -->
-  <div class="mobile-panel" id="morePalettesMobilePanel" style="z-index:1002;">
+  <!-- Mobile More-Palettes sub-panel (full-screen modal; overlays Color panel).
+       Uses top:0 + 100dvh so iOS Safari address-bar collapse can't hide content. -->
+  <div class="mobile-panel" id="morePalettesMobilePanel"
+       style="z-index:1002; top:0; bottom:0; max-height:100vh; max-height:100dvh; border-radius:0;">
     <div class="panel-header"><span class="panel-title">More Palettes</span><button class="panel-close" aria-label="Close">&times;</button></div>
-    <div class="panel-body">
+    <div class="panel-body" style="flex:1 1 auto;">
       <div id="mobilePaletteOptions" style="display: flex; flex-direction: column; gap: 6px; padding: 8px 4px;"></div>
     </div>
   </div>
@@ -7645,6 +7650,16 @@
             accountMenu.classList.remove('visible');
           }
         }
+      });
+
+      // After a palette is applied from anywhere (desktop or mobile sub-panel),
+      // refresh the mobile Color panel grid + quick swatches and auto-dismiss
+      // the More Palettes sub-panel so the user sees the effect immediately.
+      window.addEventListener('tappy:palette-applied', function() {
+        try { if (typeof syncColorPanel === 'function') syncColorPanel(); } catch (e) {}
+        try { if (typeof buildQuickSwatches === 'function') buildQuickSwatches(); } catch (e) {}
+        var sub = document.getElementById('morePalettesMobilePanel');
+        if (sub) sub.classList.remove('panel-open');
       });
 
       // Tap map to close panels

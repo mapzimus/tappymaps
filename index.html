@@ -4591,6 +4591,7 @@
     async function captureMapImage() {
       const statsBar = document.getElementById('statsBar');
       const watermarkEl = document.getElementById('freeWatermark');
+      const logoWatermarkEl = document.getElementById('logoWatermark');
       const subtitleEl = document.getElementById('mapSubtitle');
       const titleEl = document.getElementById('mapTitle');
       const mapContainer = document.getElementById('mapContainer');
@@ -4601,6 +4602,7 @@
       const origStatsDisplay = statsBar.style.display;
       const origStatsVis = statsBar.style.visibility;
       const origWatermarkDisplay = watermarkEl ? watermarkEl.style.display : '';
+      const origLogoWatermarkDisplay = logoWatermarkEl ? logoWatermarkEl.style.display : '';
       const origTitleDisplay = titleEl ? titleEl.style.display : '';
       const origOverflow = mapContainer.style.overflow;
       const origSvgFlex = svg.style.flex;
@@ -4621,6 +4623,11 @@
       statsBar.style.display = 'none';
       statsBar.style.visibility = 'hidden';
       if (watermarkEl) watermarkEl.style.display = 'none';
+      // Hide the in-SVG logoWatermark too — for Pro users the export should
+      // be clean, and for free users the canvas-drawn 'tappymaps.com' text
+      // (added post-capture below) handles attribution. The live UI still
+      // shows the slim watermark for branding while creating.
+      if (logoWatermarkEl) logoWatermarkEl.style.display = 'none';
       if (subtitleWasEmpty) subtitleEl.style.display = 'none';
       // Force title visible — landscape-orientation media query hides it on
       // mobile, but exports always force landscape framing and need the title.
@@ -4765,6 +4772,7 @@
         // Earlier this was guarded by !isPro(), which left Pro users with
         // a permanently hidden watermark on the live UI after every export.
         if (watermarkEl) watermarkEl.style.display = origWatermarkDisplay;
+        if (logoWatermarkEl) logoWatermarkEl.style.display = origLogoWatermarkDisplay;
         if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
         if (titleEl) titleEl.style.display = origTitleDisplay;
         mapContainer.style.width = origContainerW;

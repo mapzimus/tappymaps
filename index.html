@@ -4598,6 +4598,7 @@
       // Save original styles
       const origStatsDisplay = statsBar.style.display;
       const origStatsVis = statsBar.style.visibility;
+      const origWatermarkDisplay = watermarkEl ? watermarkEl.style.display : '';
       const origTitleDisplay = titleEl ? titleEl.style.display : '';
       const origOverflow = mapContainer.style.overflow;
       const origSvgFlex = svg.style.flex;
@@ -4698,17 +4699,31 @@
             const dtiScale = 3;
             const dtiWidth = captureWidth * dtiScale;
             const dtiHeight = captureHeight * dtiScale;
-            const dataUrl = await domtoimage.toPng(mapContainer, {
-              width: dtiWidth,
-              height: dtiHeight,
-              style: {
-                transform: 'scale(' + dtiScale + ')',
-                transformOrigin: 'top left',
-                width: captureWidth + 'px',
-                height: captureHeight + 'px'
-              },
-              bgcolor: bgColor
-            });
+            // Hard timeout: dom-to-image-more occasionally hangs forever (no
+            // resolve, no reject) on certain SVG content. Without this race,
+            // the outer finally never runs and the live canvas is left in
+            // its export-time mutated state — what the user sees as
+            // "the export breaks the map". Race forces the catch block to
+            // fire so the html2canvas fallback below kicks in.
+            const DTI_TIMEOUT_MS = 12000;
+            const dataUrl = await Promise.race([
+              domtoimage.toPng(mapContainer, {
+                width: dtiWidth,
+                height: dtiHeight,
+                style: {
+                  transform: 'scale(' + dtiScale + ')',
+                  transformOrigin: 'top left',
+                  width: captureWidth + 'px',
+                  height: captureHeight + 'px'
+                },
+                bgcolor: bgColor
+              }),
+              new Promise(function(_, reject) {
+                setTimeout(function() {
+                  reject(new Error('dom-to-image timed out after ' + DTI_TIMEOUT_MS + 'ms'));
+                }, DTI_TIMEOUT_MS);
+              })
+            ]);
             const img = new Image();
             canvas = await new Promise(function(resolve, reject) {
               img.onload = function() {
@@ -4744,7 +4759,10 @@
         window.scrollTo(0, origScrollY);
         statsBar.style.display = origStatsDisplay;
         statsBar.style.visibility = origStatsVis;
-        if (watermarkEl && !isPro()) watermarkEl.style.display = '';
+        // Restore the live watermark for everyone (Pro and non-Pro).
+        // Earlier this was guarded by !isPro(), which left Pro users with
+        // a permanently hidden watermark on the live UI after every export.
+        if (watermarkEl) watermarkEl.style.display = origWatermarkDisplay;
         if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
         if (titleEl) titleEl.style.display = origTitleDisplay;
         mapContainer.style.width = origContainerW;

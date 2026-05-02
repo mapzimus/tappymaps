@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>Tappymaps - Tap. Color. Share.</title>
+    <title>Tappymaps</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.4.2/chroma.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.4.5/dist/dom-to-image-more.min.js"></script>
@@ -2444,8 +2444,12 @@
             <text x="0" y="-22" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" font-family="sans-serif">N</text>
           </g>
 
-          <!-- Logo Watermark -->
-          <g id="logoWatermark" transform="translate(310, 555) scale(1.08)" opacity="0.45">
+          <!-- Logo Watermark — slim mark only, no slogan.
+               Slogan removed because "Tap. Color. Share." is map-maker-specific
+               and the product is expanding into Map Games + Gallery (Tap or Crap).
+               Scale 1.08 → 0.55 so the mark sits subtly in the gulf area
+               instead of dominating the map. -->
+          <g id="logoWatermark" transform="translate(380, 615) scale(0.55)" opacity="0.45">
             <g>
               <!-- Pin icon -->
               <circle cx="30" cy="24" r="22" fill="#0EA5E9"/>
@@ -2455,8 +2459,6 @@
               <!-- Wordmark -->
               <text x="68" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="42" font-weight="700" fill="#0EA5E9" letter-spacing="-0.5">tappy</text>
               <text x="178" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="42" font-weight="700" fill="#F97316" letter-spacing="-0.5">maps</text>
-              <!-- Slogan -->
-              <text x="68" y="58" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" font-weight="300" fill="#64748B" letter-spacing="4">Tap. Color. Share.</text>
             </g>
           </g>
 

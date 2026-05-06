@@ -16,6 +16,14 @@ const allowedOrigins = [
   'http://127.0.0.1:8000',
 ];
 
+// Server-side allowlist of accepted Stripe priceIds. Client could otherwise
+// post any priceId from the same Stripe account (e.g. a $0.01 test price)
+// and check out at that price.
+const ALLOWED_PRICE_IDS = new Set([
+  'price_1THabF6MmI5fTYyY4WNuFwHe', // Monthly $5
+  'price_1THabF6MmI5fTYyYwzIwTNKF', // Annual $48
+]);
+
 function getCorsHeaders(req) {
   const origin = req.headers.origin;
   const allowed = allowedOrigins.includes(origin) ? origin : 'https://tappymaps.com';
@@ -45,7 +53,16 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { priceId, successUrl, cancelUrl } = req.body;
+    const { priceId } = req.body;
+
+    // Validate priceId against the server-side allowlist. Ignores client-
+    // supplied successUrl/cancelUrl entirely — both are computed below from
+    // the validated request origin so a malicious client can't redirect
+    // post-checkout to a phishing host.
+    if (!ALLOWED_PRICE_IDS.has(priceId)) {
+      res.status(400).json({ error: 'Invalid priceId' });
+      return;
+    }
 
     // Get Authorization header
     const authHeader = req.headers.authorization;
@@ -66,6 +83,15 @@ export default async function handler(req, res) {
     const user = data.user;
     const userId = user.id;
     const userEmail = user.email;
+
+    // Build redirect URLs from the validated request origin (defaults to
+    // production tappymaps.com if origin isn't in the allowlist). Client-
+    // supplied successUrl/cancelUrl are ignored.
+    const origin = allowedOrigins.includes(req.headers.origin)
+      ? req.headers.origin
+      : 'https://tappymaps.com';
+    const successUrl = `${origin}/?checkout=success`;
+    const cancelUrl = `${origin}/?checkout=cancel`;
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({

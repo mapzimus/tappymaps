@@ -1541,6 +1541,21 @@
           aspect-ratio: 1010 / 710;
           max-height: none;
         }
+        /* Promote the legend into the consolidated empty space below the map.
+           Default behavior (position: absolute, overlaying the map's
+           bottom-right corner — covering Florida) is appropriate when the
+           map fills the container; here it doesn't, so render the legend
+           inline below the SVG where it has room to breathe and doesn't
+           obscure colored states. captureMapImage() resets to position:
+           absolute during export so the exported PNG still corner-anchors. */
+        #legendDisplay.legend-group {
+          position: static;
+          margin: 12px 16px 0;
+          max-width: none;
+          max-height: none;
+          width: auto;
+          pointer-events: auto;
+        }
       }
 
       /* Landscape: full canvas, icon bar on left */
@@ -4751,6 +4766,11 @@
         // a long wrapped title (e.g. "Most Walkable / Most Driveable") doesn't
         // overlap the legend at top corners. Audit §5 hypothesis (a).
         const titleClearance = Math.max(50, titleH + subtitleH + 8);
+        // Override the portrait inline-legend CSS (position: static) so the
+        // exported PNG still corner-anchors the legend over the map. Restored
+        // by the cssText reset in finally.
+        legendEl.style.position = 'absolute';
+        legendEl.style.margin = '0';
         legendEl.style.top = 'auto';
         legendEl.style.bottom = 'auto';
         legendEl.style.left = 'auto';
@@ -5532,6 +5552,17 @@
       const container = document.getElementById('mapContainer');
       const svg = document.getElementById('mapSVG');
       if (!legend || !container || !svg) return;
+
+      // On mobile portrait, the legend renders inline below the SVG via CSS
+      // (position: static). Skip the absolute-positioning math and clear any
+      // stale top/bottom/left/right inline styles so the CSS rule wins.
+      if (window.matchMedia('(max-width: 900px) and (orientation: portrait)').matches) {
+        legend.style.top = 'auto';
+        legend.style.bottom = 'auto';
+        legend.style.left = 'auto';
+        legend.style.right = 'auto';
+        return;
+      }
 
       // Anchor the legend to the actual rendered SVG content bounds, not the
       // container bounds. Necessary because the SVG (viewBox 1010x710 with

@@ -1585,21 +1585,26 @@
            Width was 280px which felt cramped on landscape phones — user
            reported "panels only take up half the screen". Bumped to 60vw
            with a sensible floor/cap so it scales from small phones (where
-           320px is plenty) to wide tablets (where 480px is the visual cap). */
+           320px is plenty) to wide tablets (where 480px is the visual cap).
+           !important is required on the layout properties because the base
+           .mobile-panel rule appears later in source order and would
+           otherwise win the `left`/`right`/`transform` cascade in landscape. */
         .mobile-panel {
-          top: 0; left: 48px; bottom: 0;
-          right: auto;
-          width: 60vw;
+          top: 0 !important;
+          left: 48px !important;
+          bottom: 0 !important;
+          right: auto !important;
+          width: 60vw !important;
           min-width: 320px;
           max-width: 480px;
           max-height: 100%;
           border-radius: 0;
           border-top: none;
           border-right: 1px solid var(--border);
-          transform: translateX(-110%);
+          transform: translateX(-110%) !important;
         }
         .mobile-panel.panel-open {
-          transform: translateX(0);
+          transform: translateX(0) !important;
         }
       }
 

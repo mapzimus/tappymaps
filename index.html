@@ -5254,6 +5254,9 @@
         reader.onload = (event) => {
           try {
             const config = JSON.parse(event.target.result);
+            // saveHistory before mutating so the user can undo a load that
+            // turned out to be the wrong file. Audit §4.
+            saveHistory();
             appState.stateColors = config.stateColors || {};
             appState.legendEntries = (config.legendEntries || []).slice(0, MAX_LEGEND_ENTRIES);
             appState.mapTitle = config.mapTitle || 'My US Map';
@@ -5727,9 +5730,12 @@
         }
       }
 
-      // Auto-create legend entries from categories
+      // Auto-create legend entries from categories. Cap at MAX_LEGEND_ENTRIES
+      // so a CSV with 30 distinct categories can't blow past the legend cap.
       if (Object.keys(categoryColors).length > 0) {
-        appState.legendEntries = Object.entries(categoryColors).map(([label, color]) => ({ label, color }));
+        appState.legendEntries = Object.entries(categoryColors)
+          .slice(0, MAX_LEGEND_ENTRIES)
+          .map(([label, color]) => ({ label, color }));
       }
 
       renderMap();

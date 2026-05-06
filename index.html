@@ -1524,6 +1524,25 @@
         padding: 6px 10px 0;
       }
 
+      /* Mobile portrait: anchor SVG to its content aspect so the map sits
+         flush below the title instead of being centered with empty bands
+         above and below. The SVG viewBox is 1010x710 (~1.42:1 landscape) and
+         the portrait viewport is ~0.46:1, so preserveAspectRatio="xMidYMid
+         meet" was leaving 200px+ of empty letterbox above and below the map.
+         With aspect-ratio applied, the SVG renders at width × (width / 1.42),
+         flex:none keeps it from stretching, and flex parent's default
+         justify-content (flex-start) anchors it to the top — empty space
+         gets consolidated below the map where it reads as background. */
+      @media (orientation: portrait) {
+        .map-container svg {
+          flex: none;
+          height: auto;
+          width: 100%;
+          aspect-ratio: 1010 / 710;
+          max-height: none;
+        }
+      }
+
       /* Landscape: full canvas, icon bar on left */
       @media (orientation: landscape) {
         .container {

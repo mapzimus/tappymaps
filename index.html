@@ -1581,11 +1581,17 @@
         .icon-bar-btn span {
           font-size: 8px;
         }
-        /* Panels: slide from left */
+        /* Panels: slide from left.
+           Width was 280px which felt cramped on landscape phones — user
+           reported "panels only take up half the screen". Bumped to 60vw
+           with a sensible floor/cap so it scales from small phones (where
+           320px is plenty) to wide tablets (where 480px is the visual cap). */
         .mobile-panel {
           top: 0; left: 48px; bottom: 0;
           right: auto;
-          width: 280px;
+          width: 60vw;
+          min-width: 320px;
+          max-width: 480px;
           max-height: 100%;
           border-radius: 0;
           border-top: none;
@@ -1824,13 +1830,23 @@
       border: 1px solid var(--accent);
       border-radius: var(--radius-lg);
       padding: 8px 16px;
-      z-index: 998;
+      /* Sits above the mobile icon bar (z-index 999); without this the Apply
+         tap landed on the icon bar instead of the multi-select bar. */
+      z-index: 1000;
       gap: 8px;
       align-items: center;
       box-shadow: var(--shadow-lg);
       white-space: nowrap;
     }
     .multi-select-bar.visible { display: flex; }
+    /* Mobile portrait: clear the bottom icon bar (~110-130px tall with
+       quick-swatches + nav + safe-area). Without this, the bar lands behind
+       or inside the icon bar and Apply isn't reachable. */
+    @media (max-width: 900px) and (orientation: portrait) {
+      .multi-select-bar {
+        bottom: calc(140px + env(safe-area-inset-bottom));
+      }
+    }
     .multi-select-bar .ms-count {
       font-size: 12px; color: var(--text-muted); font-weight: 600;
     }
@@ -2447,9 +2463,9 @@
           <!-- Logo Watermark — slim mark only, no slogan.
                Slogan removed because "Tap. Color. Share." is map-maker-specific
                and the product is expanding into Map Games + Gallery (Tap or Crap).
-               Scale 1.08 → 0.55 so the mark sits subtly in the gulf area
-               instead of dominating the map. -->
-          <g id="logoWatermark" transform="translate(380, 615) scale(0.55)" opacity="0.45">
+               Scale tuned to read on the canvas without dominating: original
+               1.08 was too dominant, 0.55 was illegible — 0.9 reads cleanly. -->
+          <g id="logoWatermark" transform="translate(380, 615) scale(0.9)" opacity="0.45">
             <g>
               <!-- Pin icon -->
               <circle cx="30" cy="24" r="22" fill="#0EA5E9"/>
@@ -4023,6 +4039,7 @@
       const swatch = document.getElementById('msSwatch');
       const picker = document.getElementById('msColorPicker');
       if (!bar) return;
+      const wasVisible = bar.classList.contains('visible');
       const count = appState.multiSelected.size;
       if (count > 0) {
         bar.classList.add('visible');
@@ -4034,6 +4051,10 @@
       } else {
         bar.classList.remove('visible');
       }
+      // If visibility flipped, re-anchor the legend so it clears the bar
+      // when shown and snaps back when hidden — error3.
+      const nowVisible = bar.classList.contains('visible');
+      if (wasVisible !== nowVisible) updateLegendPosition();
     }
 
     function applyMultiSelect() {
@@ -4141,7 +4162,7 @@
         const state = decodeStateFromURL(hash);
         if (state) {
           appState.stateColors = state.colors || {};
-          appState.legendEntries = state.legend || [];
+          appState.legendEntries = (state.legend || []).slice(0, MAX_LEGEND_ENTRIES);
           appState.mapTitle = state.title || 'My US Map';
           appState.mapSubtitle = state.subtitle || '';
           appState.mapSource = state.source || '';
@@ -4622,12 +4643,18 @@
       // Hide non-export elements
       statsBar.style.display = 'none';
       statsBar.style.visibility = 'hidden';
-      if (watermarkEl) watermarkEl.style.display = 'none';
-      // Hide the in-SVG logoWatermark too — for Pro users the export should
-      // be clean, and for free users the canvas-drawn 'tappymaps.com' text
-      // (added post-capture below) handles attribution. The live UI still
-      // shows the slim watermark for branding while creating.
-      if (logoWatermarkEl) logoWatermarkEl.style.display = 'none';
+      // SVG <g> hide: belt-and-braces. Some renderers (notably dom-to-image-more
+      // on iOS Safari) have honored `display:none` inconsistently when the
+      // element is captured before layout settles. Setting both the style
+      // property AND the SVG presentation attribute makes the hide deterministic.
+      if (watermarkEl) {
+        watermarkEl.style.display = 'none';
+        watermarkEl.setAttribute('display', 'none');
+      }
+      if (logoWatermarkEl) {
+        logoWatermarkEl.style.display = 'none';
+        logoWatermarkEl.setAttribute('display', 'none');
+      }
       if (subtitleWasEmpty) subtitleEl.style.display = 'none';
       // Force title visible — landscape-orientation media query hides it on
       // mobile, but exports always force landscape framing and need the title.
@@ -4648,10 +4675,20 @@
       mapContainer.style.height = captureHeight + 'px';
       mapContainer.style.overflow = 'hidden';
 
-      // Let SVG fill the forced landscape container
+      // Let SVG fill the forced landscape container. Compute the explicit
+      // pixel height so flex layout drift on iOS Safari can't leave the SVG
+      // sized to its natural-content rect (the bug behind error4's huge empty
+      // band — flex:1 height:100% inside a freshly-resized parent sometimes
+      // resolves to the pre-resize parent height).
+      // Force a synchronous layout flush so titleEl.offsetHeight reflects
+      // the post-resize world, not stale measurements.
+      void mapContainer.offsetHeight;
+      const titleH = (titleEl && titleEl.style.display !== 'none') ? titleEl.offsetHeight : 0;
+      const subtitleH = (subtitleEl && !subtitleWasEmpty) ? subtitleEl.offsetHeight : 0;
+      const svgH = Math.max(0, captureHeight - titleH - subtitleH);
       svg.style.flex = 'none';
       svg.style.minHeight = 'auto';
-      svg.style.height = '100%';
+      svg.style.height = svgH + 'px';
       svg.style.width = '100%';
       // Clear pinch-zoom transform so export captures the neutral map
       svg.style.transition = 'none';
@@ -4678,7 +4715,10 @@
       if (legendEl && legendEl.style.display !== 'none') {
         const corner = appState.legendPosition || 'bottom-right';
         const inset = 12;
-        const titleClearance = 50;
+        // Match titleClearance to the actual measured title+subtitle height so
+        // a long wrapped title (e.g. "Most Walkable / Most Driveable") doesn't
+        // overlap the legend at top corners. Audit §5 hypothesis (a).
+        const titleClearance = Math.max(50, titleH + subtitleH + 8);
         legendEl.style.top = 'auto';
         legendEl.style.bottom = 'auto';
         legendEl.style.left = 'auto';
@@ -4771,8 +4811,14 @@
         // Restore the live watermark for everyone (Pro and non-Pro).
         // Earlier this was guarded by !isPro(), which left Pro users with
         // a permanently hidden watermark on the live UI after every export.
-        if (watermarkEl) watermarkEl.style.display = origWatermarkDisplay;
-        if (logoWatermarkEl) logoWatermarkEl.style.display = origLogoWatermarkDisplay;
+        if (watermarkEl) {
+          watermarkEl.style.display = origWatermarkDisplay;
+          watermarkEl.removeAttribute('display');
+        }
+        if (logoWatermarkEl) {
+          logoWatermarkEl.style.display = origLogoWatermarkDisplay;
+          logoWatermarkEl.removeAttribute('display');
+        }
         if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
         if (titleEl) titleEl.style.display = origTitleDisplay;
         mapContainer.style.width = origContainerW;
@@ -5157,7 +5203,7 @@
           try {
             const config = JSON.parse(event.target.result);
             appState.stateColors = config.stateColors || {};
-            appState.legendEntries = config.legendEntries || [];
+            appState.legendEntries = (config.legendEntries || []).slice(0, MAX_LEGEND_ENTRIES);
             appState.mapTitle = config.mapTitle || 'My US Map';
             appState.mapSubtitle = config.mapSubtitle || '';
 
@@ -5479,6 +5525,21 @@
       const offsetBottom = containerRect.height - (offsetTop + contentH);
 
       const inset = 12;
+      // When the multi-select bar is visible, a bottom-anchored legend can
+      // collide with it. Measure the bar's actual viewport rect and compute
+      // the minimum shift needed — that way landscape mobile (bar at bottom:80)
+      // gets a real shift while portrait mobile (bar at bottom:140+, well above
+      // the legend) gets ~0 and the legend doesn't jump up unnecessarily.
+      const msBar = document.getElementById('multiSelectBar');
+      const msVisible = msBar && msBar.classList.contains('visible');
+      let bottomShift = 0;
+      if (msVisible) {
+        const msRect = msBar.getBoundingClientRect();
+        // Legend bottom (viewport y) = containerRect.bottom − (offsetBottom + inset + shift)
+        // Want: legend_bottom_y ≤ msRect.top − 8  (8px gap above the bar)
+        const required = containerRect.bottom - offsetBottom - inset - msRect.top + 8;
+        bottomShift = Math.max(0, required);
+      }
 
       legend.style.top = 'auto';
       legend.style.bottom = 'auto';
@@ -5487,11 +5548,11 @@
 
       switch (appState.legendPosition) {
         case 'bottom-right':
-          legend.style.bottom = (offsetBottom + inset) + 'px';
+          legend.style.bottom = (offsetBottom + inset + bottomShift) + 'px';
           legend.style.right = (offsetRight + inset) + 'px';
           break;
         case 'bottom-left':
-          legend.style.bottom = (offsetBottom + inset) + 'px';
+          legend.style.bottom = (offsetBottom + inset + bottomShift) + 'px';
           legend.style.left = (offsetLeft + inset) + 'px';
           break;
         case 'top-right':
@@ -6833,7 +6894,7 @@
       appState.mapSubtitle = '';
       appState.presetColors = [...tpl.presetColors];
       appState.selectedColor = tpl.presetColors[0];
-      appState.legendEntries = tpl.legendEntries.map(e => ({...e}));
+      appState.legendEntries = tpl.legendEntries.slice(0, MAX_LEGEND_ENTRIES).map(e => ({...e}));
 
       // Clear any active data map context — otherwise the ramp picker and
       // legend builder stay tied to the previous data map's state.

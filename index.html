@@ -4099,28 +4099,36 @@
       if (cb) cb.checked = enabled;
     }
 
-    // Wire multi-select bar buttons
-    document.getElementById('msApply')?.addEventListener('click', applyMultiSelect);
-    document.getElementById('msClear')?.addEventListener('click', clearMultiSelect);
-    // Tapping the swatch opens the hidden color picker
-    document.getElementById('msSwatch')?.addEventListener('click', function() {
-      const p = document.getElementById('msColorPicker');
-      if (p) p.click();
-    });
-    // Live preview as user drags the picker
-    document.getElementById('msColorPicker')?.addEventListener('input', function(e) {
-      const sw = document.getElementById('msSwatch');
-      if (sw) sw.style.background = e.target.value;
-    });
-    // Commit the chosen color so Apply uses it
-    document.getElementById('msColorPicker')?.addEventListener('change', function(e) {
-      if (typeof selectColor === 'function') selectColor(e.target.value);
-      const sw = document.getElementById('msSwatch');
-      if (sw) sw.style.background = e.target.value;
-    });
-    // Desktop multi-select toggle
-    document.getElementById('desktopMultiSelect')?.addEventListener('change', function(e) {
-      toggleMultiSelectMode(e.target.checked);
+    // Wire multi-select bar buttons.
+    // CRITICAL: this script runs inline during body parse — the multi-select
+    // bar (#msApply, #msClear, #msSwatch, #msColorPicker) lives later in the
+    // body so getElementById returns null at this point and the optional-chain
+    // silently no-ops the addEventListener. That left the Apply button dead
+    // ("popup is not interactable and stays there"). Defer to DOMContentLoaded
+    // so the elements exist when we wire them.
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('msApply')?.addEventListener('click', applyMultiSelect);
+      document.getElementById('msClear')?.addEventListener('click', clearMultiSelect);
+      // Tapping the swatch opens the hidden color picker
+      document.getElementById('msSwatch')?.addEventListener('click', function() {
+        const p = document.getElementById('msColorPicker');
+        if (p) p.click();
+      });
+      // Live preview as user drags the picker
+      document.getElementById('msColorPicker')?.addEventListener('input', function(e) {
+        const sw = document.getElementById('msSwatch');
+        if (sw) sw.style.background = e.target.value;
+      });
+      // Commit the chosen color so Apply uses it
+      document.getElementById('msColorPicker')?.addEventListener('change', function(e) {
+        if (typeof selectColor === 'function') selectColor(e.target.value);
+        const sw = document.getElementById('msSwatch');
+        if (sw) sw.style.background = e.target.value;
+      });
+      // Desktop multi-select toggle
+      document.getElementById('desktopMultiSelect')?.addEventListener('change', function(e) {
+        toggleMultiSelectMode(e.target.checked);
+      });
     });
 
     // ============================================================================

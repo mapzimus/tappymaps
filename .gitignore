@@ -8,6 +8,20 @@ patch_*.py
 # Commit message staging file (used by CMD workflow)
 .gitmsg
 
+# Per-session Claude context (kept locally; see HANDOVER.md for the canonical handover)
+/HANDOVER-*.md
+/audit-*.md
+/template-audit-*.md
+/tappymaps-observations.md
+
+# Local Claude settings & MCP scratch
+.claude/settings.local.json
+.playwright-mcp/
+
+# Visual-debug screenshots at repo root (assets/ images are unaffected)
+/*.png
+/*.PNG
+
 # OS / editor junk
 .DS_Store
 Thumbs.db

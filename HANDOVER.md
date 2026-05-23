@@ -41,11 +41,37 @@ The app is fully functional and rebranded as Tappymaps:
 - **Stripe**: Product with two prices ($5/mo, $48/yr), webhook configured
 - **3 API routes**: `create-checkout.js`, `verify-subscription.js`, `webhook.js`
 - **Auth UI**: Sign up/in/out in upgrade modal, Supabase client via CDN
-### Known Issues
-- Upgrade modal button event propagation (modal closes instead of triggering checkout)
-- Webhook returns 200 on DB failure (should return 500)
-- Hardcoded promo codes bypass payment (remove before real launch)
-- Export counter is localStorage-only (bypassable)
+### Known Issues — Resolved (2026-04 / 2026-05 sprint)
+
+All four prior known issues were closed out in the late-April through early-May
+commits. Status as of `dd9fcad`:
+
+- **Upgrade modal button event propagation:** Fixed. `syncAccountMenu`
+  (index.html:7561) reads `appState.currentUser` and `isPro()` instead of the
+  non-existent `appState.user` / `appState.isPro` fields. Per
+  audit-2026-04-18.md §2.
+- **Webhook returns 200 on DB failure:** Fixed. `api/stripe/webhook.js` returns
+  500 from all four DB-failure paths (subscription create/update/delete and
+  payment failure handling) and 200 only on success ack.
+- **Hardcoded promo codes / arbitrary priceId bypass:** Fixed in `1ed6036`
+  (Stripe API hardening). Server-side priceId allowlist + origin-pinned
+  success/cancel URLs. Closes audit §1 [LOW] findings.
+- **Export counter is localStorage-only:** Fixed for signed-in users.
+  `api/stripe/track-export.js` enforces 3/month server-side against the
+  Supabase `export_counts` table with JWT auth. Anonymous users still get
+  1 localStorage-tracked export (acceptable — the quota is trivially small).
+
+### Genuinely open items (lower priority)
+
+- **Device-verification debt.** Several mobile commits (`cab8b0c`, `f353def`,
+  `d39c0e2`, `e0dc07c`) shipped as "candidate fixes" pending real-device
+  testing. See the gitignored dated `HANDOVER-*.md` docs for the per-commit
+  verification checklist.
+- **Line-ending churn.** No `.gitattributes` yet, so most edits trigger
+  CRLF/LF warnings on Windows. Cosmetic, doesn't affect deploys.
+- **Mobile `wire()` walk (audit Tier 2 §3).** Need to walk every mobile
+  handler to verify it targets a mobile-visible element, not desktop-only DOM.
+  `mobileMorePalettes` was found and fixed; more may lurk.
 
 ## Architecture Overview
 

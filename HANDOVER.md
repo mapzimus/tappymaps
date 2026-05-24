@@ -133,6 +133,5 @@ Tappymaps is one of three products under Mapparatus Organization:
 5. See `.claude/CLAUDE.md` for full technical context
 
 ## Owner
-- **Name**: Max
-- **Email**: mhowe.gis@gmail.com
-- **GitHub**: mapzimus
+- **GitHub**: [@mapzimus](https://github.com/mapzimus)
+- **Contact**: see README

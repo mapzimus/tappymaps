@@ -2504,7 +2504,7 @@
                and the product is expanding into Map Games + Gallery (Tap or Crap).
                Scale tuned to read on the canvas without dominating: original
                1.08 was too dominant, 0.55 was illegible — 0.9 reads cleanly. -->
-          <g id="logoWatermark" transform="translate(380, 615) scale(0.9)" opacity="0.45">
+          <g id="logoWatermark" transform="translate(330, 570) scale(1.0)" opacity="0.7">
             <g>
               <!-- Pin icon -->
               <circle cx="30" cy="24" r="22" fill="#0EA5E9"/>
@@ -5062,17 +5062,14 @@
       // Hide upgrade banner for pro users
       const banner = document.getElementById('upgradeBanner');
       if (banner) banner.style.display = pro ? 'none' : '';
-      // Show/hide watermark
+      // Diagonal text watermark removed per Phase 0 spec section 9 — the
+      // pin+wordmark logoWatermark is the only on-canvas brand element now.
+      // Container kept empty so other JS that references #freeWatermark
+      // (captureMapImage save/restore, SVG export clone removal) keeps working.
       const watermark = document.getElementById('freeWatermark');
       if (watermark) {
-        if (pro) {
-          watermark.innerHTML = '';
-          watermark.style.display = 'none';
-        } else {
-          watermark.style.display = '';
-          const fillColor = appState.darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)';
-          watermark.innerHTML = `<text x="485" y="340" text-anchor="middle" font-size="72" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" fill="${fillColor}" letter-spacing="8" transform="rotate(-30, 485, 340)">tappymaps.com</text>`;
-        }
+        while (watermark.firstChild) watermark.removeChild(watermark.firstChild);
+        watermark.style.display = 'none';
       }
       // Update export counter
       updateExportCounter();

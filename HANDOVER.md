@@ -73,6 +73,45 @@ commits. Status as of `dd9fcad`:
   handler to verify it targets a mobile-visible element, not desktop-only DOM.
   `mobileMorePalettes` was found and fixed; more may lurk.
 
+## Reimagining — Phase 0 shipped (2026-05-24)
+
+Design spec at `docs/superpowers/specs/2026-05-23-tappymaps-reimagining-design.md`.
+Plan at `docs/superpowers/plans/2026-05-23-tappymaps-reimagining-phase-0.md`.
+
+Phase 0 punch list complete. Commits on `master`:
+
+- `6258a4e` — drop diagonal text watermark, enlarge pin+wordmark logo (Task 2)
+- `1362cbc` — update logoWatermark comment for new scale + drop TaC ref (Task 2 follow-up)
+- `997ade4` — remove Show Logo toggle entirely, logo always visible (Task 3)
+- `1cd8102` — keep logo visible in exports (spec section 9 mandatory for everyone) (Task 2A)
+- `943e949` — show map title in mobile landscape (Task 4)
+- `490cfb9` — scroll onboarding modal within viewport on landscape phones (Task 5)
+- `36be1b0` — close ~270px portrait wasted band between map and palette (Task 6)
+- `77e8b99` — stop firing dead Supabase analytics request on every page load (Task 7)
+- `86ed0c1` — add basic SEO head tags, OG/Twitter cards, and h1 element (Task 8)
+
+Items shipped:
+- Diagonal "tappymaps.com" text watermark removed from canvas
+- Pin+wordmark logo enlarged (scale 0.72 → 1.0, opacity 0.45 → 0.7)
+- Logo mandatory on all exports for all users (no Pro removal option, no UI toggle)
+- Landscape map title visible (was display:none — live audit bug)
+- Landscape onboarding modal scrolls within viewport (was clipping skip link)
+- Portrait wasted-band gap closed (365px → 0px between stats and palette; stopgap until Phase 1's rotate-overlay)
+- Dead Supabase analytics URL no longer fires ERR_NAME_NOT_RESOLVED on every page load
+- Basic SEO head tags added (title, meta description, OG, Twitter cards, canonical, sr-only h1)
+- `.superpowers/` gitignored (brainstorm session artifacts kept local)
+
+Items deferred to Phase 1 / parallel work:
+- Reddit Developer account (Task 11, external) — apply at developers.reddit.com to reserve Tappymaps Devvit app name; takes a few days for approval
+- Per-route SEO tags (Phase 1 once mode router exists)
+- Form-label a11y fixes (Phase 1 Create-mode refactor)
+- `.claude/agents/tappymaps-cartographer.md` update (Phase 1 once mode-router patterns exist)
+- `--mobile-icon-bar-height` CSS custom property extraction (Phase 1 cleanup)
+- Analytics rewire to new Supabase project (Phase 1 once gallery schemas land)
+
+Next: Phase 1 — mode router + Hub Layout B + Create mode 5-panel rail refresh.
+Plan will land at `docs/superpowers/plans/2026-05-XX-tappymaps-reimagining-phase-1.md` (TBD when Phase 0 is fully signed off).
+
 ## Architecture Overview
 
 Everything lives in one HTML file plus 3 Vercel serverless functions. No build tools, no framework.

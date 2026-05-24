@@ -17,6 +17,7 @@ patch_*.py
 # Local Claude settings & MCP scratch
 .claude/settings.local.json
 .playwright-mcp/
+.superpowers/
 
 # Visual-debug screenshots at repo root (assets/ images are unaffected)
 /*.png

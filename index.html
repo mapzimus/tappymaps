@@ -2350,10 +2350,6 @@
               <option value="top-left">Top Left</option>
             </select>
           </div>
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
-            <input type="checkbox" id="toggleLogo" checked style="accent-color: #0EA5E9; cursor: pointer;">
-            Show logo <span style="font-size: 9px; background: #0EA5E9; color: white; padding: 1px 5px; border-radius: 3px; margin-left: 4px;">PRO to hide</span>
-          </label>
           <div style="margin-top: 8px;">
             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
               <input type="color" id="titleColorPicker" value="#0EA5E9" style="width: 24px; height: 24px; border: none; background: none; cursor: pointer; padding: 0;">
@@ -2740,7 +2736,6 @@
       redoStack: [],
       darkMode: true,
       showLabels: true,
-      showLogo: true,
       proUnlocked: false,
       currentUser: null,
       subscription: null,
@@ -6434,17 +6429,6 @@
 
 
 
-      // Logo toggle (hiding requires Pro)
-      document.getElementById('toggleLogo').addEventListener('change', (e) => {
-        if (!e.target.checked && !appState.proUnlocked) {
-          e.target.checked = true;
-          showUpgradeModal();
-          return;
-        }
-        appState.showLogo = e.target.checked;
-        document.getElementById('logoWatermark').style.display = e.target.checked ? '' : 'none';
-      });
-
       // North arrow toggle, position, color & style
       document.getElementById('toggleNorthArrow').addEventListener('change', (e) => {
         if (countyMode) { e.target.checked = false; showMessage('North arrow not available in county view', 'info'); return; }
@@ -7168,7 +7152,6 @@
         <label class="panel-toggle"><input type="checkbox" id="mobileToggleLabels"><span>State Labels</span></label>
         <label class="panel-toggle"><input type="checkbox" id="mobileToggleNorthArrow"><span>North Arrow</span></label>
         <label class="panel-toggle"><input type="checkbox" id="mobileToggleScaleBar"><span>Scale Bar</span></label>
-        <label class="panel-toggle"><input type="checkbox" id="mobileToggleLogo"><span>Show Logo</span></label>
       </div>
       <div class="panel-section">
         <div class="panel-section-title">Legend Position</div>
@@ -7512,10 +7495,6 @@
           var sb = document.getElementById('scaleBar');
           return sb && sb.style.display !== 'none';
         });
-        syncCheckbox('mobileToggleLogo', function() {
-          var logo = document.getElementById('logoWatermark');
-          return logo && logo.style.display !== 'none';
-        });
 
         // Legend position
         if (typeof appState !== 'undefined' && appState.legendPosition) {
@@ -7620,16 +7599,6 @@
       });
       wire('mobileToggleScaleBar', 'change', function(e) {
         var el = document.getElementById('scaleBar');
-        if (el) el.style.display = e.target.checked ? '' : 'none';
-      });
-      wire('mobileToggleLogo', 'change', function(e) {
-        if (!e.target.checked && typeof appState !== 'undefined' && !appState.proUnlocked) {
-          e.target.checked = true;
-          if (typeof showUpgradeModal === 'function') showUpgradeModal();
-          return;
-        }
-        if (typeof appState !== 'undefined') appState.showLogo = e.target.checked;
-        var el = document.getElementById('logoWatermark');
         if (el) el.style.display = e.target.checked ? '' : 'none';
       });
       // Legend position buttons

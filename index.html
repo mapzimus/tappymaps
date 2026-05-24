@@ -4558,15 +4558,10 @@
           if (log.length > 500) log.splice(0, log.length - 500);
           localStorage.setItem('tappymaps_events', JSON.stringify(log));
         }, 2000);
-        // Fire-and-forget to Supabase if table exists
-        if (supabaseClient) {
-          supabaseClient.from('analytics').insert([{
-            event: entry.event,
-            metadata: meta,
-            user_id: appState.currentUser?.id || null,
-            created_at: entry.ts
-          }]).then(() => {}).catch(() => {});
-        }
+        // Phase 0: localStorage-only. The Supabase analytics table is gone
+        // (ERR_NAME_NOT_RESOLVED on every page load). Phase 1 will rewire
+        // analytics writes to whatever new Supabase project the gallery
+        // schemas land in. Auth/subscription paths still use supabaseClient.
       } catch (e) { /* silent */ }
     }
 

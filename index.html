@@ -1534,22 +1534,42 @@
         padding: 6px 10px 0;
       }
 
-      /* Mobile portrait: anchor SVG to its content aspect so the map sits
-         flush below the title instead of being centered with empty bands
-         above and below. The SVG viewBox is 1010x710 (~1.42:1 landscape) and
-         the portrait viewport is ~0.46:1, so preserveAspectRatio="xMidYMid
-         meet" was leaving 200px+ of empty letterbox above and below the map.
-         With aspect-ratio applied, the SVG renders at width × (width / 1.42),
-         flex:none keeps it from stretching, and flex parent's default
-         justify-content (flex-start) anchors it to the top — empty space
-         gets consolidated below the map where it reads as background. */
+      /* Mobile portrait layout. SVG viewBox is 1010x710 (~1.42:1 landscape)
+         vs portrait viewport ~0.46:1, so preserveAspectRatio="xMidYMid meet"
+         letterboxes the map. Earlier iterations capped the SVG to its content
+         aspect (flex:none + aspect-ratio: 1010/710), which removed internal
+         letterbox but pushed the empty space below the SVG inside the flex
+         container — creating a ~270-365px dead band right above the bottom
+         palette. The current rule (Phase 0 stopgap) lets the SVG fill the
+         container so letterbox space sits *inside* the SVG (reads as map
+         background, not as a dead band) and bottom-pads the container by
+         the icon-bar height so the stats bar sits flush above the palette. */
       @media (orientation: portrait) {
+        /* Phase 0 stopgap: close the ~270-365px dead band between the map's
+           stats bar and the bottom color palette. Root cause: the prior
+           SVG rule pinned the SVG to its aspect ratio (1010/710 ≈ width ×
+           0.70 = ~274px tall at 390px wide), but .map-container stayed
+           flex:1 and stretched to the full viewport. The remaining ~365px
+           of container height rendered as background — a single dark dead
+           band right above the palette, which is what made portrait look
+           broken.
+           Fix: bottom-pad .map-container by the icon-bar height (~106px:
+           45px swatch row + 61px nav row + safe-area) so the stats bar
+           sits flush above the palette without being clipped beneath the
+           fixed bar, and drop the SVG's aspect-ratio cap so it fills the
+           container's remaining height. preserveAspectRatio="xMidYMid
+           meet" still keeps the map's shape correct — letterbox space
+           inside the SVG reads as map background (continuous with the
+           ocean tint and contains the logo watermark + scale bar), not as
+           a separate broken-looking dead band.
+           Phase 1's landscape-required rotate overlay will eliminate
+           portrait editing entirely; this is just to make portrait less
+           embarrassing in the meantime. */
+        .map-container {
+          padding-bottom: 106px;
+        }
         .map-container svg {
-          flex: none;
-          height: auto;
           width: 100%;
-          aspect-ratio: 1010 / 710;
-          max-height: none;
         }
         /* Promote the legend into the consolidated empty space below the map.
            Default behavior (position: absolute, overlaying the map's

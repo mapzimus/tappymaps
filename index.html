@@ -3,7 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <title>Tappymaps</title>
+    <title>Tappymaps: Tap. Color. Share.</title>
+    <meta name="description" content="Make beautiful colored maps of the United States. Tap states, build a legend, share or export. Free.">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="Tappymaps: Tap. Color. Share.">
+    <meta property="og:description" content="Make beautiful colored maps of the United States. Tap states, build a legend, share or export. Free.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tappymaps.com/">
+    <meta property="og:image" content="https://tappymaps.com/assets/social-og-image.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Tappymaps: Tap. Color. Share.">
+    <meta name="twitter:description" content="Make beautiful colored maps of the United States. Tap states, build a legend, share or export. Free.">
+    <meta name="twitter:image" content="https://tappymaps.com/assets/social-og-image.png">
+
+    <link rel="canonical" href="https://tappymaps.com/">
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗺️</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/chroma-js@2.4.2/chroma.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@3.4.5/dist/dom-to-image-more.min.js"></script>
@@ -446,6 +463,18 @@
       background: var(--bg);
       color: var(--text);
       transition: background-color var(--duration-slow) ease, color var(--duration-slow) ease;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
 
 
@@ -2245,6 +2274,7 @@
     </style>
 </head>
 <body>
+  <h1 class="sr-only">Tappymaps</h1>
   <div class="container">
     <!-- Sidebar -->
     <div class="sidebar" id="sidebarSheet">

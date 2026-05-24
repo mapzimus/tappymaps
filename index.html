@@ -1445,6 +1445,16 @@
       color: #999;
     }
 
+    /* Landscape phones: constrain modal height so all content (including
+       the "I've been here before" skip link) is reachable by scrolling
+       within the card instead of clipping below the fold. */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .onboarding-card {
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+    }
+
     /* Pulsing hint for first-time color pick */
     .pulse-hint {
       animation: pulseHint 2s ease-in-out 3;

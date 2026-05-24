@@ -4657,7 +4657,8 @@
     async function captureMapImage() {
       const statsBar = document.getElementById('statsBar');
       const watermarkEl = document.getElementById('freeWatermark');
-      const logoWatermarkEl = document.getElementById('logoWatermark');
+      // #logoWatermark deliberately not queried — Phase 0 §9 makes it
+      // mandatory on every export, so capture leaves it visible.
       const subtitleEl = document.getElementById('mapSubtitle');
       const titleEl = document.getElementById('mapTitle');
       const mapContainer = document.getElementById('mapContainer');
@@ -4668,7 +4669,8 @@
       const origStatsDisplay = statsBar.style.display;
       const origStatsVis = statsBar.style.visibility;
       const origWatermarkDisplay = watermarkEl ? watermarkEl.style.display : '';
-      const origLogoWatermarkDisplay = logoWatermarkEl ? logoWatermarkEl.style.display : '';
+      // Phase 0 §9: #logoWatermark stays visible during capture for every
+      // tier — no Pro removal. Save kept for symmetry but no longer touched.
       const origTitleDisplay = titleEl ? titleEl.style.display : '';
       const origOverflow = mapContainer.style.overflow;
       const origSvgFlex = svg.style.flex;
@@ -4696,10 +4698,10 @@
         watermarkEl.style.display = 'none';
         watermarkEl.setAttribute('display', 'none');
       }
-      if (logoWatermarkEl) {
-        logoWatermarkEl.style.display = 'none';
-        logoWatermarkEl.setAttribute('display', 'none');
-      }
+      // #logoWatermark intentionally NOT hidden — Phase 0 §9 makes the
+      // pin+wordmark logo mandatory on every export for every tier. Earlier
+      // code hid it here (commit ccc5508, "clean Pro exports"); that flow is
+      // reversed by the new spec, so the live logo is captured as-is.
       if (subtitleWasEmpty) subtitleEl.style.display = 'none';
       // Force title visible — landscape-orientation media query hides it on
       // mobile, but exports always force landscape framing and need the title.
@@ -4865,10 +4867,9 @@
           watermarkEl.style.display = origWatermarkDisplay;
           watermarkEl.removeAttribute('display');
         }
-        if (logoWatermarkEl) {
-          logoWatermarkEl.style.display = origLogoWatermarkDisplay;
-          logoWatermarkEl.removeAttribute('display');
-        }
+        // #logoWatermark not hidden during capture (Phase 0 §9) — nothing
+        // to restore. The save/restore is removed rather than left as a
+        // no-op so the export contract reads cleanly.
         if (subtitleWasEmpty && subtitleEl) subtitleEl.style.display = '';
         if (titleEl) titleEl.style.display = origTitleDisplay;
         mapContainer.style.width = origContainerW;

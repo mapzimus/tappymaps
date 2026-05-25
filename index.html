@@ -2271,6 +2271,28 @@
       }
     }
 
+    /* Defeat Chrome's :-webkit-autofill chip on the Source citation fields.
+       Diagnosed live: Chrome was autofilling the user's email + rendering it
+       with rgb(232,240,254) background even though our JS set el.value="".
+       Combined with readonly attribute on the inputs (toggled off on focus in
+       JS) this prevents both the autofill from firing AND any visual leak if
+       it somehow does. The huge inset box-shadow overpaints Chrome's chip
+       background; the 5000s transition trick prevents Chrome's re-paint timer
+       from ever firing. */
+    #sourceInput:-webkit-autofill,
+    #sourceInput:-webkit-autofill:hover,
+    #sourceInput:-webkit-autofill:focus,
+    #sourceInput:-webkit-autofill:active,
+    #mobileSourceInput:-webkit-autofill,
+    #mobileSourceInput:-webkit-autofill:hover,
+    #mobileSourceInput:-webkit-autofill:focus,
+    #mobileSourceInput:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 1000px var(--surface-raised) inset !important;
+      -webkit-text-fill-color: var(--text) !important;
+      caret-color: var(--text) !important;
+      transition: background-color 5000s ease-in-out 0s !important;
+    }
+
     </style>
 </head>
 <body>
@@ -2421,7 +2443,7 @@
           </div>
           <div style="margin-top: 8px;">
             <label style="font-size: 12px; margin-bottom: 4px; display: block; color: var(--text-muted);">Source citation</label>
-            <input type="text" id="sourceInput" name="map-source-citation" autocomplete="off" data-1p-ignore data-lpignore="true" placeholder="e.g. U.S. Census Bureau, 2024" maxlength="100" style="width: 100%; padding: 4px 8px; font-size: 11px; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text); box-sizing: border-box;">
+            <input type="text" id="sourceInput" name="map-source-citation" autocomplete="off" data-1p-ignore data-lpignore="true" readonly placeholder="e.g. U.S. Census Bureau, 2024" maxlength="100" style="width: 100%; padding: 4px 8px; font-size: 11px; background: var(--surface-raised); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text); box-sizing: border-box;">
           </div>
         </div>
       </div>
@@ -4280,6 +4302,17 @@
         // (which propagates the value into appState), then we wipe it correctly.
         el.addEventListener('input', function() {
           setTimeout(function() { clearEmailFromField(el); }, 0);
+        });
+        // Readonly trick: the field ships with readonly=readonly in HTML so
+        // Chrome can't autofill it (Chrome refuses to autofill readonly fields,
+        // even when its memory says it should). Remove readonly when the user
+        // focuses so they can type; re-add on blur if the field is empty so
+        // re-autofill is still blocked. If user typed something, leave it
+        // editable. Combined with the :-webkit-autofill CSS overlay in the
+        // head, this is two-layer protection.
+        el.addEventListener('focus', function() { el.removeAttribute('readonly'); });
+        el.addEventListener('blur', function() {
+          if (!el.value) el.setAttribute('readonly', 'readonly');
         });
       });
       // Belt-and-suspenders: also sweep at known checkpoints in case the listener
@@ -7287,7 +7320,7 @@
       </div>
       <div class="panel-section">
         <div class="panel-section-title">Source</div>
-        <input type="text" class="panel-input" id="mobileSourceInput" name="map-source-citation-mobile" autocomplete="off" data-1p-ignore data-lpignore="true" placeholder="e.g. U.S. Census Bureau, 2024" maxlength="100">
+        <input type="text" class="panel-input" id="mobileSourceInput" name="map-source-citation-mobile" autocomplete="off" data-1p-ignore data-lpignore="true" readonly placeholder="e.g. U.S. Census Bureau, 2024" maxlength="100">
       </div>
       <div class="panel-section">
         <div class="panel-section-title">Selection Mode</div>

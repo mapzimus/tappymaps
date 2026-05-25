@@ -4457,20 +4457,23 @@
 
     // TESTER MODE: temporary while we test on real devices.
     // - Hides the auth UI (no sign-in / sign-up / sign-out shown)
-    // - Wires the access code field to unlock Pro locally
+    // - Auto-grants Pro to EVERY visitor (zero friction for testers — they
+    //   see the full app without entering anything or signing in)
+    // - The access code field still works for demo / sanity but is redundant
     // REMOVE BEFORE LAUNCH: flip TESTER_MODE to false, drop the TESTER_CODES list,
-    // and remove the proCodeSubmit handler in the DOMContentLoaded block below.
+    // remove the proCodeSubmit handler in the DOMContentLoaded block below, and
+    // delete this auto-grant block.
     const TESTER_MODE = true;
     const TESTER_CODES = ['tap26'];
     const TESTER_PRO_KEY = 'tappymaps_tester_pro';
-    // Restore tester-Pro from localStorage so unlock survives reloads.
+    // Auto-grant Pro for every visitor in TESTER_MODE. Without this, data maps
+    // and other Pro features would be gated and look "broken" to testers.
     if (TESTER_MODE) {
-      try {
-        if (localStorage.getItem(TESTER_PRO_KEY) === '1') {
-          appState.proUnlocked = true;
-          appState.subscription = { status: 'tester' };
-        }
-      } catch (_) { /* localStorage disabled or full */ }
+      appState.proUnlocked = true;
+      appState.subscription = { status: 'tester' };
+      // Persist so any later subscription check (initializeAuth → checkSubscriptionStatus
+      // for the unlikely case someone signs in via dev console) doesn't fight us.
+      try { localStorage.setItem(TESTER_PRO_KEY, '1'); } catch (_) {}
     }
 
     async function checkSubscriptionStatus(token) {

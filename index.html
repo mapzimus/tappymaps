@@ -4244,6 +4244,35 @@
       document.getElementById('proCodeInput')?.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') { e.preventDefault(); handleProCodeSubmit(); }
       });
+
+      // Defeat browser autofill prefilling the Source citation with the user's email.
+      // The autocomplete="off" + name + 1p-ignore attrs on the inputs aren't enough on
+      // Chrome — Chrome ignores those by design. So we detect and clear on load.
+      // Guarded: only clears if the value looks like an email AND doesn't match what
+      // the app actually thinks the source is (so legitimate state restored from a
+      // URL hash or saved config isn't blown away).
+      var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      function clearAutofilledEmailSource() {
+        var trueSource = (typeof appState !== 'undefined' && appState.mapSource) || '';
+        ['sourceInput', 'mobileSourceInput'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (!el) return;
+          var v = (el.value || '').trim();
+          if (EMAIL_RE.test(v) && v !== trueSource) el.value = trueSource;
+        });
+        var svg = document.getElementById('mapSource');
+        if (svg) {
+          var t = (svg.textContent || '').trim();
+          if (EMAIL_RE.test(t) && t !== trueSource) {
+            svg.textContent = trueSource;
+            svg.style.opacity = trueSource ? '1' : '0';
+          }
+        }
+      }
+      // Run immediately, then again after Chrome's lazy autofill might have fired.
+      clearAutofilledEmailSource();
+      setTimeout(clearAutofilledEmailSource, 200);
+      setTimeout(clearAutofilledEmailSource, 800);
     });
 
     // ============================================================================

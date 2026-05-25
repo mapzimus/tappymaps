@@ -25,17 +25,17 @@ If the task is ambiguous, ask Max. The three modes have almost nothing in common
 
 ## Repo Orientation
 
-- **Single-file app:** `C:\Users\mhowe\tappymaps\index.html` (~5700 lines).
+- **Single-file app:** `C:\Users\mhowe\tappymaps\index.html` (~7,500 lines; drifts — `wc -l` to confirm).
 - **Default branch:** `master`. Push = deploy via Vercel. No staging.
 - **SVG viewBox:** `-20 -30 1010 710`. All in-SVG geometry (watermarks, north arrow, scale bar, logo) must fit.
 - **Projection:** TopoJSON `us-atlas@3/states-albers-10m.json` with Albers baked in. Don't reproject.
-- **Two script blocks:** main app (~L1858–4601) and mobile-UX IIFE (~L4626–5121). A syntax error in the main block kills `init()` but the mobile-UX script still runs — classic "only the map is broken" symptom.
+- **Two script blocks:** main app (~first 60% of file) and mobile-UX IIFE (~last 30%). Grep to find exact boundaries — line numbers drift. A syntax error in the main block kills `init()` but the mobile-UX script still runs — classic "only the map is broken" symptom. Use the `_validate.py` helper at repo root (gitignored) to `node --check` both blocks before commit.
 
 ## What You Own (Code)
 
 **Rendering:** `renderStatesFromTopology`, `renderMap`, `onStateClick` (~L2323+), county click handler, `updateStatsBar` (~L1975), `updateLegendDisplay` (~L2787), `updateLegendPosition`, palette logic, data maps (`DATA_MAP_DATASETS` — 22 Census ACS datasets — and `showDataMapRampPicker` / `executeDataMapLoad`).
 
-**Export pipeline:** `captureMapImage()` is the shared async helper for every export path. Tries dom-to-image-more first (vector-preserving), falls back to html2canvas. Forces landscape 1010:710 aspect ratio on mobile. Scrolls to (0,0), shrinks legend on mobile, restores in `finally`. `exportPNG`, `exportSVG`, `copyImageToClipboard` all delegate to it. Watermark is an SVG `<g>` at `translate(350, 575) scale(0.72)` opacity 0.45.
+**Export pipeline:** `captureMapImage()` is the shared async helper for every export path. Tries dom-to-image-more first (vector-preserving), falls back to html2canvas. Forces landscape 1010:710 aspect ratio on mobile. Scrolls to (0,0), shrinks legend on mobile, restores in `finally`. `exportPNG`, `exportSVG`, `copyImageToClipboard` all delegate to it. Pin+wordmark logo is an SVG `<g id="logoWatermark">` at `translate(330, 570) scale(1.0)` opacity 0.7 (post-Phase-0; was 350,575/0.72/0.45 before commit `6258a4e`). **Logo is MANDATORY** on every export for every tier (no Pro removal — spec §9). The "Show Logo" toggle was removed in `997ade4`; do not re-introduce. The diagonal "tappymaps.com" text watermark was removed from the canvas in `6258a4e`; `#freeWatermark` container stays but is empty + hidden.
 
 **Mobile touch:** bottom-sheet sidebar with `100dvh`/`100vh` fallback, floating color bar (`.mobile-color-bar`, direct child of `<body>`, MutationObserver synced), long-press symbology menu (500ms, 15px threshold, attached to `#mapSVG`, gated by `window._tappyLongPressTime`), pinch-zoom 1x–4x, double-tap reset. `updateMobileVisibility()` uses JS inline styles in portrait and defers to CSS in landscape — inline display beats CSS `!important`.
 
@@ -51,6 +51,9 @@ If the task is ambiguous, ask Max. The three modes have almost nothing in common
 8. **Mobile exports force 1010:710 landscape.** Regardless of device orientation.
 9. **Web Share API first on mobile.** Fall back to in-app hold-to-save overlay. Don't rewrite — the existing code handles iOS Safari quirks.
 10. **Palette + ramp symmetry.** Selecting a palette must recolor any active data map via `window._activeDataMap`.
+11. **Logo is mandatory on every export.** `#logoWatermark` SVG `<g>` stays visible during capture (Phase 0 commit `1cd8102` undid the prior legacy hide). No `appState.showLogo` field — it was removed. No user toggle. No Pro option to remove. Per spec §9.
+12. **`TESTER_MODE = true` is live.** Hides auth UI on the upgrade modal; access code `tap26` grants Pro locally (localStorage-persisted). REMOVE BEFORE PUBLIC LAUNCH — all four touch points tagged with `TESTER MODE` comments for grep. Defined near `ADMIN_EMAILS` in the main script block.
+13. **Source field has aggressive autofill defeat.** `#sourceInput` and `#mobileSourceInput` carry `readonly` attribute (toggled off on focus), `autocomplete="off"`, `name="map-source-citation"`, `data-1p-ignore`, `data-lpignore`, plus a `:-webkit-autofill` CSS overlay with inset `box-shadow` + 5000s transition that overpaints Chrome's autofill chip. Plus a JS input listener that clears email-shaped autofilled values. Don't simplify any layer — Chrome's autofill subsystem is aggressive and each layer catches a different case (`187cad1`).
 
 ## Reading `index.html`
 
@@ -85,13 +88,30 @@ If it fails, do NOT commit. Fix, re-validate.
 
 ## Git Workflow
 
-PowerShell times out on git. CMD mangles quoted commit messages. Use this pattern via `mcp__Desktop_Commander__start_process` with `shell: "cmd"`:
+PowerShell works fine for git in 2026 sessions (verified across Phase 0). Use a PowerShell heredoc for commit messages:
 
+```powershell
+Set-Location C:\Users\mhowe\tappymaps
+git add <files>
+git commit -m @'
+<headline>
+
+<body line>
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+'@
+git push origin master
 ```
-set PATH=%PATH%;C:\Program Files\Git\bin&& cd /d C:\Users\mhowe\tappymaps && git add <files> && (echo <headline>& echo.& echo <body line>& echo.& echo Co-Authored-By: Claude Opus 4.6 ^<noreply@anthropic.com^>) > .gitmsg && git commit -F .gitmsg && git push origin master
-```
+
+If PowerShell ever does time out, fall back to the CMD pattern: `set PATH=%PATH%;C:\Program Files\Git\bin&& cd /d C:\Users\mhowe\tappymaps && git add <files> && (echo <headline>& echo.& echo <body line>& echo.& echo Co-Authored-By: Claude Opus 4.7 ^<noreply@anthropic.com^>) > .gitmsg && git commit -F .gitmsg && git push origin master`
 
 Rules: imperative mood, headline under 72 chars, blank line, body. NEVER force-push. NEVER rewrite history on master.
+
+## Phase 1 prep (status: design approved, plan TBD)
+
+Spec: `docs/superpowers/specs/2026-05-25-tappymaps-phase-1-implementation-design.md`.
+
+Phase 1 introduces a **mode router** that dispatches `/`, `/design/make`, `/games/...`, etc. to mode-specific `enter/exit/meta` handlers. This agent's Engineering mode WILL change once Phase 1 ships — the editor moves into `Modes.Create` (an IIFE that registers with `Router`), replacing the current desktop-sidebar + mobile-bottom-nav split with a unified 5-panel left rail (Map / Color / Legend / Data / Upgrade). Wait for Phase 1 implementation to land before authoring engineering tasks that assume the new structure.
 
 ---
 

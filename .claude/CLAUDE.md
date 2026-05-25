@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What It Is
 
-Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in **one file (`index.html`, ~9,900 lines)**. No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
+Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in **one file (`index.html`, ~7,500 lines; grew to ~9,900 during the rebrand era, shrank back after Phase 0 deletion-heavy commits)**. No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
+
+**Status as of 2026-05-25:** Phase 0 of the Reimagining shipped (audit fixes, brand polish, autofill defeat). Tester mode is live with access code `tap26` (auth UI hidden). Phase 1 design spec approved + committed, ready for the implementation plan to be written via `superpowers:writing-plans`. See `HANDOVER.md` for the canonical "where we are, what's next" summary.
 
 Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella over three products:
 - **Tappymaps** (tappymaps.com): consumer map-making, casual + playful
@@ -41,17 +43,16 @@ There is no build step. `index.html` is loaded directly by the browser.
 
 ## Two Script Blocks (gotcha)
 
-`index.html` contains **two `<script>` blocks**: the main app (~line 2613+) and a Mobile UX IIFE (~line 9180+). A syntax error in the main block silently kills `init()` but the mobile IIFE still runs, producing partial breakage that's hard to diagnose. After any JS edit, validate by extracting both blocks and running `node --check`:
+`index.html` contains **two `<script>` blocks**: the main app (roughly first 60% of file) and a Mobile UX IIFE (roughly last 30%). Line numbers drift — grep to find boundaries. A syntax error in the main block silently kills `init()` but the mobile IIFE still runs, producing partial breakage that's hard to diagnose.
 
-```bash
-python -c "
-import re
-src = open('index.html', encoding='utf-8').read()
-blocks = re.findall(r'<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>', src, re.DOTALL)
-for i, b in enumerate(blocks):
-    open(f'_chk{i}.js', 'w', encoding='utf-8').write(b)
-" && node --check _chk0.js && node --check _chk1.js && echo OK && rm _chk*.js
+**Use the validation helper at `C:\Users\mhowe\tappymaps\_validate.py`** (gitignored, created in Phase 0 Task 1). It extracts both blocks and `node --check`s them. Run after every JS edit, before committing:
+
+```powershell
+Set-Location C:\Users\mhowe\tappymaps
+python _validate.py
 ```
+
+Expected output: `Block 0 (NNN chars): PASS` + `Block 1 (NNN chars): PASS`. Non-zero exit if either fails. The script is 40 lines and matches the cartographer agent's documented pattern — see that file for the inline source if you ever lose `_validate.py`.
 
 ## Git Workflow
 
@@ -131,9 +132,34 @@ Mobile-specific features:
 
 ## Account Menu (mobile)
 
-`syncAccountMenu()` reads `appState.currentUser` and `isPro()`. Earlier versions read non-existent `appState.user` / `appState.isPro` causing the "not signed in" branch to run unconditionally. When debugging account-menu issues, verify the function reads the correct field names.
+`syncAccountMenu()` reads `appState.currentUser` and `isPro()`. Earlier versions read non-existent `appState.user` / `appState.isPro` causing the "not signed in" branch to run unconditionally — fixed in pre-Phase-0 cleanup. When debugging account-menu issues, verify the function reads the correct field names.
 
 The mobile Sign In button calls `showUpgradeModal('auth')`, which renders the upgrade modal in auth-only mode (hides feature grid + access code section, retitles to "Sign In or Sign Up"). The default `showUpgradeModal()` (no argument) renders the full upgrade UI — used by all pro-badge / upgrade-banner / export-gate callers.
+
+**With TESTER_MODE enabled (current state), the auth UI is hidden entirely.** `updateUpgradeModalUI()` early-returns when `TESTER_MODE === true` and hides both `#upgradeAuthSection` and `#upgradePricingSection`. The only path to Pro is the access code field (`tap26`). See the Tester Mode section below.
+
+## Tester Mode (current — REMOVE BEFORE PUBLIC LAUNCH)
+
+Tester mode hides all auth/pricing UI from the Upgrade modal and substitutes a single access-code unlock. Live since commit `a1acb4a` (2026-05-23). Four touch points in `index.html`, all tagged with `TESTER MODE` comments for grep:
+
+| Location (grep `TESTER MODE`) | Purpose |
+|---|---|
+| Near `ADMIN_EMAILS` constant | Defines `TESTER_MODE = true`, `TESTER_CODES = ['tap26']`, `TESTER_PRO_KEY = 'tappymaps_tester_pro'`, and the localStorage restore block (auto-grants Pro on load if the user previously entered the code) |
+| `updateUpgradeModalUI()` | Early-return that hides auth + pricing sections when `TESTER_MODE` |
+| DOMContentLoaded block | `handleProCodeSubmit()` validates input against `TESTER_CODES` (case-insensitive), sets `appState.proUnlocked = true`, persists to localStorage, calls `updateProGates()` |
+| Inline initializer | Auto-grants Pro to every visitor in TESTER_MODE so testers get the full editor without needing the code (see `aa0fa64`) |
+
+To remove tester mode at launch: flip `TESTER_MODE = false`, delete the four tagged blocks, restore the original `updateUpgradeModalUI()` if/else. Total revert is ~50 lines, all annotated.
+
+## Source field autofill defeat
+
+Chrome autofill was prefilling the Source citation field with the user's email and rendering it visually on the map. Three-layer fix (commits `c5f8461`, `9afa442`, `decaf8c`, `187cad1`):
+
+1. **HTML:** Both `#sourceInput` and `#mobileSourceInput` carry `readonly` (toggled off on focus), `autocomplete="off"`, `name="map-source-citation"`, `data-1p-ignore`, `data-lpignore="true"`
+2. **CSS:** `:-webkit-autofill` override with `box-shadow: 0 0 0 1000px var(--surface-raised) inset !important` + `transition: background-color 5000s ease-in-out 0s !important` — overpaints Chrome's autofill chip and prevents repaint
+3. **JS:** Real-time `input` listener that clears email-shaped values (deferred via `setTimeout(0)` so existing handler propagates first), plus checkpoint sweeps at 0/200/800/2500ms, plus a `userTypedSource` flag set on real `keydown`/`paste` (autofill doesn't fire keydown) so legitimate typed input is respected
+
+Don't simplify any layer — Chrome's autofill subsystem is aggressive and each layer catches a different case. The cartographer agent doc has this in its Tribal Knowledge section.
 
 ## Notion Project Tracking
 
@@ -158,11 +184,11 @@ Save location for agent exports: `C:\Users\mhowe\Downloads\tappymaps-agent-expor
 
 ## Infrastructure
 
-- **Vercel**: Serverless functions in `/api/stripe/`. Env vars in dashboard.
-- **Supabase**: Project `qbhqdicppoahhvnuvcwd.supabase.co`. Tables: `user_subscriptions`, `analytics`, `export_counts` — all with RLS.
-- **Stripe**: Monthly + annual prices, webhook at `/api/stripe/webhook` (signature-verified).
+- **Vercel**: Serverless functions in `/api/stripe/`. Env vars in dashboard. Push to `master` = auto-deploy in ~30s.
+- **Supabase**: Original project `qbhqdicppoahhvnuvcwd.supabase.co` is **DEAD** (paused or deleted — Phase 0 Task 7 commit `77e8b99` no-op'd the `appendAnalyticsEvent` network call because every page load was firing `ERR_NAME_NOT_RESOLVED`). The auth-related code paths that still reference Supabase work because the JWT verification happens server-side in `/api/stripe/*` against a different (still-live) project. Phase 1 will rewire analytics to the new project once gallery schemas land. Tables (in the working project): `user_subscriptions`, `export_counts` — both with RLS.
+- **Stripe**: Monthly + annual prices, webhook at `/api/stripe/webhook` (signature-verified). PriceId allowlist + origin-pinned success/cancel URLs landed in `1ed6036`.
 - **DNS**: tappymaps.com — A 76.76.21.21, CNAME www → cname.vercel-dns.com.
-- **Admin Pro**: client-side gate for `max@mapparatus.org` and `mhowe.gis@gmail.com` via `ADMIN_EMAILS` constant. NOT a security boundary — server-side `verify-subscription` is the authoritative pro check.
+- **Admin Pro**: client-side gate for `max@mapparatus.org` and `mhowe.gis@gmail.com` via `ADMIN_EMAILS` constant. NOT a security boundary — server-side `verify-subscription` is the authoritative pro check. **In TESTER_MODE** (current), admin emails are bypassed because the auth UI is hidden entirely; everyone uses the `tap26` code instead.
 
 ## User Preferences
 
@@ -171,12 +197,37 @@ Save location for agent exports: `C:\Users\mhowe\Downloads\tappymaps-agent-expor
 - Plain-English explanations over jargon
 - For mobile UX work specifically: **never claim a bug is fixed from static analysis alone.** Ship as "candidate fix, please verify on phone" and stop. The bundle-then-ship pattern has burned us multiple times — bugs only surface on real devices. Audit first, small focused commits, device test between tiers. (See `feedback_mobile_verification.md` in memory.)
 
-## Known Open Items
+## Known Open Items (post-Phase-0)
 
-- **Florida overlap on bottom-right export** is mitigated (translucent legend + smaller export sizing) but not eliminated. Could default exports to bottom-left if it remains an issue.
-- **Mobile architectural rot** still present — `mobileMorePalettes` and likely other handlers still target desktop-only DOM. Tier 2 of the audit covers a full `wire()` walk.
-- **Hardening**: `create-checkout.js` accepts arbitrary `priceId` / `successUrl` / `cancelUrl` from client (should whitelist). `ADMIN_EMAILS` hardcoded in client (could move server-side).
-- **PWA / Capacitor**: planned mobile distribution path — service worker + manifest, then Capacitor wrapper for App Store / Play.
+**Resolved during Phase 0 (2026-05-24):**
+- Diagonal text watermark removed (`6258a4e`)
+- Pin+wordmark logo enlarged + mandatory on every export (`6258a4e`, `1cd8102`)
+- "Show Logo" toggle deleted (`997ade4`)
+- Landscape map title visibility fix (`943e949`)
+- Landscape onboarding overflow (`490cfb9`)
+- Portrait wasted-band gap closed (`36be1b0`)
+- Dead Supabase analytics URL no-op'd (`77e8b99`)
+- Basic SEO head tags + sr-only h1 (`86ed0c1`)
+- Stripe priceId allowlist + origin-pinned URLs (`1ed6036` — pre-Phase-0)
+- Webhook returns 500 on DB failure (was 200 — pre-Phase-0)
+- Server-side export quota enforcement (`track-export.js` — pre-Phase-0)
+
+**Resolved post-Phase-0:**
+- Source field email autofill (`c5f8461`, `9afa442`, `decaf8c`, `187cad1` — three-layer HTML+CSS+JS defeat)
+- Tester mode hides auth UI + `tap26` access code (`a1acb4a`, `aa0fa64`)
+
+**Still open (lower priority — Phase 1+ work):**
+- **Mobile architectural rot** still present in places — `mobileMorePalettes` was fixed, others may lurk. The Phase 1 Create-mode rebuild eliminates the dual-rendering-path entirely (single 5-panel rail at all sizes), which closes this whole category of bug.
+- **`ADMIN_EMAILS` hardcoded in client** — could move server-side eventually (mostly moot under TESTER_MODE).
+- **Florida overlap on bottom-right export** — mitigated (translucent legend + smaller export sizing) but not eliminated. Could default exports to bottom-left if it remains an issue.
+- **PWA / Capacitor** — planned mobile distribution path; service worker + manifest, then Capacitor wrapper for App Store / Play.
+- **Per-route SEO** — basic head tags shipped but they're site-wide. Real per-route SEO requires the Phase 1 mode router.
+
+## Phase 1 — design approved, plan TBD
+
+Phase 1 of the Reimagining spec — mode router + Hub Layout B + Create mode 5-panel rail rebuild — was **brainstormed + approved on 2026-05-25**. Design spec committed at `docs/superpowers/specs/2026-05-25-tappymaps-phase-1-implementation-design.md` (commit `8dd2f5c`).
+
+**Next step:** invoke `superpowers:writing-plans` with that spec to produce a task-by-task implementation plan at `docs/superpowers/plans/2026-05-XX-tappymaps-phase-1.md`. Then dispatch via `superpowers:subagent-driven-development` (the pattern that worked for Phase 0).
 
 ## Naming History
 

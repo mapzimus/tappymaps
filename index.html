@@ -4246,33 +4246,48 @@
       });
 
       // Defeat browser autofill prefilling the Source citation with the user's email.
-      // The autocomplete="off" + name + 1p-ignore attrs on the inputs aren't enough on
-      // Chrome — Chrome ignores those by design. So we detect and clear on load.
-      // Guarded: only clears if the value looks like an email AND doesn't match what
-      // the app actually thinks the source is (so legitimate state restored from a
-      // URL hash or saved config isn't blown away).
+      // The autocomplete="off" + name + 1p-ignore attrs are ignored by Chrome.
+      // First attempt (9afa442) guarded against clobbering legit URL-hash state by
+      // comparing to appState.mapSource — but the existing input handler propagates
+      // the autofilled value INTO appState before our clear runs, so the guard
+      // always saw value === appState.mapSource and refused to clear. Fixed now:
+      // we just clear any email-shaped value UNLESS the user has actually typed.
       var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      function clearAutofilledEmailSource() {
-        var trueSource = (typeof appState !== 'undefined' && appState.mapSource) || '';
-        ['sourceInput', 'mobileSourceInput'].forEach(function(id) {
-          var el = document.getElementById(id);
-          if (!el) return;
-          var v = (el.value || '').trim();
-          if (EMAIL_RE.test(v) && v !== trueSource) el.value = trueSource;
-        });
+      var userTypedSource = false;
+      function emailLike(v) { return EMAIL_RE.test((v || '').trim()); }
+      function clearEmailFromField(el) {
+        if (!el || !emailLike(el.value) || userTypedSource) return;
+        el.value = '';
+        if (typeof appState !== 'undefined') appState.mapSource = '';
         var svg = document.getElementById('mapSource');
-        if (svg) {
-          var t = (svg.textContent || '').trim();
-          if (EMAIL_RE.test(t) && t !== trueSource) {
-            svg.textContent = trueSource;
-            svg.style.opacity = trueSource ? '1' : '0';
-          }
-        }
+        if (svg) { svg.textContent = ''; svg.style.opacity = '0'; }
       }
-      // Run immediately, then again after Chrome's lazy autofill might have fired.
+      function clearAutofilledEmailSource() {
+        clearEmailFromField(document.getElementById('sourceInput'));
+        clearEmailFromField(document.getElementById('mobileSourceInput'));
+      }
+      // Track real user typing — Chrome autofill does NOT fire keydown, so anything
+      // hitting these listeners is a human (or paste, which still fires keydown).
+      ['sourceInput', 'mobileSourceInput'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('keydown', function(e) {
+          if (e.key && e.key.length === 1) userTypedSource = true;
+        });
+        el.addEventListener('paste', function() { userTypedSource = true; });
+        // Catch autofill in real time — input event fires on autofill in Chrome.
+        // setTimeout(0) defers our clear so the existing input handler runs first
+        // (which propagates the value into appState), then we wipe it correctly.
+        el.addEventListener('input', function() {
+          setTimeout(function() { clearEmailFromField(el); }, 0);
+        });
+      });
+      // Belt-and-suspenders: also sweep at known checkpoints in case the listener
+      // never fires (some pathological autofill paths skip the input event).
       clearAutofilledEmailSource();
       setTimeout(clearAutofilledEmailSource, 200);
       setTimeout(clearAutofilledEmailSource, 800);
+      setTimeout(clearAutofilledEmailSource, 2500);
     });
 
     // ============================================================================

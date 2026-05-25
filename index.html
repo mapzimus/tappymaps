@@ -4218,6 +4218,32 @@
       document.getElementById('desktopMultiSelect')?.addEventListener('change', function(e) {
         toggleMultiSelectMode(e.target.checked);
       });
+
+      // TESTER MODE: access-code unlock for the Upgrade modal.
+      // Validates against TESTER_CODES (case-insensitive), grants Pro locally,
+      // persists in localStorage so reloads stay unlocked. Remove with TESTER_MODE.
+      function handleProCodeSubmit() {
+        if (typeof TESTER_MODE === 'undefined' || !TESTER_MODE) return;
+        const input = document.getElementById('proCodeInput');
+        const code = (input && input.value || '').trim().toLowerCase();
+        const valid = TESTER_CODES.some(function(c) { return c.toLowerCase() === code; });
+        if (valid) {
+          appState.proUnlocked = true;
+          appState.subscription = { status: 'tester' };
+          try { localStorage.setItem(TESTER_PRO_KEY, '1'); } catch (_) {}
+          if (typeof updateProGates === 'function') updateProGates();
+          if (typeof closeUpgradeModal === 'function') closeUpgradeModal();
+          if (typeof showMessage === 'function') showMessage('Pro unlocked', 'success');
+          if (input) input.value = '';
+        } else {
+          if (typeof showMessage === 'function') showMessage('Invalid code', 'error');
+          if (input) input.focus();
+        }
+      }
+      document.getElementById('proCodeSubmit')?.addEventListener('click', handleProCodeSubmit);
+      document.getElementById('proCodeInput')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); handleProCodeSubmit(); }
+      });
     });
 
     // ============================================================================
@@ -4354,6 +4380,12 @@
     function updateUpgradeModalUI() {
       const authSection = document.getElementById('upgradeAuthSection');
       const pricingSection = document.getElementById('upgradePricingSection');
+      // TESTER MODE: never show auth or pricing — testers unlock via the access code field.
+      if (typeof TESTER_MODE !== 'undefined' && TESTER_MODE) {
+        if (authSection) authSection.style.display = 'none';
+        if (pricingSection) pricingSection.style.display = 'none';
+        return;
+      }
       if (appState.currentUser) {
         authSection.style.display = 'none';
         pricingSection.style.display = '';
@@ -4393,6 +4425,24 @@
 
     // Admin emails that get automatic Pro access
     const ADMIN_EMAILS = ['max@mapparatus.org', 'mhowe.gis@gmail.com'];
+
+    // TESTER MODE: temporary while we test on real devices.
+    // - Hides the auth UI (no sign-in / sign-up / sign-out shown)
+    // - Wires the access code field to unlock Pro locally
+    // REMOVE BEFORE LAUNCH: flip TESTER_MODE to false, drop the TESTER_CODES list,
+    // and remove the proCodeSubmit handler in the DOMContentLoaded block below.
+    const TESTER_MODE = true;
+    const TESTER_CODES = ['tap26'];
+    const TESTER_PRO_KEY = 'tappymaps_tester_pro';
+    // Restore tester-Pro from localStorage so unlock survives reloads.
+    if (TESTER_MODE) {
+      try {
+        if (localStorage.getItem(TESTER_PRO_KEY) === '1') {
+          appState.proUnlocked = true;
+          appState.subscription = { status: 'tester' };
+        }
+      } catch (_) { /* localStorage disabled or full */ }
+    }
 
     async function checkSubscriptionStatus(token) {
       if (!token) {

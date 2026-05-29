@@ -2657,6 +2657,54 @@
         overflow-y: auto;
         padding: 16px;
       }
+      /* Relocated legacy sidebar sections fill the panel width and drop their
+         sidebar chrome (they ride in via runtime appendChild during cutover). */
+      #createPanel .section {
+        margin: 0 0 16px 0;
+        padding: 0;
+        border: none;
+        background: none;
+      }
+      #createPanel .section:last-child { margin-bottom: 0; }
+
+      /* THE CUTOVER (Phase 1): once the Router dispatches any mode, body gets a
+         data-mode attribute. That hides the entire legacy single-page layout
+         (.container = sidebar + map + actions). The nodes Create mode needs are
+         moved OUT of .container into #modeCreate first, so they stay live. */
+      body[data-mode] .container { display: none !important; }
+
+      /* Legacy Mobile-UX chrome (icon bar, slide-up panels, backdrop, account
+         menu) are top-level <body> children OUTSIDE .container, so the rule
+         above can't reach them. The Mobile-UX IIFE force-shows them on phones
+         (≤900px) regardless of mode — which bleeds through the new Create rail
+         in landscape (and in portrait if the rotate-overlay is dismissed).
+         Post-cutover every viewport uses the single Create rail, so suppress
+         the legacy mobile chrome whenever a route is active. The body[data-mode]
+         prefix (specificity 0,2,1) + !important beats .mobile-*{display:flex
+         !important} (0,1,0). */
+      body[data-mode] .mobile-icon-bar,
+      body[data-mode] .mobile-panel,
+      body[data-mode] .mobile-panel-backdrop,
+      body[data-mode] .mobile-account-menu { display: none !important; }
+
+      /* Share popover — anchored under the top-bar Share button. */
+      #createTopBar { position: relative; }
+      .create-share-popover {
+        position: absolute;
+        top: 46px;
+        right: 12px;
+        width: 290px;
+        max-height: calc(100vh - 64px);
+        overflow-y: auto;
+        background: var(--surface-raised, var(--surface, #16213e));
+        border: 1px solid var(--border, rgba(255,255,255,0.14));
+        border-radius: 10px;
+        padding: 12px;
+        z-index: 1300;
+        box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+      }
+      .create-share-popover .section { margin: 0; }
+      .create-share-popover .section-title { margin-top: 0; }
 
       /* Portrait stack (when user dismisses rotate overlay) */
       @media (max-width: 600px) and (orientation: portrait) {
@@ -2835,6 +2883,8 @@
         <button type="button" class="create-action-btn create-action-btn--share" id="createShareBtn">Share</button>
         <button type="button" class="create-action-btn create-action-btn--account" id="createAccountBtn" aria-label="Account">●</button>
       </div>
+      <!-- Share popover — legacy Export section (#secExport) is slotted in here during cutover -->
+      <div id="createSharePopover" class="create-share-popover" style="display:none"></div>
     </header>
     <div id="createBody">
       <nav id="createRail" aria-label="Editor panels">
@@ -2922,8 +2972,8 @@
       </div>
 
       <!-- Color Palette -->
-      <div class="section">
-        <div style="margin-bottom: 10px;">
+      <div class="section" id="secColorPalette">
+        <div style="margin-bottom: 10px;" id="secTemplatesBtn">
           <button class="btn primary" onclick="showTemplatePicker()" style="width: 100%; padding: 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">&#x1F5FA; Browse Templates</button>
         </div>
         <div class="section-title">Color Palette</div>
@@ -2981,7 +3031,7 @@
       </div>
 
       <!-- Display Options -->
-      <div class="section">
+      <div class="section" id="secDisplay">
         <div class="section-title">Display</div>
         <div class="section-content">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; margin-bottom: 6px;">
@@ -3112,7 +3162,7 @@
 
 
       <!-- Pro Features -->
-      <div class="section">
+      <div class="section" id="secProFeatures">
         <div class="section-title">Pro Features</div>
         <div class="section-content">
           <button class="btn btn-pro" id="countyViewBtn">
@@ -3124,7 +3174,7 @@
       </div>
 
       <!-- Actions -->
-      <div class="section">
+      <div class="section" id="secActions">
         <div class="section-title">Actions</div>
         <div class="section-content">
           <div style="display: flex; gap: 8px;">
@@ -3136,7 +3186,7 @@
       </div>
 
       <!-- Export -->
-      <div class="section">
+      <div class="section" id="secExport">
         <div class="section-title">Save & Share</div>
         <div class="section-content">
           <div class="export-counter" id="exportCounter" style="display: none;">
@@ -3826,9 +3876,93 @@
       }
     });
 
+    // --- THE CUTOVER: relocate legacy editor nodes into the Create shell -----
+    // Runtime re-parenting. Moving a live DOM node with appendChild preserves
+    // its already-attached event listeners, so every legacy control keeps
+    // working in its new panel home with NO re-wiring. Runs exactly once
+    // (guarded), the first time Create mode is entered. The legacy .container
+    // is hidden by CSS (body[data-mode] .container{display:none}); we move the
+    // nodes Create needs OUT of it first. #mapContainer moves wholesale, so
+    // captureMapImage() and the ~12 #mapTitle write sites are untouched.
+    let _createCutoverDone = false;
+    function setupCreateCutover() {
+      if (_createCutoverDone) return;
+      const createMap = document.getElementById('createMap');
+      const mapContainer = document.getElementById('mapContainer');
+      if (!createMap || !mapContainer) return; // shell missing — leave legacy up
+      _createCutoverDone = true;
+
+      // 1) Map canvas — move the whole #mapContainer (on-map title/subtitle/SVG/
+      //    watermark) into #createMap. Export path is byte-identical.
+      createMap.appendChild(mapContainer);
+
+      // 2) Controls — slot legacy sections into their panels (listeners ride along).
+      const slot = function(childId, panelId) {
+        const c = document.getElementById(childId);
+        const p = document.getElementById(panelId);
+        if (c && p) p.appendChild(c);
+      };
+      slot('secTemplatesBtn',  'createPanelMap');    // Browse Templates
+      slot('secDisplay',       'createPanelMap');    // labels/arrow/scale/legend pos/colors/SOURCE
+      slot('secProFeatures',   'createPanelMap');    // County View
+      slot('secActions',       'createPanelMap');    // Clear All (undo/redo also top-bar)
+      slot('secColorPalette',  'createPanelColor');  // palette + custom color + ramps
+      slot('legendContent',    'createPanelLegend'); // legend builder
+      slot('quickFillSection', 'createPanelLegend'); // region/geo/fun fill
+      slot('dataMapSection',   'createPanelData');   // ACS datasets
+      slot('secExport',        'createSharePopover');// export/share/save/load
+
+      // 3) Theme + Help buttons → top-bar actions (preserve their listeners).
+      const actions = document.querySelector('.create-topbar-actions');
+      if (actions) {
+        const help = document.getElementById('helpBtn');
+        const theme = document.getElementById('themeToggle');
+        if (theme) actions.insertBefore(theme, actions.firstChild);
+        if (help)  actions.insertBefore(help, actions.firstChild);
+      }
+
+      // 4) Top-bar title <-> on-map #mapTitle two-way sync. The on-map title
+      //    stays (export needs it); the top-bar input mirrors it.
+      const topTitle = document.getElementById('createMapTitleInput');
+      const mapTitle = document.getElementById('mapTitle');
+      if (topTitle && mapTitle) {
+        topTitle.value = (typeof appState !== 'undefined' && appState.mapTitle)
+          ? appState.mapTitle
+          : (mapTitle.textContent || '').trim();
+        topTitle.addEventListener('input', function() {
+          mapTitle.textContent = topTitle.value;
+          if (typeof appState !== 'undefined') appState.mapTitle = topTitle.value;
+        });
+        mapTitle.addEventListener('input', function() {
+          topTitle.value = (mapTitle.textContent || '').trim();
+        });
+      }
+
+      // 5) Top-bar action wiring (addEventListener; runs once so no dupes).
+      const pop = document.getElementById('createSharePopover');
+      const undoBtn = document.getElementById('createUndoBtn');
+      const redoBtn = document.getElementById('createRedoBtn');
+      const shareBtn = document.getElementById('createShareBtn');
+      const acctBtn = document.getElementById('createAccountBtn');
+      if (undoBtn) undoBtn.addEventListener('click', function() { if (typeof undo === 'function') undo(); });
+      if (redoBtn) redoBtn.addEventListener('click', function() { if (typeof redo === 'function') redo(); });
+      if (shareBtn) shareBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (pop) pop.style.display = (!pop.style.display || pop.style.display === 'none') ? 'block' : 'none';
+      });
+      if (acctBtn) acctBtn.addEventListener('click', function() { if (typeof showUpgradeModal === 'function') showUpgradeModal(); });
+      // Click-away closes the share popover.
+      document.addEventListener('click', function(e) {
+        if (!pop || pop.style.display === 'none') return;
+        if (e.target.closest('#createSharePopover') || e.target.closest('#createShareBtn')) return;
+        pop.style.display = 'none';
+      });
+    }
+
     // --- Modes.Create lifecycle (Phase 1) ---------------------------------
     Modes.Create = {
       enter(route) {
+        setupCreateCutover();
         const el = document.getElementById('modeCreate');
         if (el) el.style.display = 'flex';
         // Restore state from hash if present (legacy URL compat in Task 9
@@ -5265,6 +5399,10 @@
           if (input) input.focus();
         }
       }
+      // Expose to global scope so the top-level /tap-in (line ~3718) and Create
+      // Upgrade-panel (line ~3820) submit delegates can reach it — both guard with
+      // `typeof handleProCodeSubmit === 'function'`, which is false without this.
+      window.handleProCodeSubmit = handleProCodeSubmit;
       document.getElementById('proCodeSubmit')?.addEventListener('click', handleProCodeSubmit);
       document.getElementById('proCodeInput')?.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') { e.preventDefault(); handleProCodeSubmit(); }
@@ -8252,8 +8390,17 @@
       });
     }
 
-    // Initialize app
-    init()
+    // Initialize app, THEN hand control to the Router. Dispatching after init()
+    // resolves guarantees the map is rendered, palette built, and auth resolved
+    // before Modes.Create.enter() relocates those nodes into the new shell.
+    // (THE CUTOVER — Phase 1. Before this, the Router never auto-dispatched and
+    // the legacy single-page editor was the live app.)
+    init().then(function() {
+      if (typeof Router !== 'undefined' && Router.dispatch) Router.dispatch();
+    }).catch(function(e) {
+      console.error('init failed:', e);
+      if (typeof Router !== 'undefined' && Router.dispatch) Router.dispatch();
+    });
   </script>
 
   <!-- Floating Symbology Menu (appears on long-press) -->

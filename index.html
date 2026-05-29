@@ -2293,9 +2293,63 @@
       transition: background-color 5000s ease-in-out 0s !important;
     }
 
+      /* Phase 1 — mode containers */
+      .mode { width: 100%; min-height: 100vh; }
+
+      /* ComingSoon stub */
+      #modeComingSoon {
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .coming-soon-inner {
+        max-width: 480px;
+        text-align: center;
+      }
+      .coming-soon-label {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 8px;
+        color: var(--accent);
+      }
+      .coming-soon-body {
+        font-size: 18px;
+        margin: 0 0 16px;
+        color: var(--text);
+      }
+      .coming-soon-sub {
+        font-size: 14px;
+        margin: 0 0 24px;
+        color: var(--text-muted, var(--text));
+        opacity: 0.7;
+      }
+      .coming-soon-back {
+        display: inline-block;
+        padding: 10px 20px;
+        background: var(--accent);
+        color: white;
+        text-decoration: none;
+        border-radius: var(--radius-md, 8px);
+        font-weight: 600;
+      }
+      .coming-soon-back:hover { transform: translateY(-1px); }
+
     </style>
 </head>
 <body>
+  <!-- Phase 1: Mode containers (Hub, ComingSoon, Create) -->
+  <!-- ComingSoon stub — handles Gallery/Arcade/GeoDraft/embed/marketing -->
+  <div class="mode" id="modeComingSoon" style="display:none">
+    <div class="coming-soon-inner">
+      <h2 class="coming-soon-label" id="comingSoonLabel">This</h2>
+      <p class="coming-soon-body">is coming in <strong id="comingSoonPhase">a future phase</strong>.</p>
+      <p class="coming-soon-sub">In the meantime, want to make a map?</p>
+      <a href="/" data-route class="coming-soon-back">← Back to Tappymaps</a>
+    </div>
+  </div>
   <h1 class="sr-only">Tappymaps</h1>
   <div class="container">
     <!-- Sidebar -->
@@ -2970,6 +3024,55 @@
         },
       };
     })();
+
+    // --- ComingSoon stub mode (Phase 1) -----------------------------------
+    // Handles every route not yet implemented (Gallery, Arcade, GeoDraft,
+    // embed, /about, /pricing). One markup div, content swapped per route.
+
+    Modes.ComingSoon = {
+      enter(route) {
+        const el = document.getElementById('modeComingSoon');
+        if (!el) return;
+        el.style.display = 'flex';
+        document.getElementById('comingSoonLabel').textContent = route.label || 'This';
+        document.getElementById('comingSoonPhase').textContent = route.phaseTarget || 'a future phase';
+      },
+      exit() {
+        const el = document.getElementById('modeComingSoon');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        return {
+          title: 'Tappymaps — ' + (route.label || 'Coming soon'),
+          description: (route.label || 'This feature') + ' is coming in a future Tappymaps phase. Make a map in the meantime.',
+          canonical: 'https://tappymaps.com' + window.location.pathname,
+        };
+      },
+    };
+
+    // Register all "coming soon" routes. Each gets its own label/phaseTarget so
+    // the stub page text is specific. The Router's parseRoute resolves the
+    // mode key (e.g. 'design/gallery'), so we wrap ComingSoon in a per-route
+    // closure that injects label + phaseTarget into the route object.
+    function registerComingSoon(modeId, label, phaseTarget) {
+      Router.register(modeId, {
+        enter(route) { Modes.ComingSoon.enter({ ...route, label, phaseTarget }); },
+        exit() { Modes.ComingSoon.exit(); },
+        meta(route) { return Modes.ComingSoon.meta({ ...route, label, phaseTarget }); },
+      });
+    }
+
+    registerComingSoon('design/gallery', 'Gallery', 'Phase 4 — Gallery');
+    registerComingSoon('games/arcade',   'Arcade',  'Phase 2 — Arcade');
+    registerComingSoon('games/draft',    'GeoDraft','Phase 3 — GeoDraft');
+    registerComingSoon('embed',          'Embed',   'Phase 5 — Distribution');
+    registerComingSoon('about',          'About',   'Coming soon — Marketing');
+    registerComingSoon('pricing',        'Pricing', 'Coming soon — Marketing');
+    Router.register('__notFound__', {
+      enter(route) { Modes.ComingSoon.enter({ ...route, label: 'Page not found', phaseTarget: 'the Tappymaps URL tree' }); },
+      exit() { Modes.ComingSoon.exit(); },
+      meta(route) { return Modes.ComingSoon.meta({ ...route, label: 'Not found', phaseTarget: 'Tappymaps' }); },
+    });
 
     // ============================================================================
     // INITIALIZATION

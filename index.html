@@ -2894,6 +2894,83 @@
       el.setAttribute('href', href);
     }
 
+    // --- Mode Router (Phase 1) --------------------------------------------
+    // Single-page router. Modes register themselves with id + lifecycle
+    // (enter, exit, optional meta). dispatch() reads window.location.pathname,
+    // calls the matching mode's enter(). Hash component preserved across
+    // pushState calls — state stays in hash, route in path.
+    //
+    // Phase 1 limits:
+    //   * No nested route hierarchies
+    //   * No route guards / async loading / transitions
+    //   * No URL parameter parsing (modes do their own)
+    //   * dispatch() not auto-called yet — that lands in the cutover commit
+
+    const Modes = {}; // populated by later tasks: Modes.Hub, Modes.Create, etc.
+
+    const Router = (function() {
+      const modes = {};
+      let current = null;
+
+      function register(id, mode) {
+        modes[id] = mode;
+      }
+
+      function parseRoute(pathname) {
+        // '/' → { mode: '__hub__' }
+        // '/design/make' → { mode: 'design/make' }
+        // '/games/arcade/find-state' → { mode: 'games/arcade', sub: 'find-state' }
+        // '/games/draft/category' → { mode: 'games/draft', sub: 'category' }
+        // anything else → { mode: '__notFound__' }
+        if (pathname === '/' || pathname === '') return { mode: '__hub__' };
+        const trimmed = pathname.replace(/^\/+|\/+$/g, '');
+        const parts = trimmed.split('/');
+        // 1-segment routes ('/tap-in', '/pro', '/about', '/pricing')
+        if (parts.length === 1) {
+          return { mode: parts[0], sub: null };
+        }
+        // 2-segment routes ('/design/make', '/design/gallery', '/games/arcade', '/games/draft', '/embed/<hash>')
+        if (parts.length === 2) {
+          return { mode: parts[0] + '/' + parts[1], sub: null };
+        }
+        // 3-segment routes ('/design/gallery/featured', '/games/arcade/find-state', '/games/draft/category')
+        if (parts.length === 3) {
+          return { mode: parts[0] + '/' + parts[1], sub: parts[2] };
+        }
+        return { mode: '__notFound__' };
+      }
+
+      function dispatch() {
+        const route = parseRoute(window.location.pathname);
+        const next = modes[route.mode] || modes['__notFound__'] || modes['__hub__'];
+        if (!next) {
+          console.warn('Router: no mode registered for', route.mode, '(and no fallback)');
+          return;
+        }
+        if (current && current.exit) current.exit();
+        current = next;
+        document.body.dataset.mode = route.mode; // CSS hook for mode-scoped styles
+        next.enter(route);
+        if (next.meta && typeof updateMetaTags === 'function') {
+          updateMetaTags(next.meta(route));
+        }
+      }
+
+      // popstate listener attaches now — but no modes registered yet, so
+      // dispatch is a no-op (next is undefined → warn + return). Safe.
+      window.addEventListener('popstate', dispatch);
+
+      return {
+        register,
+        parseRoute,
+        dispatch,
+        navigate(path) {
+          history.pushState({}, '', path);
+          dispatch();
+        },
+      };
+    })();
+
     // ============================================================================
     // INITIALIZATION
     // ============================================================================

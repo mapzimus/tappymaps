@@ -3362,6 +3362,25 @@
       }
     });
 
+    // --- data-route click delegate (Phase 1) ------------------------------
+    // Intercepts <a data-route> clicks so internal navigation uses
+    // Router.navigate (no full page reload). External links, modified
+    // clicks (cmd/ctrl/shift/meta), target="_blank", and middle-clicks
+    // get default behavior.
+
+    document.addEventListener('click', function(e) {
+      // Only act on primary-button clicks
+      if (e.button !== 0) return;
+      const a = e.target.closest('a[data-route]');
+      if (!a) return;
+      if (a.target === '_blank') return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      const href = a.getAttribute('href');
+      if (!href) return;
+      Router.navigate(href);
+    });
+
     // ============================================================================
     // INITIALIZATION
     // ============================================================================

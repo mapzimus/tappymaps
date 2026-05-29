@@ -2337,10 +2337,135 @@
       }
       .coming-soon-back:hover { transform: translateY(-1px); }
 
+      /* Hub at / */
+      #modeHub {
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      .hub-header {
+        text-align: center;
+        margin: 32px 0 24px;
+      }
+      .hub-wordmark {
+        font-size: 48px;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.02em;
+        color: var(--text);
+      }
+      .hub-slogan {
+        font-size: 18px;
+        margin: 8px 0 4px;
+        color: var(--text);
+        opacity: 0.85;
+      }
+      .hub-descriptor {
+        font-size: 14px;
+        margin: 0;
+        color: var(--text);
+        opacity: 0.6;
+      }
+      .hub-cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        max-width: 960px;
+        margin: 0 auto;
+        width: 100%;
+        flex: 1;
+        align-items: stretch;
+        padding: 16px 0 32px;
+      }
+      .hub-card {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 24px;
+        border-radius: 16px;
+        text-decoration: none;
+        color: white;
+        transition: transform 0.15s ease;
+        min-height: 240px;
+      }
+      .hub-card:hover { transform: translateY(-2px); }
+      .hub-card--design { background: #0EA5E9; }
+      .hub-card--games { background: #F97316; }
+      .hub-card-label {
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        opacity: 0.85;
+      }
+      .hub-card-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 22px;
+        font-weight: 600;
+        line-height: 1.5;
+      }
+      .hub-card-list li { padding: 2px 0; }
+      .hub-footer {
+        text-align: center;
+        font-size: 13px;
+        opacity: 0.6;
+        padding: 16px 0;
+      }
+      .hub-footer a {
+        color: var(--text);
+        text-decoration: none;
+      }
+      .hub-footer a:hover { text-decoration: underline; }
+      .hub-footer-sep { user-select: none; }
+
+      /* Portrait phones: stack cards */
+      @media (max-width: 600px) {
+        .hub-cards { grid-template-columns: 1fr; }
+        .hub-wordmark { font-size: 36px; }
+      }
+
     </style>
 </head>
 <body>
   <!-- Phase 1: Mode containers (Hub, ComingSoon, Create) -->
+  <!-- Hub at / — two-card layout per spec §4 -->
+  <div class="mode" id="modeHub" style="display:none">
+    <header class="hub-header">
+      <h1 class="hub-wordmark">tappymaps</h1>
+      <p class="hub-slogan">Tap. Color. Share.</p>
+      <p class="hub-descriptor">The Design + Games suite for the US map.</p>
+    </header>
+    <main class="hub-cards">
+      <a class="hub-card hub-card--design" href="/design/make" data-route>
+        <div class="hub-card-label">DESIGN</div>
+        <ul class="hub-card-list">
+          <li>→ Create a map</li>
+          <li>→ Browse Gallery</li>
+        </ul>
+      </a>
+      <a class="hub-card hub-card--games" href="/games/arcade" data-route>
+        <div class="hub-card-label">GAMES</div>
+        <ul class="hub-card-list">
+          <li>→ Find the State</li>
+          <li>→ Speed Run</li>
+          <li>→ GeoDraft</li>
+          <li>→ All games</li>
+        </ul>
+      </a>
+    </main>
+    <footer class="hub-footer">
+      <a href="/about" data-route>about</a>
+      <span class="hub-footer-sep"> · </span>
+      <a href="/pricing" data-route>pricing</a>
+      <span class="hub-footer-sep"> · </span>
+      <a href="/tap-in" data-route>tap in</a>
+    </footer>
+  </div>
   <!-- ComingSoon stub — handles Gallery/Arcade/GeoDraft/embed/marketing -->
   <div class="mode" id="modeComingSoon" style="display:none">
     <div class="coming-soon-inner">
@@ -3073,6 +3198,26 @@
       exit() { Modes.ComingSoon.exit(); },
       meta(route) { return Modes.ComingSoon.meta({ ...route, label: 'Not found', phaseTarget: 'Tappymaps' }); },
     });
+
+    // --- Hub mode (Phase 1) -----------------------------------------------
+    Modes.Hub = {
+      enter() {
+        const el = document.getElementById('modeHub');
+        if (el) el.style.display = 'flex';
+      },
+      exit() {
+        const el = document.getElementById('modeHub');
+        if (el) el.style.display = 'none';
+      },
+      meta() {
+        return {
+          title: 'Tappymaps — Tap. Color. Share.',
+          description: 'Make beautiful colored maps of the United States. The Design + Games suite for the US map. Free.',
+          canonical: 'https://tappymaps.com/',
+        };
+      },
+    };
+    Router.register('__hub__', Modes.Hub);
 
     // ============================================================================
     // INITIALIZATION

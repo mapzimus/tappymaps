@@ -3826,6 +3826,34 @@
       }
     });
 
+    // --- Modes.Create lifecycle (Phase 1) ---------------------------------
+    Modes.Create = {
+      enter(route) {
+        const el = document.getElementById('modeCreate');
+        if (el) el.style.display = 'flex';
+        // Restore state from hash if present (legacy URL compat in Task 9
+        // already rewrote /#<hash> → /design/make#<hash>).
+        if (window.location.hash && typeof loadStateFromURL === 'function') {
+          try { loadStateFromURL(); } catch (e) { console.warn('loadStateFromURL:', e); }
+        }
+        // Default to Map panel.
+        if (typeof switchPanel === 'function') switchPanel('map');
+      },
+      exit() {
+        const el = document.getElementById('modeCreate');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const titleField = (typeof appState !== 'undefined' && appState.mapTitle) ? appState.mapTitle : 'Create';
+        return {
+          title: titleField + ' — Tappymaps',
+          description: 'Color a US states map. Tap. Color. Share.',
+          canonical: 'https://tappymaps.com/design/make',
+        };
+      },
+    };
+    Router.register('design/make', Modes.Create);
+
     // ============================================================================
     // INITIALIZATION
     // ============================================================================

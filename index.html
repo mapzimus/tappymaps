@@ -3292,6 +3292,29 @@
       };
     })();
 
+    // --- Legacy URL compat (Phase 1) --------------------------------------
+    // Before the Router dispatches, rewrite legacy "/#<base64>" URLs to
+    // "/design/make#<base64>" so existing shared maps land in Create mode
+    // with state intact. Hash component preserved by history.replaceState.
+    //
+    // Detection: pathname is exactly "/" and hash is long enough to plausibly
+    // be a state blob. If atob/JSON.parse succeed AND the decoded object has
+    // a known appState field, rewrite. Else leave the hash alone.
+
+    (function rewriteLegacyHash() {
+      if (window.location.pathname !== '/') return;
+      if (!window.location.hash || window.location.hash.length < 10) return;
+      try {
+        const decoded = JSON.parse(atob(window.location.hash.slice(1)));
+        // Heuristic: any legacy state will have at least one of these.
+        if (decoded && (decoded.colors || decoded.legend || decoded.stateColors || decoded.legendEntries || decoded.mapTitle !== undefined)) {
+          history.replaceState({}, '', '/design/make' + window.location.hash);
+        }
+      } catch (_) {
+        // Not a valid base64+JSON blob — could be a regular fragment, leave it.
+      }
+    })();
+
     // --- ComingSoon stub mode (Phase 1) -----------------------------------
     // Handles every route not yet implemented (Gallery, Arcade, GeoDraft,
     // embed, /about, /pricing). One markup div, content swapped per route.

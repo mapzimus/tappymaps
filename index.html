@@ -2851,6 +2851,49 @@
       ]
     };
 
+    // --- Per-route SEO meta tag helpers (Phase 1) -------------------------
+    // Used by Router to update <title>, meta description, OG/Twitter cards,
+    // and canonical on every mode dispatch. Each Mode's meta(route) returns
+    // { title, description, canonical?, ogImage? } — these helpers apply it.
+
+    function updateMetaTags({ title, description, canonical, ogImage }) {
+      const FALLBACK_OG = 'https://tappymaps.com/assets/social-og-image.png';
+      document.title = title;
+      setMeta('description', description);
+      setMeta('og:title', title);
+      setMeta('og:description', description);
+      setMeta('og:url', canonical || window.location.href);
+      setMeta('og:image', ogImage || FALLBACK_OG);
+      setMeta('twitter:title', title);
+      setMeta('twitter:description', description);
+      setMeta('twitter:image', ogImage || FALLBACK_OG);
+      setLink('canonical', canonical || window.location.href);
+    }
+
+    function setMeta(name, content) {
+      const sel = name.startsWith('og:')
+        ? `meta[property="${name}"]`
+        : `meta[name="${name}"]`;
+      let el = document.querySelector(sel);
+      if (!el) {
+        el = document.createElement('meta');
+        if (name.startsWith('og:')) el.setAttribute('property', name);
+        else el.setAttribute('name', name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    }
+
+    function setLink(rel, href) {
+      let el = document.querySelector(`link[rel="${rel}"]`);
+      if (!el) {
+        el = document.createElement('link');
+        el.setAttribute('rel', rel);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('href', href);
+    }
+
     // ============================================================================
     // INITIALIZATION
     // ============================================================================

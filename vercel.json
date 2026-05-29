@@ -2,7 +2,11 @@
   "framework": null,
   "outputDirectory": ".",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    {
+      "source": "/((?!api|assets|favicon|.*\\.(?:png|svg|ico|webmanifest|json)).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {

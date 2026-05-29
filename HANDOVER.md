@@ -4,39 +4,42 @@
 
 ---
 
-## Where we are right now (2026-05-25)
+## Where we are right now (2026-05-29)
 
 **Production:** https://tappymaps.com — live, stable, auto-deploys on every push to `master` via Vercel.
 
 **Reimagining status:**
-- **Phase 0 (Foundation + Audit Fixes)** — SHIPPED 2026-05-24. All 10 punch-list items live. See "Recent commits" table below.
+- **Phase 0 (Foundation + Audit Fixes)** — SHIPPED 2026-05-24. All 10 punch-list items live.
 - **Tester mode** — LIVE since 2026-05-23. Auth UI hidden, access code `tap26` unlocks Pro. REMOVE BEFORE PUBLIC LAUNCH.
 - **Source field autofill defeat** — LIVE since 2026-05-25. Three-layer fix (HTML + CSS + JS) prevents Chrome from autofilling the user's email into the Source citation field.
-- **Phase 1 (Mode router + Hub + Create rebuild)** — DESIGN APPROVED 2026-05-25. Implementation plan NOT YET WRITTEN.
+- **Phase 1 (Mode router + Hub + Create rebuild)** — SHIPPED 2026-05-29 (cutover commit `619e309`). The editor now lives at `/design/make`; `/` is the Hub. Verified across desktop + mobile portrait/landscape. See the "Reimagining — Phase 1 shipped" section below.
 
-**Your next action:** Invoke `superpowers:writing-plans` to convert the Phase 1 design spec into a task-by-task implementation plan. Then dispatch via `superpowers:subagent-driven-development` (the pattern that worked for Phase 0).
+**Your next action:** Phase 1 is live and verified. Next up is Phase 2+ (Arcade games / GeoDraft / Gallery / Distribution) — each phase needs its own design spec → plan → subagent execution. Before that, a short live-soak is worthwhile: let the new router + Create rail run in production and watch for console errors or routing edge cases the smoke test didn't cover.
 
 ---
 
-## Phase 1 — ready to plan
+## Reimagining — Phase 1 shipped (2026-05-29)
 
 **Design spec:** `docs/superpowers/specs/2026-05-25-tappymaps-phase-1-implementation-design.md` (commit `8dd2f5c`)
+**Implementation plan:** `docs/superpowers/plans/2026-05-25-tappymaps-phase-1.md` (commit `b70aa88`)
+**Executed via** `superpowers:subagent-driven-development` — fresh subagent per task, two-stage review (spec compliance, then code quality). Shipped as 15 commits `26485ea`→`619e309`.
 
-**Scope locked during brainstorm (2026-05-25):**
-- Full Phase 1 atomically (router + Hub + Create rebuild together, not split into 1a/1b)
-- Routing via History API + Vercel rewrites (clean URLs, real per-route SEO)
-- Hub sub-mode previews: static text + links (no backend dependencies)
-- Migration: clean rebuild of editor presentation, keep underlying logic untouched
-- Testing: continue Phase 0 pattern (`_validate.py` + chrome-devtools-mcp probes), no new test framework
-- Coexistence: none — atomic deletion of old markup in cleanup commit
+**What shipped:**
+- **Mode router** — `Router` IIFE (grep `const Router = (function()`) dispatches History-API paths to mode handlers (`enter/exit/meta`): `/` → Hub, `/design/make` → Create editor, `/tap-in` → access-code unlock, `/gallery` `/arcade` `/geodraft` `/embed/*` → ComingSoon stub. `vercel.json` rewrites every non-asset path to `/index.html` so deep links resolve; `init().then(Router.dispatch)` activates the router on load.
+- **Hub** landing page at `/` — "Tap. Color. Share." + mode cards.
+- **Create 5-panel rail** at `/design/make` — Map / Color / Legend / Data / Upgrade (`createPanelMap/Color/Legend/Data/Upgrade`), switched by `switchPanel()`. One information architecture at every viewport size; the old dual desktop-sidebar / mobile-bottom-sheet split is gone from the live UI.
+- **Per-route SEO** meta helpers, a **landscape rotate-overlay** for portrait phones on Create, and **legacy `/#<base64>` URLs** that auto-rewrite to `/design/make#<base64>` so old shared links still open.
 
-**Key architectural decision baked into the plan:** Tasks 3-14 add new code with new mode divs `display:none` and Router defined but NOT auto-dispatching. Task 15 (cleanup + activation) atomically deletes old markup AND adds the `addEventListener('DOMContentLoaded', Router.dispatch)` line. Every commit before that is safely dormant in production.
+**What is HIDDEN, not deleted — read this before editing the editor:**
+The cutover did NOT delete the legacy markup. It **re-parents** live DOM nodes at runtime and hides the old shell with CSS:
+- `body[data-mode] .container { display:none !important }` hides the entire legacy single-page layout whenever a route is active; the same rule hides `.mobile-icon-bar / .mobile-panel / .mobile-panel-backdrop / .mobile-account-menu`.
+- On first entry to Create, `setupCreateCutover()` (guarded by `_createCutoverDone`) `appendChild`-moves the whole `#mapContainer` plus the control sections (`secColorPalette / secTemplatesBtn / secDisplay / secProFeatures / secActions / secExport`) into the new panels. Moving a live node preserves its attached listeners, so the editor works with **zero re-wiring**.
+- `#mapTitle` (on-map title) STAYS and is mandatory for `captureMapImage()`; a new top-bar `#createMapTitleInput` two-way-syncs with it. `#sourceInput` (desktop, autofill-defeat intact) is the field that lands in the Map panel; `#mobileSourceInput` stays dormant in the hidden mobile markup.
+- Net diff was **+155 / −8** (the 8 "deletions" are lines that merely gained `id=` attributes), NOT the ~1000-line delete-and-rebuild the plan originally imagined. Rollback = a single `git revert 619e309`.
 
-**To start Phase 1 implementation:**
-1. Read the spec at `docs/superpowers/specs/2026-05-25-tappymaps-phase-1-implementation-design.md`
-2. Invoke `superpowers:writing-plans`
-3. It produces `docs/superpowers/plans/2026-05-XX-tappymaps-phase-1.md` (~15 tasks)
-4. Invoke `superpowers:subagent-driven-development` to execute task-by-task
+**Verified (Task 16 smoke test, production):** `/` Hub renders with legacy hidden; `/design/make` (real SPA-rewrite nav) → editor with map re-parented, 5 rail buttons, 51 states, zero console errors; coloring applies and toggles off cleanly; legacy `/#<hash>` rewrites and restores state. `captureMapImage` + `handleProCodeSubmit` are both global.
+
+**Next:** Phase 2+ (Arcade games / GeoDraft / Gallery / Distribution) — each needs its own design spec → plan → subagent execution. Specs land in `docs/superpowers/specs/`, plans in `docs/superpowers/plans/`.
 
 ---
 
@@ -44,6 +47,23 @@
 
 | SHA | Message | Phase |
 |---|---|---|
+| `619e309` | feat(create): atomic cutover to mode router + 5-panel Create rail | **Phase 1 cutover** |
+| `2afdb5d` | chore: gitignore _*.md throwaway working docs | Phase 1 |
+| `8de928c` | feat(create): add Modes.Create lifecycle + register with Router | Phase 1 Task 13 |
+| `4439d0e` | feat(create): wire switchPanel + rail delegate + Upgrade panel handlers | Phase 1 Task 12 |
+| `b6e0396` | feat(create): add 5-button rail + 5 panel content templates (skeletons) | Phase 1 Task 11 |
+| `e23f7f1` | feat(create): add new Create mode shell with top bar | Phase 1 Task 10 |
+| `5016a69` | compat: rewrite legacy /#<base64> URLs to /design/make#<base64> | Phase 1 Task 9 |
+| `2a3a76a` | feat(create): add landscape rotate-overlay for portrait phones in Create | Phase 1 Task 8 |
+| `d5de931` | feat(router): add data-route click delegate for in-app navigation | Phase 1 Task 7 |
+| `17ceb0a` | feat(tap-in): add minimal /tap-in mode with access-code unlock form | Phase 1 Task 6 |
+| `ca38224` | feat(hub): add Hub markup + CSS + Modes.Hub registration | Phase 1 Task 5 |
+| `11cbf62` | feat(router): add ComingSoon stub + register Gallery/Arcade/GeoDraft/embed | Phase 1 Task 4 |
+| `2a9c4f2` | feat(router): add Mode Router IIFE (dormant, no auto-dispatch) | Phase 1 Task 3 |
+| `142f26d` | seo: add per-route meta tag helpers (dormant until Router lands) | Phase 1 Task 2 |
+| `26485ea` | infra: add vercel.json SPA rewrites for client-side routing | Phase 1 Task 1 |
+| `b70aa88` | docs(reimagining): add Phase 1 implementation plan | Phase 1 plan |
+| `4becd77` | docs: refresh CLAUDE.md, cartographer agent, HANDOVER.md for new session | Phase 1 docs |
 | `8dd2f5c` | docs(reimagining): add Phase 1 implementation design spec | Phase 1 design |
 | `187cad1` | fix: kill Chrome autofill chip on Source field (readonly + CSS overlay) | Polish |
 | `decaf8c` | fix: actually clear autofilled email Source (drop broken guard, add input listener) | Polish |
@@ -52,23 +72,6 @@
 | `c5f8461` | fix: stop browser autofill from prefilling email in Source field | Polish |
 | `a1acb4a` | test: add TESTER_MODE + tap26 access code, hide auth UI | Tester mode |
 | `7136308` | docs: mark Phase 0 of reimagining complete in HANDOVER | Phase 0 docs |
-| `86ed0c1` | seo: add basic head tags, OG/Twitter cards, and h1 element | Phase 0 Task 8 |
-| `77e8b99` | fix: stop firing dead Supabase analytics request on every page load | Phase 0 Task 7 |
-| `36be1b0` | fix: close ~270px portrait wasted band between map and palette | Phase 0 Task 6 |
-| `490cfb9` | fix: scroll onboarding modal within viewport on landscape phones | Phase 0 Task 5 |
-| `943e949` | fix: show map title in mobile landscape | Phase 0 Task 4 |
-| `1cd8102` | brand: keep logo visible in exports (spec §9: mandatory for everyone) | Phase 0 Task 2A |
-| `997ade4` | brand: remove Show Logo toggle entirely, logo always visible | Phase 0 Task 3 |
-| `1362cbc` | brand: update logoWatermark comment to match new scale + drop TaC ref | Phase 0 Task 2 followup |
-| `6258a4e` | brand: drop diagonal text watermark, enlarge pin+wordmark logo | Phase 0 Task 2 |
-| `8f7e685` | docs(reimagining): add Phase 0 implementation plan | Phase 0 plan |
-| `5e62f6d` | docs(reimagining): add full design spec + gitignore .superpowers/ | Reimagining design |
-| `8960c8c` | docs: add public README and remove email from HANDOVER | Repo polish |
-| `d1df68a` | HANDOVER.md: mark four "known issues" as resolved | Pre-Phase-0 |
-| `dd9fcad` | Workspace cleanup: gitignore session-context files, rewrite CLAUDE.md | Pre-Phase-0 |
-| `fe16b1d` | Undo coverage + legend cap for config/CSV import | Pre-Phase-0 |
-| `1ed6036` | Stripe API hardening: priceId allowlist + dead import strip | Pre-Phase-0 |
-| `f9f260b` | Mobile portrait: render legend inline below the map | Pre-Phase-0 |
 
 ---
 
@@ -127,10 +130,10 @@ The `_validate.py` helper extracts both inline `<script>` blocks and runs `node 
 ## Genuinely open items (Phase 1+ work)
 
 - **Reddit Developer account** — external task for Max. Apply at https://developers.reddit.com/ to reserve the Tappymaps Devvit app name. Takes a few days for approval. Needed for Phase 5 (Distribution).
-- **Mobile architectural rot** — some mobile handlers may still target desktop-only DOM. Phase 1's unified 5-panel rail (one IA at all sizes) closes this entire category, so don't bother spot-fixing individual cases.
-- **Form-label a11y fixes** — live audit found 5 form fields missing `<label>` elements. Phase 1's Create rebuild handles this.
+- **Mobile architectural rot** — RESOLVED in the live UI by Phase 1: the unified 5-panel rail is the only editor IA at all sizes, and the legacy mobile bottom-sheet chrome is hidden whenever a route is active (`body[data-mode] .mobile-* { display:none }`). Caveat: the rotted handlers still EXIST in the file — the cutover *hid* the markup, it didn't delete it, so they're dead-but-present. A future cleanup could delete the dormant mobile IIFE; harmless where it is.
+- **Form-label a11y fixes** — STILL OPEN; NOT closed by Phase 1. The cutover re-parented the existing control nodes rather than rebuilding the form markup, so fields that lacked `<label>` elements before still lack them (the audit flagged ~5). Needs a dedicated pass: re-audit the live `/design/make` panels and label the real, now-relocated inputs.
 - **`.gitattributes` for line endings** — CRLF/LF warnings fire on every edit on Windows. Cosmetic, doesn't affect deploys. Add a `.gitattributes` whenever someone gets tired of the warnings.
-- **Analytics rewire** — the old Supabase project at `qbhqdicppoahhvnuvcwd.supabase.co` is dead. Phase 0 no-op'd the network call. Phase 1 rewires writes to the new project (whichever lands the gallery + game_scores tables in Phase 4).
+- **Analytics rewire** — STILL OPEN. The old Supabase project at `qbhqdicppoahhvnuvcwd.supabase.co` is dead; Phase 0 no-op'd the network call. Analytics was NOT in Phase 1 scope. Rewire writes to the new project whenever the gallery + game_scores tables land (Phase 4).
 
 ---
 
@@ -164,7 +167,7 @@ git push origin master
 
 Tappymaps is a single-file HTML/CSS/JS web app at https://tappymaps.com. Users tap US states, build legends, and export publication-ready maps. Free tier with watermark + 3 exports/month; Pro tier at $5/mo or $48/yr unlocks unlimited exports + 22 Census ACS data maps + 10 color ramps + county view + custom labels.
 
-**Stack:** Vanilla JS (no framework, no build step), Vercel + Supabase + Stripe backend, single `index.html` (~7,500 lines). See `.claude/CLAUDE.md` for the full technical context including Critical Patterns (captureMapImage, updateLegendPosition, history/undo), Mobile UX architecture, Theme system, Data maps, Templates.
+**Stack:** Vanilla JS (no framework, no build step), Vercel + Supabase + Stripe backend, single `index.html` (~9,400 lines, plus a client-side mode router as of Phase 1). See `.claude/CLAUDE.md` for the full technical context including the Mode Router (Phase 1), Critical Patterns (captureMapImage, updateLegendPosition, history/undo), Mobile UX architecture, Theme system, Data maps, Templates.
 
 **Brand:** Part of Mapparatus Organization. Tappymaps (consumer, casual) ↔ Mapzimus (editorial brand for viral content) ↔ Mapparatus (future pro GIS tool). Primary turquoise `#0EA5E9` for Design contexts, orange `#F97316` for Games. Outfit Bold headings, Instrument Sans body, Geist Mono code.
 

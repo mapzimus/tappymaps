@@ -2679,6 +2679,72 @@
         }
       }
 
+      /* Rail buttons */
+      .rail-btn {
+        width: 40px;
+        height: 40px;
+        background: transparent;
+        border: none;
+        border-radius: 8px;
+        color: var(--text);
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0.55;
+        transition: opacity 0.12s ease, background 0.12s ease;
+      }
+      .rail-btn:hover { opacity: 0.85; background: var(--surface-raised, rgba(255,255,255,0.05)); }
+      .rail-btn.is-active {
+        opacity: 1;
+        background: color-mix(in srgb, var(--accent, #0EA5E9) 20%, transparent);
+        color: var(--accent, #0EA5E9);
+      }
+      .rail-btn--pro.is-active {
+        background: color-mix(in srgb, #F97316 20%, transparent);
+        color: #F97316;
+      }
+
+      /* Panel content templates */
+      .create-panel-content {
+        animation: panelFade 0.18s ease;
+      }
+      @keyframes panelFade {
+        from { opacity: 0; transform: translateY(4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .create-panel-heading {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin: 0 0 12px;
+        color: var(--text);
+        opacity: 0.7;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pro-chip {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: linear-gradient(90deg, var(--accent, #0EA5E9) 0%, #F97316 100%);
+        color: white;
+      }
+      .create-panel-lede {
+        font-size: 14px;
+        margin: 0 0 12px;
+        opacity: 0.85;
+      }
+      .create-panel-sub {
+        font-size: 12px;
+        margin: 16px 0 8px;
+        opacity: 0.6;
+      }
+
     </style>
 </head>
 <body>
@@ -2772,13 +2838,63 @@
     </header>
     <div id="createBody">
       <nav id="createRail" aria-label="Editor panels">
-        <!-- Filled in Task 11 -->
+        <button type="button" class="rail-btn" data-panel="map" aria-label="Map settings" title="Map">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3 L3 6 V21 L9 18 L15 21 L21 18 V3 L15 6 L9 3 Z"/><path d="M9 3 V18"/><path d="M15 6 V21"/></svg>
+        </button>
+        <button type="button" class="rail-btn" data-panel="color" aria-label="Colors" title="Color">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="8" cy="10" r="1.5" fill="currentColor"/><circle cx="16" cy="10" r="1.5" fill="currentColor"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/></svg>
+        </button>
+        <button type="button" class="rail-btn" data-panel="legend" aria-label="Legend" title="Legend">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="4" height="4"/><rect x="3" y="11" width="4" height="4"/><rect x="3" y="17" width="4" height="2"/><line x1="10" y1="7" x2="21" y2="7"/><line x1="10" y1="13" x2="21" y2="13"/><line x1="10" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <button type="button" class="rail-btn" data-panel="data" aria-label="Data Maps" title="Data">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18 L9 12 L13 16 L21 6"/><path d="M16 6 H21 V11"/></svg>
+        </button>
+        <button type="button" class="rail-btn rail-btn--pro" data-panel="upgrade" aria-label="Pro upgrade" title="Pro">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L15 9 L22 10 L17 15 L18 22 L12 18 L6 22 L7 15 L2 10 L9 9 Z"/></svg>
+        </button>
       </nav>
       <div id="createMap">
         <!-- SVG mapSVG moves here in cutover (Task 15) -->
       </div>
       <aside id="createPanel" aria-label="Active panel content">
-        <!-- 5 panel templates (Task 11) and active panel content -->
+        <!-- Map panel: title/subtitle/source + Browse Templates inline grid -->
+        <section class="create-panel-content" id="createPanelMap" style="display:none">
+          <h3 class="create-panel-heading">Map</h3>
+          <!-- Inner content slotted in cutover (Task 15) from legacy #sidebarSheet / #tapPanel -->
+        </section>
+
+        <!-- Color panel: palette, manage colors -->
+        <section class="create-panel-content" id="createPanelColor" style="display:none">
+          <h3 class="create-panel-heading">Colors</h3>
+        </section>
+
+        <!-- Legend panel: legend builder -->
+        <section class="create-panel-content" id="createPanelLegend" style="display:none">
+          <h3 class="create-panel-heading">Legend</h3>
+        </section>
+
+        <!-- Data panel: ACS datasets + ramp -->
+        <section class="create-panel-content" id="createPanelData" style="display:none">
+          <h3 class="create-panel-heading">
+            Data Maps
+            <span class="pro-chip">PRO</span>
+          </h3>
+        </section>
+
+        <!-- Upgrade panel: Pro feature surfacing -->
+        <section class="create-panel-content" id="createPanelUpgrade" style="display:none">
+          <h3 class="create-panel-heading">Tappymaps Pro</h3>
+          <p class="create-panel-lede">Unlock unlimited exports, no watermark, and Data Maps.</p>
+          <button type="button" class="create-action-btn create-action-btn--share" id="createUpgradeCTA" style="width:100%;margin-top:12px">
+            Upgrade
+          </button>
+          <p class="create-panel-sub">Already have an access code?</p>
+          <form id="createPanelCodeForm" autocomplete="off">
+            <input type="text" id="createPanelCodeInput" class="tap-in-input" placeholder="access code" maxlength="32">
+            <button type="submit" class="tap-in-submit" style="width:100%;margin-top:8px">Unlock</button>
+          </form>
+        </section>
       </aside>
     </div>
   </div>

@@ -3769,6 +3769,63 @@
       if (ov) ov.classList.remove('dismissed');
     });
 
+    // --- Create rail: panel switching (Phase 1) ---------------------------
+    // switchPanel(name) hides all #createPanelXxx sections, shows the named
+    // one, toggles .is-active on the matching rail button.
+
+    function switchPanel(name) {
+      const ids = ['createPanelMap', 'createPanelColor', 'createPanelLegend', 'createPanelData', 'createPanelUpgrade'];
+      const targetId = 'createPanel' + name.charAt(0).toUpperCase() + name.slice(1);
+      ids.forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === targetId) ? 'block' : 'none';
+      });
+      const rail = document.getElementById('createRail');
+      if (rail) {
+        rail.querySelectorAll('.rail-btn').forEach(function(btn) {
+          btn.classList.toggle('is-active', btn.dataset.panel === name);
+        });
+      }
+    }
+
+    // Rail click delegate — single listener on #createRail, dispatches
+    // based on clicked button's data-panel attribute.
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('#createRail .rail-btn');
+      if (!btn) return;
+      const name = btn.dataset.panel;
+      if (name) switchPanel(name);
+    });
+
+    // --- Upgrade panel handlers (Phase 1) ---------------------------------
+    // CTA: shows the full upgrade modal (when not in TESTER_MODE) or the
+    //      access-code field (when in TESTER_MODE).
+    // Form: delegates to handleProCodeSubmit() — same plumbing as /tap-in
+    //      and the existing modal field.
+
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.id === 'createUpgradeCTA') {
+        if (typeof showUpgradeModal === 'function') {
+          showUpgradeModal();
+        }
+      }
+    });
+
+    document.addEventListener('submit', function(e) {
+      if (e.target && e.target.id === 'createPanelCodeForm') {
+        e.preventDefault();
+        const input = document.getElementById('createPanelCodeInput');
+        const code = (input && input.value || '').trim();
+        if (!code) return;
+        if (typeof handleProCodeSubmit === 'function') {
+          // Stash on the canonical input the legacy fn reads from.
+          const canonical = document.getElementById('proCodeInput');
+          if (canonical) canonical.value = code;
+          try { handleProCodeSubmit(); } catch (_) {}
+        }
+      }
+    });
+
     // ============================================================================
     // INITIALIZATION
     // ============================================================================

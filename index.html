@@ -2536,6 +2536,149 @@
         body[data-mode="design/make"] .rotate-overlay:not(.dismissed) { display: flex; }
       }
 
+      /* Create mode (Phase 1) — landscape-first 5-panel rail layout */
+      #modeCreate {
+        display: none;            /* router toggles to flex */
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        background: var(--bg);
+      }
+      body[data-mode="design/make"] #modeCreate { display: flex; }
+
+      #createTopBar {
+        height: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px;
+        border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+        background: var(--surface, rgba(255,255,255,0.02));
+        flex: 0 0 44px;
+      }
+      .create-wordmark {
+        font-weight: 800;
+        font-size: 15px;
+        color: var(--text);
+        text-decoration: none;
+        letter-spacing: -0.01em;
+      }
+      .create-map-title {
+        flex: 1;
+        max-width: 360px;
+        margin: 0 auto;
+        padding: 6px 10px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 600;
+        text-align: center;
+      }
+      .create-map-title:focus {
+        background: var(--surface-raised, rgba(255,255,255,0.04));
+        border-color: var(--border, rgba(255,255,255,0.12));
+        outline: none;
+      }
+      .create-topbar-actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .create-icon-btn {
+        width: 30px;
+        height: 30px;
+        background: transparent;
+        border: 1px solid var(--border, rgba(255,255,255,0.1));
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 16px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .create-icon-btn:hover { background: var(--surface-raised, rgba(255,255,255,0.06)); }
+      .create-action-btn {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .create-action-btn--share {
+        background: var(--accent, #0EA5E9);
+        color: white;
+        border: none;
+      }
+      .create-action-btn--account {
+        width: 30px;
+        height: 30px;
+        padding: 0;
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border, rgba(255,255,255,0.1));
+        font-size: 18px;
+      }
+
+      #createBody {
+        flex: 1;
+        display: flex;
+        min-height: 0;             /* allow children to scroll */
+        overflow: hidden;
+      }
+      #createRail {
+        width: 56px;
+        flex: 0 0 56px;
+        background: var(--surface, rgba(255,255,255,0.02));
+        border-right: 1px solid var(--border, rgba(255,255,255,0.08));
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px 0;
+        gap: 6px;
+      }
+      #createMap {
+        flex: 1 1 55%;
+        min-width: 0;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        overflow: hidden;
+      }
+      #createPanel {
+        flex: 0 0 320px;
+        background: var(--surface, rgba(255,255,255,0.02));
+        border-left: 1px solid var(--border, rgba(255,255,255,0.08));
+        overflow-y: auto;
+        padding: 16px;
+      }
+
+      /* Portrait stack (when user dismisses rotate overlay) */
+      @media (max-width: 600px) and (orientation: portrait) {
+        #createBody {
+          flex-direction: column;
+        }
+        #createRail {
+          flex-direction: row;
+          width: 100%;
+          height: 56px;
+          flex: 0 0 56px;
+          border-right: none;
+          border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+          justify-content: center;
+        }
+        #createPanel {
+          flex: 0 0 60vh;
+          border-left: none;
+          border-top: 1px solid var(--border, rgba(255,255,255,0.08));
+        }
+      }
+
     </style>
 </head>
 <body>
@@ -2608,6 +2751,38 @@
       <a href="/design/make" data-route class="tap-in-skip">Skip — make a map without unlocking →</a>
     </div>
   </div>
+  <!-- Create mode — 5-panel rail rebuild (Phase 1) -->
+  <div class="mode" id="modeCreate" style="display:none">
+    <header id="createTopBar">
+      <a href="/" data-route class="create-wordmark">tappymaps</a>
+      <input
+        type="text"
+        id="createMapTitleInput"
+        class="create-map-title"
+        placeholder="My US Map"
+        maxlength="60"
+        autocomplete="off"
+        spellcheck="false">
+      <div class="create-topbar-actions">
+        <button type="button" class="create-icon-btn" id="createUndoBtn" aria-label="Undo">↶</button>
+        <button type="button" class="create-icon-btn" id="createRedoBtn" aria-label="Redo">↷</button>
+        <button type="button" class="create-action-btn create-action-btn--share" id="createShareBtn">Share</button>
+        <button type="button" class="create-action-btn create-action-btn--account" id="createAccountBtn" aria-label="Account">●</button>
+      </div>
+    </header>
+    <div id="createBody">
+      <nav id="createRail" aria-label="Editor panels">
+        <!-- Filled in Task 11 -->
+      </nav>
+      <div id="createMap">
+        <!-- SVG mapSVG moves here in cutover (Task 15) -->
+      </div>
+      <aside id="createPanel" aria-label="Active panel content">
+        <!-- 5 panel templates (Task 11) and active panel content -->
+      </aside>
+    </div>
+  </div>
+
   <!-- ComingSoon stub — handles Gallery/Arcade/GeoDraft/embed/marketing -->
   <div class="mode" id="modeComingSoon" style="display:none">
     <div class="coming-soon-inner">

@@ -2429,6 +2429,71 @@
         .hub-wordmark { font-size: 36px; }
       }
 
+      /* TapIn landing */
+      #modeTapIn {
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        min-height: 100vh;
+      }
+      .tap-in-inner {
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+      }
+      .tap-in-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 8px;
+        color: var(--accent);
+      }
+      .tap-in-sub {
+        font-size: 14px;
+        margin: 0 0 24px;
+        opacity: 0.7;
+      }
+      .tap-in-form {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .tap-in-input {
+        flex: 1;
+        padding: 12px 16px;
+        border: 1px solid var(--border, rgba(255,255,255,0.15));
+        border-radius: 8px;
+        background: var(--surface, rgba(255,255,255,0.04));
+        color: var(--text);
+        font-size: 16px;
+      }
+      .tap-in-submit {
+        padding: 12px 24px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .tap-in-submit:hover { transform: translateY(-1px); }
+      .tap-in-status {
+        font-size: 13px;
+        min-height: 20px;
+        margin: 0 0 16px;
+        opacity: 0.85;
+      }
+      .tap-in-skip {
+        display: inline-block;
+        font-size: 13px;
+        color: var(--text);
+        opacity: 0.6;
+        text-decoration: none;
+      }
+      .tap-in-skip:hover { opacity: 1; text-decoration: underline; }
+
     </style>
 </head>
 <body>
@@ -2465,6 +2530,26 @@
       <span class="hub-footer-sep"> · </span>
       <a href="/tap-in" data-route>tap in</a>
     </footer>
+  </div>
+  <!-- Tap In landing — minimal Phase 1 implementation -->
+  <div class="mode" id="modeTapIn" style="display:none">
+    <div class="tap-in-inner">
+      <h2 class="tap-in-title">Tap in to Tappymaps</h2>
+      <p class="tap-in-sub">Enter your access code to unlock the Pro editor.</p>
+      <form id="tapInForm" class="tap-in-form" autocomplete="off">
+        <input
+          type="text"
+          id="tapInCodeInput"
+          class="tap-in-input"
+          placeholder="access code"
+          autocomplete="off"
+          spellcheck="false"
+          maxlength="32">
+        <button type="submit" class="tap-in-submit">Unlock</button>
+      </form>
+      <p class="tap-in-status" id="tapInStatus" aria-live="polite"></p>
+      <a href="/design/make" data-route class="tap-in-skip">Skip — make a map without unlocking →</a>
+    </div>
   </div>
   <!-- ComingSoon stub — handles Gallery/Arcade/GeoDraft/embed/marketing -->
   <div class="mode" id="modeComingSoon" style="display:none">
@@ -3218,6 +3303,64 @@
       },
     };
     Router.register('__hub__', Modes.Hub);
+
+    // --- TapIn landing (Phase 1) ------------------------------------------
+    // Minimal page surfacing the access-code unlock for testers. Reuses
+    // handleProCodeSubmit() (defined later in the script) when the form
+    // submits.
+
+    Modes.TapIn = {
+      enter() {
+        const el = document.getElementById('modeTapIn');
+        if (el) el.style.display = 'flex';
+        // Reset status text on every entry
+        const status = document.getElementById('tapInStatus');
+        if (status) status.textContent = '';
+      },
+      exit() {
+        const el = document.getElementById('modeTapIn');
+        if (el) el.style.display = 'none';
+      },
+      meta() {
+        return {
+          title: 'Tappymaps — Tap in',
+          description: 'Tap in to Tappymaps. Enter your access code to unlock the Pro editor.',
+          canonical: 'https://tappymaps.com/tap-in',
+        };
+      },
+    };
+    Router.register('tap-in', Modes.TapIn);
+
+    // Form handler — submits the code via existing handleProCodeSubmit if
+    // available, else falls back to a local validate-and-redirect.
+    document.addEventListener('submit', function(e) {
+      if (e.target && e.target.id === 'tapInForm') {
+        e.preventDefault();
+        const input = document.getElementById('tapInCodeInput');
+        const status = document.getElementById('tapInStatus');
+        const code = (input && input.value || '').trim();
+        if (!code) {
+          if (status) status.textContent = 'Enter a code first.';
+          return;
+        }
+        // Delegate to the existing tester-mode submitter if it exists.
+        if (typeof handleProCodeSubmit === 'function') {
+          // handleProCodeSubmit normally reads from its own input element.
+          // Stash the value on the canonical input before calling.
+          const canonical = document.getElementById('proCodeInput');
+          if (canonical) canonical.value = code;
+          try {
+            handleProCodeSubmit();
+            if (status) status.textContent = 'Unlocked. Redirecting…';
+            setTimeout(function() { Router.navigate('/design/make'); }, 400);
+          } catch (err) {
+            if (status) status.textContent = 'Invalid code.';
+          }
+        } else {
+          if (status) status.textContent = 'Code system not loaded yet — try the editor instead.';
+        }
+      }
+    });
 
     // ============================================================================
     // INITIALIZATION

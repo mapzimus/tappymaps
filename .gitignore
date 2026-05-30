@@ -17,6 +17,7 @@ patch_*.py
 
 # Local Claude settings & MCP scratch
 .claude/settings.local.json
+.claude/launch.json
 .playwright-mcp/
 .superpowers/
 

@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What It Is
 
-Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in **one file (`index.html`, ~7,500 lines; grew to ~9,900 during the rebrand era, shrank back after Phase 0 deletion-heavy commits)**. No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
+Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in **one file (`index.html`, ~9,400 lines; grew to ~9,900 during the rebrand era, trimmed by Phase 0, then Phase 1 added a client-side mode router + Hub + Create rail)**. No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
 
-**Status as of 2026-05-25:** Phase 0 of the Reimagining shipped (audit fixes, brand polish, autofill defeat). Tester mode is live with access code `tap26` (auth UI hidden). Phase 1 design spec approved + committed, ready for the implementation plan to be written via `superpowers:writing-plans`. See `HANDOVER.md` for the canonical "where we are, what's next" summary.
+**Status as of 2026-05-29:** Phase 1 of the Reimagining SHIPPED (cutover commit `619e309`) — a client-side **mode router**, a **Hub** landing page at `/`, and the **Create-mode 5-panel rail** rebuild. The editor now lives at `/design/make`; `/` is the Hub. Phase 0 (audit fixes, brand polish, autofill defeat) shipped 2026-05-24. Tester mode is live with access code `tap26` (auth UI hidden). See the **"Mode Router (Phase 1)"** section below and `HANDOVER.md` for the canonical "where we are, what's next" summary.
 
 Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella over three products:
 - **Tappymaps** (tappymaps.com): consumer map-making, casual + playful
@@ -26,7 +26,7 @@ Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella over thre
 ## Repository Layout
 
 ```
-index.html               # The entire app (~9,900 lines, two <script> blocks)
+index.html               # The entire app (~9,400 lines, two <script> blocks + mode router)
 api/stripe/              # Vercel serverless functions
   ├── webhook.js         # Stripe webhook (signature-verified)
   ├── create-checkout.js # Creates checkout session (JWT-auth'd)
@@ -39,7 +39,7 @@ assets/logo-horizontal.svg
 package.json, vercel.json, CNAME
 ```
 
-There is no build step. `index.html` is loaded directly by the browser.
+There is no build step. `index.html` is loaded directly by the browser. As of Phase 1, `vercel.json` rewrites every non-asset path (e.g. `/design/make`, `/tap-in`) back to `/index.html` so the client-side mode router can handle deep links.
 
 ## Two Script Blocks (gotcha)
 
@@ -53,6 +53,27 @@ python _validate.py
 ```
 
 Expected output: `Block 0 (NNN chars): PASS` + `Block 1 (NNN chars): PASS`. Non-zero exit if either fails. The script is 40 lines and matches the cartographer agent's documented pattern — see that file for the inline source if you ever lose `_validate.py`.
+
+## Mode Router (Phase 1 — SHIPPED 2026-05-29, commit `619e309`)
+
+Phase 1 added a **client-side mode router** on top of the single-page editor. The editor is no longer the root page — it now lives at `/design/make`, and `/` is a **Hub** landing page.
+
+- `Router` IIFE (grep `const Router = (function()`) dispatches History-API paths to mode handlers that expose `enter / exit / meta`. Routes: `/` → `Modes.Hub`, `/design/make` → `Modes.Create` (the editor), `/tap-in` → access-code unlock, `/gallery` `/arcade` `/geodraft` `/embed/*` → `Modes.ComingSoon` stub.
+- `vercel.json` rewrites every non-asset path to `/index.html` so deep links resolve in production. `init().then(Router.dispatch)` activates the router on load. **Local `python -m http.server` has NO rewrite** — a hard load of `/design/make` 404s; load `/` then call `Router.navigate('/design/make')` in the console.
+- Legacy `/#<base64>` share URLs auto-rewrite to `/design/make#<base64>`, so old shared links still open the editor with state restored.
+
+### The cutover was runtime re-parenting, NOT deletion (read before editing the editor)
+
+The legacy single-page layout is **still in the file** — it is HIDDEN, not removed. Do not grep for "deleted" sidebar markup; it's present but dormant.
+
+- `body[data-mode] .container { display:none !important }` hides the entire legacy layout whenever a route is active; the same rule hides `.mobile-icon-bar / .mobile-panel / .mobile-panel-backdrop / .mobile-account-menu`.
+- On first entry to Create, `setupCreateCutover()` (guarded by a `_createCutoverDone` flag, runs once inside `Modes.Create.enter()`) **`appendChild`-moves** the live `#mapContainer` plus the control sections `secColorPalette / secTemplatesBtn / secDisplay / secProFeatures / secActions / secExport` into the new rail panels. Moving a live node preserves its attached listeners, so the editor works with **zero re-wiring** — edit the original control nodes, they're just re-homed at runtime.
+- The 5 rail panels are `createPanelMap / createPanelColor / createPanelLegend / createPanelData / createPanelUpgrade`; `switchPanel(name)` toggles them.
+- **`#mapTitle` (on-map title) STILL EXISTS and is mandatory** — `captureMapImage()` and every title write target it unchanged. A new top-bar `#createMapTitleInput` two-way-syncs with it. Do NOT remove `#mapTitle`; export fidelity depends on it.
+- **`#sourceInput`** (desktop Source field, autofill-defeat intact — see "Source field autofill defeat" below) is the node that lands in the Create Map panel after re-parenting; `#mobileSourceInput` stays dormant in the hidden mobile markup.
+- Net cutover diff was **+155 / −8** (the 8 "deletions" are lines that gained `id=` attributes). Rollback = a single `git revert 619e309`.
+
+Validate editor edits with `_validate.py` — the cutover never touched the Mobile-UX IIFE (Block 1), so its char count must stay constant (33,371 chars) as proof you didn't disturb it.
 
 ## Git Workflow
 
@@ -110,6 +131,8 @@ No Census API key is sent — ACS data is public and the key is only for higher 
 Each template: `{ id, title, category, presetColors, legendEntries, darkMode }`. `loadTemplate()` calls `saveHistory()` then `updateLegendBuilder()` so the editor's closures rebind to the new entries (otherwise edits silently no-op against stale indices).
 
 ## Mobile UX
+
+**Phase 1 note:** The legacy mobile chrome described in this section (bottom sheet, floating color bar, mobile IIFE handlers) is now **dormant** — it's hidden by `body[data-mode] .mobile-* { display:none !important }` whenever a route is active, and the Create editor uses the same 5-panel rail at all viewport sizes. The markup and the IIFE still exist (hidden, not deleted), so the descriptions below remain accurate for the dormant code; they no longer describe the live mobile editor.
 
 Mobile breakpoint: `@media (max-width: 900px)`. The mobile IIFE wires panel buttons via a `wire(id, event, fn)` helper that silently no-ops if the element isn't found.
 
@@ -216,18 +239,21 @@ Save location for agent exports: `C:\Users\mhowe\Downloads\tappymaps-agent-expor
 - Source field email autofill (`c5f8461`, `9afa442`, `decaf8c`, `187cad1` — three-layer HTML+CSS+JS defeat)
 - Tester mode hides auth UI + `tap26` access code (`a1acb4a`, `aa0fa64`)
 
-**Still open (lower priority — Phase 1+ work):**
-- **Mobile architectural rot** still present in places — `mobileMorePalettes` was fixed, others may lurk. The Phase 1 Create-mode rebuild eliminates the dual-rendering-path entirely (single 5-panel rail at all sizes), which closes this whole category of bug.
+**Resolved in Phase 1 (2026-05-29):**
+- **Mobile architectural rot** — closed in the live UI: the Create editor uses one 5-panel rail at all sizes, and the legacy mobile chrome is hidden by `body[data-mode] .mobile-* { display:none !important }`. The dead handlers are **dormant, not deleted** — they still exist in the hidden mobile markup + IIFE (the cutover re-parented, it didn't remove), so a future cleanup pass could delete them.
+- **Per-route SEO** — per-route `<meta>` + document-title helpers shipped with the router (commit `142f26d`); each mode sets its own title + description on `enter`.
+
+**Still open (lower priority — Phase 2+ work):**
+- **Form-label a11y** — STILL OPEN. The cutover re-parented existing inputs rather than rebuilding form markup, so label associations weren't revisited; a future pass should add explicit `<label for>` / `aria-label` coverage across the rail panels.
 - **`ADMIN_EMAILS` hardcoded in client** — could move server-side eventually (mostly moot under TESTER_MODE).
 - **Florida overlap on bottom-right export** — mitigated (translucent legend + smaller export sizing) but not eliminated. Could default exports to bottom-left if it remains an issue.
 - **PWA / Capacitor** — planned mobile distribution path; service worker + manifest, then Capacitor wrapper for App Store / Play.
-- **Per-route SEO** — basic head tags shipped but they're site-wide. Real per-route SEO requires the Phase 1 mode router.
 
-## Phase 1 — design approved, plan TBD
+## Phase 1 — SHIPPED 2026-05-29
 
-Phase 1 of the Reimagining spec — mode router + Hub Layout B + Create mode 5-panel rail rebuild — was **brainstormed + approved on 2026-05-25**. Design spec committed at `docs/superpowers/specs/2026-05-25-tappymaps-phase-1-implementation-design.md` (commit `8dd2f5c`).
+Phase 1 of the Reimagining — mode router + Hub + Create-mode 5-panel rail rebuild — **shipped 2026-05-29** (cutover commit `619e309`). Design spec `8dd2f5c`, implementation plan `b70aa88` (`docs/superpowers/plans/2026-05-25-tappymaps-phase-1.md`), executed as 15 commits `26485ea`→`619e309` via `superpowers:subagent-driven-development`. The full architecture lives in the **"Mode Router (Phase 1)"** section above; the re-parenting-not-deletion nuance is the key thing to internalize before touching the editor.
 
-**Next step:** invoke `superpowers:writing-plans` with that spec to produce a task-by-task implementation plan at `docs/superpowers/plans/2026-05-XX-tappymaps-phase-1.md`. Then dispatch via `superpowers:subagent-driven-development` (the pattern that worked for Phase 0).
+**Next:** Phase 2+ (Arcade / GeoDraft / Gallery / Distribution) — each phase gets its own design spec → plan → subagent execution. See `HANDOVER.md` for the canonical status.
 
 ## Naming History
 

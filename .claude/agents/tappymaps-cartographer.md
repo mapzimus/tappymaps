@@ -107,11 +107,26 @@ If PowerShell ever does time out, fall back to the CMD pattern: `set PATH=%PATH%
 
 Rules: imperative mood, headline under 72 chars, blank line, body. NEVER force-push. NEVER rewrite history on master.
 
-## Phase 1 prep (status: design approved, plan TBD)
+## Mode Router (Phase 1 — SHIPPED 2026-05-29, commit `619e309`)
 
-Spec: `docs/superpowers/specs/2026-05-25-tappymaps-phase-1-implementation-design.md`.
+Spec: `docs/superpowers/specs/2026-05-25-tappymaps-phase-1-implementation-design.md`. Plan: `docs/superpowers/plans/2026-05-25-tappymaps-phase-1.md`.
 
-Phase 1 introduces a **mode router** that dispatches `/`, `/design/make`, `/games/...`, etc. to mode-specific `enter/exit/meta` handlers. This agent's Engineering mode WILL change once Phase 1 ships — the editor moves into `Modes.Create` (an IIFE that registers with `Router`), replacing the current desktop-sidebar + mobile-bottom-nav split with a unified 5-panel left rail (Map / Color / Legend / Data / Upgrade). Wait for Phase 1 implementation to land before authoring engineering tasks that assume the new structure.
+Phase 1 introduced a **client-side mode router** (`Router` IIFE near the top of the main script block — grep `const Router = (function()`). It dispatches History-API paths to mode handlers exposing `enter/exit/meta`:
+
+- `/` → `Modes.Hub` (landing page)
+- `/design/make` → `Modes.Create` (**the editor — this is where your Engineering work now lives**)
+- `/tap-in` → access-code unlock
+- `/gallery`, `/arcade`, `/geodraft`, `/embed/*` → `Modes.ComingSoon` stub
+- Routing works in production because `vercel.json` rewrites every non-asset path to `/index.html`. Local `python -m http.server` has NO rewrite, so a hard load of `/design/make` 404s — load `/` then call `Router.navigate('/design/make')` in the console.
+
+**The cutover was runtime re-parenting, NOT deletion.** The legacy single-page layout (`.container` sidebar + mobile bottom-sheet chrome) is STILL in the file — it is hidden by CSS whenever a route is active (`body[data-mode] .container { display:none !important }`, plus the same rule for `.mobile-icon-bar / .mobile-panel / .mobile-panel-backdrop / .mobile-account-menu`). On first entry to Create, `setupCreateCutover()` (guarded by a `_createCutoverDone` flag) **moves** the live control nodes — `#mapContainer` and the `secColorPalette / secTemplatesBtn / secDisplay / secProFeatures / secActions / secExport` sections — into the new panels via `appendChild`. Moving a live node preserves its already-attached listeners, so the editor works with zero re-wiring. Consequences for your Engineering work:
+
+- **Don't grep for "deleted" sidebar markup — it's present but dormant.** Edit the original control nodes; they're just re-homed at runtime.
+- **`#mapTitle` (on-map title) STILL EXISTS and is mandatory.** `captureMapImage()` and every title write target it unchanged. A new top-bar input `#createMapTitleInput` two-way-syncs with it. Do NOT remove `#mapTitle` — export fidelity depends on it.
+- **`#sourceInput`** (the desktop Source field, autofill-defeat intact per Tribal Knowledge #13) is the node that lands in the Create Map panel after re-parenting; `#mobileSourceInput` stays dormant in the hidden mobile markup. The autofill defeat still covers the visible field because the node carried its listeners along.
+- The 5 rail panels are `createPanelMap / createPanelColor / createPanelLegend / createPanelData / createPanelUpgrade`; `switchPanel(name)` toggles them. `setupCreateCutover` runs once inside `Modes.Create.enter()`.
+
+When authoring Engineering tasks now, the structure above is LIVE. Validate with `_validate.py` — the cutover never touched the Mobile-UX IIFE (Block 1), so its char count must stay constant as proof you didn't disturb it.
 
 ---
 

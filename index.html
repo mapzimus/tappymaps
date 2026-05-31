@@ -2558,12 +2558,26 @@
         flex: 0 0 44px;
       }
       .create-wordmark {
+        display: inline-flex;
+        align-items: center;
         font-weight: 800;
         font-size: 15px;
-        color: var(--text);
         text-decoration: none;
         letter-spacing: -0.01em;
       }
+      /* Two-tone brand wordmark — matches #logoWatermark: pin + cyan "tappy" +
+         orange "maps". .wm-pin sizes in em so this one rule fits both the 48px Hub
+         wordmark and the 15px Create top-bar wordmark. vertical-align is used in the
+         block Hub context; flex align-items:center centers it in the Create bar. */
+      .wm-pin {
+        height: 0.92em;
+        width: auto;
+        vertical-align: -0.14em;
+        margin-right: 0.16em;
+        flex: 0 0 auto;
+      }
+      .wm-tappy { color: #0EA5E9; }
+      .wm-maps { color: #F97316; }
       .create-map-title {
         flex: 1;
         max-width: 360px;
@@ -2645,10 +2659,23 @@
         min-width: 0;
         position: relative;
         display: flex;
-        align-items: center;
+        align-items: stretch;
         justify-content: center;
         background: var(--bg);
         overflow: hidden;
+      }
+      /* Canvas fit: the SVG otherwise sizes to stage WIDTH (~936px tall on a wide
+         stage) and overflows the centered overflow:hidden stage, clipping the title
+         (top) and logo watermark (bottom). Stretch the container to stage height and
+         let the SVG flex into the leftover height so preserveAspectRatio letterboxes
+         it horizontally instead of overflowing vertically. */
+      #createMap > #mapContainer {
+        min-height: 0;
+        max-height: 100%;
+      }
+      #createMap > #mapContainer > #mapSVG {
+        flex: 1 1 0;
+        min-height: 0;
       }
       #createPanel {
         flex: 0 0 320px;
@@ -2815,7 +2842,7 @@
   <!-- Hub at / — two-card layout per spec §4 -->
   <div class="mode" id="modeHub" style="display:none">
     <header class="hub-header">
-      <h1 class="hub-wordmark">tappymaps</h1>
+      <h1 class="hub-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></h1>
       <p class="hub-slogan">Tap. Color. Share.</p>
       <p class="hub-descriptor">The Design + Games suite for the US map.</p>
     </header>
@@ -2868,7 +2895,7 @@
   <!-- Create mode — 5-panel rail rebuild (Phase 1) -->
   <div class="mode" id="modeCreate" style="display:none">
     <header id="createTopBar">
-      <a href="/" data-route class="create-wordmark">tappymaps</a>
+      <a href="/" data-route class="create-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
       <input
         type="text"
         id="createMapTitleInput"
@@ -7138,7 +7165,9 @@
     async function fetchCensusData(dataset) {
       async function fetchYear(year) {
         var vars = dataset.variables.join(',');
-        var url = 'https://api.census.gov/data/' + year + '/acs/acs1?get=NAME,' + vars + '&for=state:*';
+        // Routed through our same-origin proxy (/api/census) because api.census.gov
+        // sends no CORS header and the browser blocks a direct cross-origin fetch.
+        var url = '/api/census?year=' + encodeURIComponent(year) + '&vars=' + encodeURIComponent(vars);
         var resp = await fetch(url);
         if (!resp.ok) throw new Error('Census API returned ' + resp.status + ' for year ' + year);
         var rows = await resp.json();

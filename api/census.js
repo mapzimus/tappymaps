@@ -47,10 +47,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid vars' });
   }
 
-  const url = 'https://api.census.gov/data/' + year + '/acs/acs1?get=NAME,' + vars + '&for=state:*';
+  // Census now requires an API key on every request (the keyless grace period
+  // ended). The key lives in the deployment environment — never in the client —
+  // and is injected here server-side, which is exactly what this proxy is for.
+  const key = process.env.CENSUS_API_KEY;
+  let url = 'https://api.census.gov/data/' + year + '/acs/acs1?get=NAME,' + vars + '&for=state:*';
+  if (key) url += '&key=' + encodeURIComponent(key);
 
   try {
     const upstream = await fetch(url);
+    // Keyless or invalid-key requests get 302-redirected to missing_key.html;
+    // fetch follows it, so detect the final URL and report a clear, actionable error.
+    if (/missing_key/.test(upstream.url)) {
+      return res.status(502).json({ error: 'Census API key required. Set CENSUS_API_KEY in the deployment environment.' });
+    }
     if (!upstream.ok) {
       return res.status(502).json({ error: 'Census API returned ' + upstream.status });
     }

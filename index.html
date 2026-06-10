@@ -2536,6 +2536,454 @@
         body[data-mode="design/make"] .rotate-overlay:not(.dismissed) { display: flex; }
       }
 
+      /* ===================================================================
+         Arcade (Phase 2) — game shell + Find the State. Games surface uses
+         the orange accent (#F97316) per brand spec §8. Self-contained: no
+         dependency on the editor's layout tokens.
+         =================================================================== */
+      #modeArcade {
+        --arcade: #F97316;
+        background: var(--bg, #0F172A);
+        color: var(--text, #f0f9ff);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+
+      /* --- Arcade hub (tile grid) --- */
+      #arcadeHub {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 32px 24px 24px;
+        box-sizing: border-box;
+      }
+      .arcade-hub-header { text-align: center; margin-bottom: 28px; }
+      .arcade-wordmark {
+        display: inline-flex; align-items: center; gap: 2px;
+        text-decoration: none; font-weight: 800; font-size: 20px;
+        margin-bottom: 14px;
+      }
+      .arcade-wordmark .wm-pin { width: 26px; height: 28px; margin-right: 4px; }
+      .arcade-wordmark .wm-tappy { color: var(--text, #f0f9ff); }
+      .arcade-wordmark .wm-maps { color: var(--accent, #0EA5E9); }
+      .arcade-hub-title {
+        font-size: 34px; font-weight: 800; margin: 4px 0 6px;
+        color: var(--arcade);
+      }
+      .arcade-hub-sub { font-size: 15px; opacity: 0.72; margin: 0; }
+      .arcade-tile-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 16px;
+        width: 100%;
+        max-width: 760px;
+        margin: 8px 0 24px;
+      }
+      .arcade-tile {
+        display: flex; flex-direction: column;
+        text-align: left;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 14px;
+        padding: 18px;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        transition: transform .12s ease, border-color .12s ease;
+      }
+      .arcade-tile:hover {
+        transform: translateY(-2px);
+        border-color: var(--arcade);
+      }
+      .arcade-tile--soon { cursor: default; opacity: 0.55; }
+      .arcade-tile--soon:hover { transform: none; border-color: var(--border, #334155); }
+      .arcade-tile-name { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+      .arcade-tile-tag { font-size: 13px; opacity: 0.7; margin: 0 0 14px; line-height: 1.35; }
+      .arcade-tile-meta {
+        margin-top: auto; display: flex; align-items: center; gap: 8px;
+        font-size: 13px;
+      }
+      .arcade-tile-medal { font-size: 16px; }
+      .arcade-tile-best { font-weight: 700; color: var(--arcade); }
+      /* Mode buttons (Classic / Shuffle) on tiles for games with variants */
+      .arcade-tile-modes { display: flex; gap: 8px; margin-top: 12px; }
+      .arcade-tile-mode-btn {
+        flex: 1; text-align: center; text-decoration: none;
+        padding: 9px 10px; border-radius: 9px;
+        border: 1px solid var(--arcade);
+        color: var(--text, #f0f9ff); font-size: 13px; font-weight: 700;
+        background: transparent;
+      }
+      .arcade-tile-mode-btn:first-child { background: var(--arcade); color: #fff; }
+      .arcade-tile-mode-btn:hover { filter: brightness(1.08); }
+      .arcade-tile-mode-desc { font-size: 11px; opacity: 0.55; margin: 6px 0 0; }
+      .arcade-tile-soon-chip {
+        margin-top: auto;
+        font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--text-muted, #94a3b8);
+      }
+      .arcade-hub-footer a {
+        color: var(--text-muted, #94a3b8); text-decoration: none; font-size: 14px;
+      }
+      .arcade-hub-footer a:hover { text-decoration: underline; }
+
+      /* --- Arcade game shell --- */
+      #arcadeGame { flex: 1; display: flex; flex-direction: column; position: relative; }
+      .arcade-game-bar {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 14px;
+        background: var(--surface, #1e293b);
+        border-bottom: 1px solid var(--border, #334155);
+      }
+      .arcade-back-btn {
+        flex: none;
+        width: 38px; height: 38px; border-radius: 9px;
+        background: transparent; border: 1px solid var(--border, #334155);
+        color: var(--text, #f0f9ff); font-size: 18px; cursor: pointer;
+      }
+      .arcade-back-btn:hover { border-color: var(--arcade); }
+      .arcade-prompt {
+        flex: 1; min-width: 0;
+        font-size: clamp(16px, 2.4vw, 24px); font-weight: 800;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      /* Big center-screen prompt pop. pointer-events:none so fast players can
+         tap the map straight through it while it's still fading. */
+      .arcade-prompt-pop {
+        position: absolute; left: 50%; top: 36%;
+        transform: translate(-50%, -50%) scale(0.8);
+        font-size: clamp(30px, 6vw, 58px); font-weight: 800;
+        color: var(--text, #f0f9ff); text-align: center;
+        background: color-mix(in srgb, var(--surface, #1e293b) 84%, transparent);
+        border: 2px solid var(--arcade);
+        border-radius: 18px; padding: 10px 28px;
+        max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        opacity: 0; pointer-events: none; z-index: 4;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+      }
+      .arcade-prompt-pop.is-pop { animation: arcadePromptPop 1.3s ease forwards; }
+      @keyframes arcadePromptPop {
+        0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+        10%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+        18%  { transform: translate(-50%, -50%) scale(1); }
+        70%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -62%) scale(0.9); }
+      }
+      .arcade-stats { flex: none; display: flex; gap: 14px; }
+      .arcade-stat { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
+      .arcade-stat-label {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
+        opacity: 0.6;
+      }
+      .arcade-stat-val { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+      .arcade-stat--prog .arcade-stat-val { color: var(--arcade); }
+
+      .arcade-timer-track { height: 5px; background: var(--surface, #1e293b); width: 100%; }
+      .arcade-timer-fill {
+        height: 100%; width: 100%;
+        background: var(--arcade);
+        transition: width .1s linear, background .2s ease;
+      }
+      .arcade-timer-fill.is-low { background: var(--error, #ef4444); }
+
+      .arcade-map-wrap {
+        flex: 1; position: relative;
+        display: flex; align-items: center; justify-content: center;
+        padding: 8px; min-height: 0;
+        background: var(--bg, #0F172A);
+      }
+      #arcadeMapSvg { width: 100%; height: 100%; max-height: 100%; }
+      .arcade-state {
+        fill: var(--surface-raised, #243044);
+        stroke: var(--bg, #0F172A);
+        stroke-width: 1.1;
+        cursor: pointer;
+        transition: fill .1s ease;
+      }
+      .arcade-state:hover { fill: #38516e; }
+      .arcade-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
+      .arcade-state--correct { fill: var(--success, #22c55e) !important; }
+      .arcade-state--wrong { fill: var(--error, #ef4444) !important; }
+      .arcade-state--reveal {
+        fill: var(--success, #22c55e) !important;
+        animation: arcadePulse .9s ease;
+      }
+      @keyframes arcadePulse { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+      #arcadeStatesGroup.is-locked { pointer-events: none; }
+      /* Painted states keep an inline fill set by arcadeResolve; the transient
+         --correct/--wrong/--reveal classes above still win via !important. */
+      .arcade-state--painted { stroke: var(--bg, #0F172A); }
+      /* Stat Duel: only the two candidate states are live; the rest dim out */
+      #arcadeStatesGroup.is-duel .arcade-state:not(.arcade-state--duel) {
+        opacity: 0.22; pointer-events: none;
+      }
+      .arcade-state--duel {
+        fill: #38516e;
+        stroke: var(--arcade); stroke-width: 2;
+        animation: arcadePulse .5s ease;
+      }
+
+      /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it */
+      .arcade-zoom-controls {
+        position: absolute; right: 10px; bottom: 12px;
+        display: flex; flex-direction: column; gap: 7px; z-index: 3;
+      }
+      .arcade-zoom-btn {
+        width: 42px; height: 42px; border-radius: 10px;
+        background: color-mix(in srgb, var(--surface, #1e293b) 88%, transparent);
+        border: 1px solid var(--border, #334155);
+        color: var(--text, #f0f9ff); font-size: 20px; font-weight: 700;
+        cursor: pointer; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .arcade-zoom-btn:hover { border-color: var(--arcade); }
+      .arcade-zoom-btn--reset { font-size: 15px; display: none; }
+      .arcade-map-wrap.is-zoomed .arcade-zoom-btn--reset { display: flex; }
+
+      .arcade-rotate-hint { display: none; }
+
+      .arcade-toast {
+        position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(8px);
+        padding: 9px 18px; border-radius: 999px;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        font-size: 15px; font-weight: 700;
+        opacity: 0; pointer-events: none;
+        transition: opacity .18s ease, transform .18s ease;
+        white-space: nowrap;
+      }
+      .arcade-toast.is-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      .arcade-toast.is-correct { border-color: var(--success, #22c55e); color: var(--success, #4ade80); }
+      .arcade-toast.is-wrong { border-color: var(--error, #ef4444); color: var(--error, #f87171); }
+
+      /* --- Completion overlay --- */
+      .arcade-complete {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--bg, #0F172A) 82%, transparent);
+        backdrop-filter: blur(6px);
+        padding: 24px; z-index: 5;
+      }
+      .arcade-complete-card {
+        width: 100%; max-width: 360px; text-align: center;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 18px;
+        padding: 26px 22px;
+      }
+      .arcade-medal { font-size: 52px; line-height: 1; margin-bottom: 6px; }
+      .arcade-complete-title { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
+      .arcade-complete-score {
+        font-size: 48px; font-weight: 800; color: var(--arcade);
+        font-variant-numeric: tabular-nums; line-height: 1;
+      }
+      .arcade-complete-detail { font-size: 14px; opacity: 0.8; margin: 10px 0 2px; }
+      .arcade-complete-best { font-size: 13px; opacity: 0.65; margin: 0 0 18px; min-height: 16px; }
+      .arcade-complete-actions { display: flex; flex-direction: column; gap: 9px; }
+      .arcade-btn {
+        padding: 11px 16px; border-radius: 10px;
+        border: 1px solid var(--border, #334155);
+        background: transparent; color: var(--text, #f0f9ff);
+        font-size: 15px; font-weight: 700; cursor: pointer;
+      }
+      .arcade-btn:hover { border-color: var(--arcade); }
+      .arcade-btn--primary { background: var(--arcade); border-color: var(--arcade); color: #fff; }
+      .arcade-btn--primary:hover { filter: brightness(1.06); }
+      .arcade-share-status { font-size: 13px; opacity: 0.75; margin: 12px 0 0; min-height: 16px; }
+
+      @media (max-width: 720px) and (orientation: portrait) {
+        .arcade-rotate-hint {
+          display: block; position: absolute; top: 8px; left: 50%;
+          transform: translateX(-50%);
+          background: var(--surface, #1e293b); border: 1px solid var(--arcade);
+          color: var(--text, #f0f9ff);
+          padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+          z-index: 3; white-space: nowrap;
+        }
+        .arcade-stat-val { font-size: 17px; }
+        .arcade-prompt { font-size: 15px; }
+      }
+
+      /* ===================================================================
+         GeoDraft (Phase 2b) — Category Draft vs the AI + Practice. Games
+         surface: orange accent per brand spec §8. Own svg, like Arcade.
+         =================================================================== */
+      #modeDraft {
+        --arcade: #F97316;
+        background: var(--bg, #0F172A);
+        color: var(--text, #f0f9ff);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+      #draftHub {
+        flex: 1; flex-direction: column; align-items: center;
+        padding: 36px 20px 24px; overflow-y: auto;
+      }
+      .draft-hub-title { font-size: 30px; font-weight: 800; margin: 14px 0 2px; }
+      .draft-hub-sub { font-size: 14px; opacity: 0.7; margin: 0 0 22px; }
+      .draft-hub-cards {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 14px; width: 100%; max-width: 860px;
+      }
+      .draft-card {
+        display: block; text-decoration: none; color: inherit;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 14px; padding: 18px;
+        transition: transform .12s ease, border-color .12s ease;
+      }
+      a.draft-card:hover { transform: translateY(-2px); border-color: var(--arcade); }
+      .draft-card-name { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+      .draft-card-tag { font-size: 13px; opacity: 0.7; margin: 0 0 12px; line-height: 1.35; }
+      .draft-card-cta { font-weight: 700; color: var(--arcade); font-size: 13px; }
+      .draft-card--soon { opacity: 0.55; }
+      .draft-card-soon-chip {
+        display: inline-block; font-size: 11px; font-weight: 700;
+        border: 1px solid var(--border, #334155); border-radius: 999px; padding: 3px 10px;
+      }
+      .draft-hub-footer { margin-top: 26px; font-size: 13px; }
+      .draft-hub-footer a { color: var(--arcade); text-decoration: none; }
+
+      #draftMatch { flex: 1; flex-direction: column; min-height: 0; position: relative; }
+      .draft-bar {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 14px;
+        background: var(--surface, #1e293b);
+        border-bottom: 1px solid var(--border, #334155);
+      }
+      .draft-round { font-size: 14px; font-weight: 800; flex: 1; min-width: 0; }
+      .draft-pips { font-size: 13px; font-weight: 700; display: flex; gap: 12px; white-space: nowrap; }
+      .draft-pips .you { color: #F97316; }
+      .draft-pips .ai { color: #8b5cf6; }
+      .draft-category {
+        display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--border, #334155);
+      }
+      .draft-cat-title { font-size: 17px; font-weight: 800; color: var(--arcade); }
+      .draft-cat-desc { font-size: 12.5px; opacity: 0.7; flex: 1; min-width: 140px; }
+      .draft-cat-rule {
+        font-size: 11.5px; font-weight: 700; white-space: nowrap;
+        border: 1px solid var(--arcade); border-radius: 999px; padding: 2px 10px;
+      }
+      .draft-main { flex: 1; display: flex; min-height: 0; }
+      .draft-map-wrap {
+        flex: 1; position: relative;
+        display: flex; align-items: center; justify-content: center;
+        padding: 8px; min-height: 0;
+        background: var(--bg, #0F172A);
+      }
+      #draftMapSvg { width: 100%; height: 100%; max-height: 100%; }
+      .draft-state {
+        fill: var(--surface-raised, #243044);
+        stroke: var(--bg, #0F172A);
+        stroke-width: 1.1;
+        cursor: pointer;
+        transition: fill .1s ease;
+      }
+      .draft-state:hover { fill: #38516e; }
+      .draft-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
+      .draft-state--taken { pointer-events: none; }
+      #draftStatesGroup.is-locked { pointer-events: none; }
+      .draft-turn {
+        position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+        padding: 5px 14px; border-radius: 999px;
+        background: var(--surface, #1e293b); border: 1px solid var(--arcade);
+        font-size: 13px; font-weight: 700; white-space: nowrap; z-index: 3;
+      }
+      .draft-map-wrap.is-zoomed .arcade-zoom-btn--reset { display: flex; }
+      .draft-rosters {
+        width: 195px; border-left: 1px solid var(--border, #334155);
+        display: flex; flex-direction: column; gap: 12px;
+        padding: 12px; overflow-y: auto;
+      }
+      .draft-roster h4 {
+        margin: 0 0 6px; font-size: 11px; text-transform: uppercase;
+        letter-spacing: 0.6px;
+      }
+      .draft-roster--you h4 { color: #F97316; }
+      .draft-roster--ai h4 { color: #8b5cf6; }
+      .draft-roster ul { list-style: none; margin: 0; padding: 0; }
+      .draft-roster li { font-size: 13px; padding: 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--border, #334155) 45%, transparent); }
+      .draft-reveal, .draft-complete {
+        position: absolute; inset: 0; z-index: 6;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--bg, #0F172A) 84%, transparent);
+        backdrop-filter: blur(6px); padding: 18px;
+      }
+      .draft-reveal-card, .draft-complete-card {
+        width: 100%; max-width: 430px;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 18px; padding: 20px 22px;
+        max-height: 94%; overflow-y: auto;
+      }
+      .draft-reveal-card h3 { margin: 0 0 12px; font-size: 18px; }
+      #draftRevealList { list-style: none; margin: 0; padding: 0; }
+      #draftRevealList li {
+        display: flex; align-items: center; gap: 9px;
+        font-size: 14px; padding: 5px 6px; border-radius: 7px;
+        opacity: 0; transform: translateY(7px);
+        transition: opacity .3s ease, transform .3s ease;
+      }
+      #draftRevealList li.is-in { opacity: 1; transform: none; }
+      #draftRevealList li .rank { width: 18px; opacity: 0.55; font-variant-numeric: tabular-nums; }
+      #draftRevealList li .name { flex: 1; font-weight: 600; }
+      #draftRevealList li .val { font-variant-numeric: tabular-nums; opacity: 0.85; }
+      #draftRevealList li .who {
+        font-size: 10px; font-weight: 800; border-radius: 5px; padding: 1px 7px;
+      }
+      #draftRevealList li.who-you .who { background: rgba(249,115,22,0.2); color: #F97316; }
+      #draftRevealList li.who-ai .who { background: rgba(139,92,246,0.2); color: #a78bfa; }
+      .draft-reveal-totals { margin: 14px 0 12px; font-weight: 800; font-size: 15px; min-height: 38px; opacity: 0; transition: opacity .3s ease; }
+      .draft-reveal-totals.is-in { opacity: 1; }
+      .draft-complete-card { text-align: center; }
+      .draft-complete-title { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
+      .draft-complete-detail { font-size: 14px; opacity: 0.8; margin: 0 0 18px; }
+      .draft-complete-actions { display: flex; flex-direction: column; gap: 9px; }
+
+      #draftPractice {
+        flex: 1; flex-direction: column;
+        width: 100%; max-width: 780px; margin: 0 auto;
+        padding: 18px 18px 30px; overflow-y: auto;
+      }
+      .draft-practice-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+      .draft-practice-bar h2 { font-size: 20px; font-weight: 800; margin: 0; flex: 1; }
+      #draftPracticeSelect {
+        width: 100%; margin: 10px 0 4px; padding: 10px 12px;
+        background: var(--surface, #1e293b); color: var(--text, #f0f9ff);
+        border: 1px solid var(--border, #334155); border-radius: 10px;
+        font-size: 14px; font-weight: 600;
+      }
+      .draft-practice-desc { font-size: 13px; opacity: 0.7; margin: 2px 0 12px; }
+      #draftPracticeList { list-style: none; margin: 0; padding: 0; }
+      #draftPracticeList li {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 13.5px; padding: 5px 6px;
+      }
+      #draftPracticeList li .rank { width: 22px; opacity: 0.55; font-variant-numeric: tabular-nums; }
+      #draftPracticeList li .name { width: 145px; font-weight: 600; }
+      #draftPracticeList li .bar-track { flex: 1; height: 9px; border-radius: 5px; background: var(--surface, #1e293b); overflow: hidden; }
+      #draftPracticeList li .bar { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #F97316, #fb923c); }
+      #draftPracticeList li .val { font-variant-numeric: tabular-nums; opacity: 0.85; min-width: 70px; text-align: right; }
+
+      @media (max-width: 720px) {
+        .draft-main { flex-direction: column; }
+        .draft-rosters {
+          width: auto; flex-direction: row; border-left: none;
+          border-top: 1px solid var(--border, #334155);
+          max-height: 120px;
+        }
+        .draft-roster { flex: 1; }
+        #draftPracticeList li .name { width: 105px; }
+      }
+
       /* Create mode (Phase 1) — landscape-first 5-panel rail layout */
       #modeCreate {
         display: none;            /* router toggles to flex */
@@ -2863,6 +3311,9 @@
           <li>→ All games</li>
         </ul>
       </a>
+      <!-- Note: hub cards navigate to the section; the Games card lands on the
+           Arcade hub where Find the State is one tap away. -->
+
     </main>
     <footer class="hub-footer">
       <a href="/about" data-route>about</a>
@@ -2985,6 +3436,161 @@
       <a href="/" data-route class="coming-soon-back">← Back to Tappymaps</a>
     </div>
   </div>
+
+  <!-- Arcade — Phase 2: shared game shell + Find the State (MVP game).
+       Self-contained: renders its OWN SVG from appState.topologyData, never
+       touches #mapContainer / captureMapImage / the editor. -->
+  <div class="mode" id="modeArcade" style="display:none">
+    <!-- Hub view: tile grid of all Arcade games -->
+    <div id="arcadeHub" style="display:none">
+      <header class="arcade-hub-header">
+        <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
+        <h2 class="arcade-hub-title">Arcade</h2>
+        <p class="arcade-hub-sub">Fast geography games. All free.</p>
+      </header>
+      <div class="arcade-tile-grid" id="arcadeTileGrid"><!-- tiles injected by arcadeRenderHub() --></div>
+      <footer class="arcade-hub-footer"><a href="/games/draft" data-route>GeoDraft →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
+    </div>
+
+    <!-- Game view: shared shell (engine-owned chrome around the map) -->
+    <div id="arcadeGame" style="display:none">
+      <header class="arcade-game-bar">
+        <button type="button" class="arcade-back-btn" id="arcadeBackBtn" aria-label="Back to Arcade">←</button>
+        <div class="arcade-prompt" id="arcadePrompt">Find the state</div>
+        <div class="arcade-stats">
+          <div class="arcade-stat"><span class="arcade-stat-label">Score</span><span class="arcade-stat-val" id="arcadeScore">0</span></div>
+          <div class="arcade-stat"><span class="arcade-stat-label">Streak</span><span class="arcade-stat-val" id="arcadeStreak">0</span></div>
+          <div class="arcade-stat"><span class="arcade-stat-label">Round</span><span class="arcade-stat-val" id="arcadeProgress">0/10</span></div>
+        </div>
+      </header>
+      <div class="arcade-timer-track"><div class="arcade-timer-fill" id="arcadeTimerFill"></div></div>
+      <div class="arcade-map-wrap" id="arcadeMapWrap">
+        <svg id="arcadeMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap the named state">
+          <g id="arcadeStatesGroup" transform="translate(5, -20) scale(0.95)"></g>
+        </svg>
+        <div class="arcade-prompt-pop" id="arcadePromptPop" aria-hidden="true"></div>
+        <div class="arcade-zoom-controls">
+          <button type="button" class="arcade-zoom-btn" id="arcadeZoomIn" aria-label="Zoom in">+</button>
+          <button type="button" class="arcade-zoom-btn" id="arcadeZoomOut" aria-label="Zoom out">−</button>
+          <button type="button" class="arcade-zoom-btn arcade-zoom-btn--reset" id="arcadeZoomReset" aria-label="Reset zoom">⤾</button>
+        </div>
+        <div class="arcade-rotate-hint" aria-hidden="true">Best played in landscape — rotate your phone.</div>
+      </div>
+      <div class="arcade-toast" id="arcadeToast" aria-live="polite"></div>
+
+      <!-- Completion overlay -->
+      <div class="arcade-complete" id="arcadeComplete" style="display:none">
+        <div class="arcade-complete-card">
+          <div class="arcade-medal" id="arcadeMedal">🥉</div>
+          <h2 class="arcade-complete-title" id="arcadeCompleteTitle">Run complete</h2>
+          <div class="arcade-complete-score" id="arcadeCompleteScore">0</div>
+          <p class="arcade-complete-detail" id="arcadeCompleteDetail">0 of 10 correct · best streak 0</p>
+          <p class="arcade-complete-best" id="arcadeCompleteBest"></p>
+          <div class="arcade-complete-actions">
+            <button type="button" class="arcade-btn arcade-btn--primary" id="arcadePlayAgain">Play again</button>
+            <button type="button" class="arcade-btn" id="arcadeShareBtn">Share my run</button>
+            <button type="button" class="arcade-btn" id="arcadeToHub">All games</button>
+          </div>
+          <p class="arcade-share-status" id="arcadeShareStatus" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GeoDraft (Phase 2b) — Category Draft vs the AI + Practice. Own svg,
+       same self-contained pattern as Arcade. -->
+  <div class="mode" id="modeDraft" style="display:none">
+    <!-- Draft hub: pick a sub-mode -->
+    <div id="draftHub" style="display:none">
+      <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
+      <h2 class="draft-hub-title">GeoDraft</h2>
+      <p class="draft-hub-sub">Draft states head-to-head. Real numbers decide.</p>
+      <div class="draft-hub-cards">
+        <a class="draft-card" href="/games/draft/category" data-route>
+          <div class="draft-card-name">Category Draft</div>
+          <p class="draft-card-tag">Best of 5 vs the AI. Each round names a category — draft 3 states, highest total wins. Values stay hidden until the reveal.</p>
+          <span class="draft-card-cta">Play vs the AI →</span>
+        </a>
+        <a class="draft-card" href="/games/draft/practice" data-route>
+          <div class="draft-card-name">Practice</div>
+          <p class="draft-card-tag">Browse every category with all 50 values revealed. Learn what wins before you draft.</p>
+          <span class="draft-card-cta">Study up →</span>
+        </a>
+        <div class="draft-card draft-card--soon">
+          <div class="draft-card-name">Territory Draft</div>
+          <p class="draft-card-tag">25 picks each — claim the whole map blind, then random categories score it.</p>
+          <span class="draft-card-soon-chip">Coming soon</span>
+        </div>
+      </div>
+      <footer class="draft-hub-footer"><a href="/games/arcade" data-route>Arcade →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
+    </div>
+
+    <!-- Match view -->
+    <div id="draftMatch" style="display:none">
+      <header class="draft-bar">
+        <button type="button" class="arcade-back-btn" id="draftBackBtn" aria-label="Back to GeoDraft">←</button>
+        <div class="draft-round" id="draftRoundLabel">Round 1 · Best of 5</div>
+        <div class="draft-pips"><span class="you">You <span id="draftPipsYou">○○○</span></span><span class="ai">AI <span id="draftPipsAi">○○○</span></span></div>
+      </header>
+      <div class="draft-category">
+        <span class="draft-cat-title" id="draftCatTitle">Category</span>
+        <span class="draft-cat-desc" id="draftCatDesc"></span>
+        <span class="draft-cat-rule" id="draftCatRule">Highest total wins</span>
+      </div>
+      <div class="arcade-timer-track"><div class="arcade-timer-fill" id="draftTimerFill"></div></div>
+      <div class="draft-main">
+        <div class="draft-map-wrap" id="draftMapWrap">
+          <svg id="draftMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap a state to draft it"><g id="draftStatesGroup" transform="translate(5, -20) scale(0.95)"></g></svg>
+          <div class="draft-turn" id="draftTurnLabel">Your pick</div>
+          <div class="arcade-zoom-controls">
+            <button type="button" class="arcade-zoom-btn" id="draftZoomIn" aria-label="Zoom in">+</button>
+            <button type="button" class="arcade-zoom-btn" id="draftZoomOut" aria-label="Zoom out">−</button>
+            <button type="button" class="arcade-zoom-btn arcade-zoom-btn--reset" id="draftZoomReset" aria-label="Reset zoom">⤾</button>
+          </div>
+        </div>
+        <aside class="draft-rosters">
+          <div class="draft-roster draft-roster--you"><h4>You</h4><ul id="draftRosterYou"></ul></div>
+          <div class="draft-roster draft-roster--ai"><h4>AI</h4><ul id="draftRosterAi"></ul></div>
+        </aside>
+      </div>
+
+      <!-- Round reveal overlay -->
+      <div class="draft-reveal" id="draftReveal" style="display:none">
+        <div class="draft-reveal-card">
+          <h3 id="draftRevealTitle">The reveal</h3>
+          <ol id="draftRevealList"></ol>
+          <div class="draft-reveal-totals" id="draftRevealTotals"></div>
+          <button type="button" class="arcade-btn arcade-btn--primary" id="draftRevealNext" style="width:100%">Next round</button>
+        </div>
+      </div>
+
+      <!-- Match complete overlay -->
+      <div class="draft-complete" id="draftComplete" style="display:none">
+        <div class="draft-complete-card">
+          <h2 class="draft-complete-title" id="draftCompleteTitle">You win the draft!</h2>
+          <p class="draft-complete-detail" id="draftCompleteDetail"></p>
+          <div class="draft-complete-actions">
+            <button type="button" class="arcade-btn arcade-btn--primary" id="draftPlayAgain">Play again</button>
+            <button type="button" class="arcade-btn" id="draftShareBtn">Share this match</button>
+            <button type="button" class="arcade-btn" id="draftToHub">GeoDraft home</button>
+          </div>
+          <p class="arcade-share-status" id="draftShareStatus" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Practice view -->
+    <div id="draftPractice" style="display:none">
+      <div class="draft-practice-bar">
+        <button type="button" class="arcade-back-btn" id="draftPracticeBack" aria-label="Back to GeoDraft">←</button>
+        <h2>Practice — learn the categories</h2>
+      </div>
+      <select id="draftPracticeSelect" aria-label="Pick a category"></select>
+      <p class="draft-practice-desc" id="draftPracticeDesc"></p>
+      <ol id="draftPracticeList"></ol>
+    </div>
+  </div>
+
   <h1 class="sr-only">Tappymaps</h1>
   <div class="container">
     <!-- Sidebar -->
@@ -3721,8 +4327,7 @@
     }
 
     registerComingSoon('design/gallery', 'Gallery', 'Phase 4 — Gallery');
-    registerComingSoon('games/arcade',   'Arcade',  'Phase 2 — Arcade');
-    registerComingSoon('games/draft',    'GeoDraft','Phase 3 — GeoDraft');
+    // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
     registerComingSoon('embed',          'Embed',   'Phase 5 — Distribution');
     registerComingSoon('about',          'About',   'Coming soon — Marketing');
     registerComingSoon('pricing',        'Pricing', 'Coming soon — Marketing');
@@ -4014,6 +4619,1126 @@
       },
     };
     Router.register('design/make', Modes.Create);
+
+    // ======================================================================
+    // ARCADE (Phase 2) — shared game shell + Find the State
+    // ----------------------------------------------------------------------
+    // Self-contained mode. Renders its OWN SVG from the already-loaded
+    // appState.topologyData (init() awaits loadUSMap before Router.dispatch),
+    // so it never touches #mapContainer, captureMapImage, or onStateClick.
+    // Games are manifest-driven so future games drop into ARCADE_GAMES.
+    // ======================================================================
+
+    // --- Game manifest registry (spec §6). `playable:false` → "coming soon" tile.
+    const ARCADE_GAMES = {
+      'find-state': {
+        id: 'find-state',
+        name: 'Find the State',
+        tagline: 'We name a state. Tap it on the map before the clock runs out.',
+        playable: true,
+        runLength: 10,
+        perPrompt: 8,            // seconds per prompt
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+        // Run variants. Classic = 10 distinct states, paint as you go.
+        // Shuffle = sampled with replacement (no back-to-back repeats), so a
+        // state you already found can come up again — no elimination guessing.
+        defaultMode: 'classic',
+        modes: {
+          classic: { label: 'Classic', generator: (rng) => arcadePickStates(10, rng) },
+          shuffle: { label: 'Shuffle', generator: (rng) => arcadePickShuffle(10, rng) },
+        },
+      },
+      'stat-duel': {
+        id: 'stat-duel',
+        name: 'Stat Duel',
+        tagline: 'Two states, one real Census stat. Tap the one that ranks higher.',
+        playable: true,
+        kind: 'duel',            // duel runs load live data before round 1
+        runLength: 10,
+        perPrompt: 10,
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+      },
+      'speed-run': {
+        id: 'speed-run', name: 'Speed Run',
+        tagline: 'Name all 50 states as fast as you can.', playable: false,
+      },
+      'state-capitals': {
+        id: 'state-capitals', name: 'State Capitals',
+        tagline: 'Match each state to its capital city.', playable: false,
+      },
+    };
+
+    // Colorable states (DC excluded) — derived from the FIPS table on first
+    // use. MUST be lazy: this Arcade block evaluates BEFORE `fipsToState` /
+    // `nonColorable` are declared later in the script, so reading them at the
+    // top level here would throw a temporal-dead-zone ReferenceError and kill
+    // the whole main script block. By first call (a game start) they exist.
+    let _arcadeStateNames = null;
+    function arcadeStateNames() {
+      if (!_arcadeStateNames) {
+        _arcadeStateNames = Object.values(fipsToState).filter(n => !nonColorable.has(n));
+      }
+      return _arcadeStateNames;
+    }
+
+    // --- Seeded RNG (mulberry32) so a shared ?seed= reproduces the same run ---
+    function arcadeHashSeed(str) {
+      let h = 1779033703 ^ str.length;
+      for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+      }
+      return (h ^ (h >>> 16)) >>> 0;
+    }
+    function arcadeMakeRng(seedStr) {
+      let a = arcadeHashSeed(String(seedStr));
+      return function() {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    // Fisher-Yates pick of N distinct state names using a seeded rng.
+    function arcadePickStates(n, rng) {
+      const pool = arcadeStateNames().slice();
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+      }
+      return pool.slice(0, n);
+    }
+    // Sample N states WITH replacement (Shuffle mode). No immediate
+    // back-to-back repeat, but a state can absolutely come up again later.
+    function arcadePickShuffle(n, rng) {
+      const pool = arcadeStateNames();
+      const out = [];
+      let prev = null;
+      for (let i = 0; i < n; i++) {
+        let pick = pool[Math.floor(rng() * pool.length)];
+        while (pick === prev) pick = pool[Math.floor(rng() * pool.length)];
+        out.push(pick); prev = pick;
+      }
+      return out;
+    }
+
+    // Bright fills cycled onto correctly-found states — the map fills with
+    // color as you play, like a mini Create session.
+    const ARCADE_PAINT_COLORS = ['#0EA5E9','#F97316','#22c55e','#a855f7','#eab308','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#06b6d4','#84cc16','#fb923c'];
+
+    // --- Stat Duel: reuses the Create editor's Census data layer -----------
+    // Lazy for the same reason as arcadeStateNames(): DATA_MAP_DATASETS is
+    // declared later in this script block — a top-level read here would TDZ-
+    // crash the whole block. By first call (a duel run start) it exists.
+    function arcadeDuelSets() {
+      return DATA_MAP_DATASETS.filter(d => d.duel);
+    }
+    // n state pairs from pool — distinct within a pair, no unordered repeats.
+    function arcadePickPairs(n, rng, pool) {
+      const pairs = [];
+      const seen = new Set();
+      while (pairs.length < n) {
+        const a = pool[Math.floor(rng() * pool.length)];
+        let b = pool[Math.floor(rng() * pool.length)];
+        while (b === a) b = pool[Math.floor(rng() * pool.length)];
+        const key = a < b ? a + '|' + b : b + '|' + a;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        pairs.push({ a: a, b: b });
+      }
+      return pairs;
+    }
+    function arcadeFormatVal(v, format) {
+      if (format === 'currency') return '$' + Math.round(v).toLocaleString();
+      if (format === 'percent') return v.toFixed(1) + '%';
+      if (format === 'decimal') return v.toFixed(3);
+      if (format === 'decimal1') return v.toFixed(2);
+      if (format === 'year') return String(Math.round(v));
+      return Math.round(v).toLocaleString();
+    }
+
+    // --- Live run state ---
+    const AG = {
+      game: null, mode: 'classic', prompts: [], idx: 0, seed: '',
+      score: 0, streak: 0, bestStreak: 0, correct: 0, paintIdx: 0,
+      answered: false, deadline: 0, timerId: null, advanceId: null,
+    };
+    let _arcadeMapBuilt = false;
+
+    // Build the independent Arcade SVG once (paths + tap handlers).
+    function arcadeBuildMap() {
+      if (_arcadeMapBuilt) return true;
+      const group = document.getElementById('arcadeStatesGroup');
+      const topology = (typeof appState !== 'undefined') ? appState.topologyData : null;
+      if (!group || !topology || typeof topojson === 'undefined') return false;
+
+      const features = topojson.feature(topology, topology.objects.states).features;
+      const pathGen = (geo) => {
+        let d = '';
+        const rings = (geo.type === 'Polygon') ? [geo.coordinates]
+          : (geo.type === 'MultiPolygon') ? geo.coordinates : [];
+        rings.forEach(poly => poly.forEach(ring => {
+          d += 'M' + ring.map(p => p.join(',')).join('L') + 'Z';
+        }));
+        return d;
+      };
+
+      features.forEach(feature => {
+        const fips = String(feature.id).padStart(2, '0');
+        const name = fipsToState[fips] || feature.properties?.name || ('Unknown ' + feature.id);
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        el.setAttribute('d', pathGen(feature.geometry));
+        el.setAttribute('data-state', name);
+        if (nonColorable.has(name)) {
+          el.setAttribute('class', 'arcade-state arcade-state--dc');
+        } else {
+          el.setAttribute('class', 'arcade-state');
+          el.addEventListener('click', () => arcadeOnTap(name));
+        }
+        group.appendChild(el);
+      });
+      _arcadeMapBuilt = true;
+      return true;
+    }
+
+    function arcadeStatePath(name) {
+      return document.querySelector('#arcadeStatesGroup .arcade-state[data-state="' + name + '"]');
+    }
+    function arcadeClearMarks() {
+      document.querySelectorAll('#arcadeStatesGroup .arcade-state')
+        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal', 'arcade-state--duel'));
+    }
+    // Strip the persistent paint fills — run start only, NOT between prompts.
+    function arcadeClearPaint() {
+      document.querySelectorAll('#arcadeStatesGroup .arcade-state').forEach(p => {
+        p.style.fill = '';
+        p.classList.remove('arcade-state--painted');
+      });
+    }
+
+    // --- Map zoom factory (pinch / pan / wheel / buttons / double-tap) -----
+    // Mirrors the Create editor's pattern (Block 1) but binds to a game's
+    // OWN svg. preventDefault during pinch/pan also suppresses the synthetic
+    // click, so dragging never registers as a state tap. Shared by the
+    // Arcade and GeoDraft maps.
+    function makeMapZoom(wrapId, svgId) {
+      const Z = { scale: 1, panX: 0, panY: 0 };
+      function apply() {
+        const svg = document.getElementById(svgId);
+        const wrap = document.getElementById(wrapId);
+        if (!svg) return;
+        svg.style.transform = 'translate(' + Z.panX + 'px, ' + Z.panY + 'px) scale(' + Z.scale + ')';
+        svg.style.transformOrigin = 'center center';
+        if (wrap) wrap.classList.toggle('is-zoomed', Z.scale > 1.05);
+      }
+      function clampPan() {
+        const wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        const rect = wrap.getBoundingClientRect();
+        const maxPan = (Z.scale - 1) * Math.max(rect.width, rect.height) / 2;
+        Z.panX = Math.max(-maxPan, Math.min(maxPan, Z.panX));
+        Z.panY = Math.max(-maxPan, Math.min(maxPan, Z.panY));
+      }
+      function zoomBy(factor) {
+        Z.scale = Math.max(1, Math.min(6, Z.scale * factor));
+        clampPan();
+        apply();
+      }
+      function reset(animate) {
+        Z.scale = 1; Z.panX = 0; Z.panY = 0;
+        const svg = document.getElementById(svgId);
+        if (svg && animate) {
+          svg.style.transition = 'transform 0.25s ease';
+          setTimeout(() => { svg.style.transition = ''; }, 260);
+        }
+        apply();
+      }
+      (function wire() {
+        const wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        let lastPinchDist = 0, isPinching = false, isPanning = false;
+        let lastPanX = 0, lastPanY = 0, lastTap = 0;
+        const dist = (t) => {
+          const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+          return Math.sqrt(dx * dx + dy * dy);
+        };
+        wrap.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 2) { isPinching = true; lastPinchDist = dist(e.touches); }
+          else if (e.touches.length === 1 && Z.scale > 1.05) {
+            isPanning = true; lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+          }
+        }, { passive: true });
+        wrap.addEventListener('touchmove', (e) => {
+          if (isPinching && e.touches.length === 2) {
+            e.preventDefault();
+            const d = dist(e.touches);
+            Z.scale = Math.max(1, Math.min(6, Z.scale * (d / lastPinchDist)));
+            lastPinchDist = d;
+            clampPan(); apply();
+          } else if (isPanning && e.touches.length === 1 && Z.scale > 1.05) {
+            e.preventDefault();
+            Z.panX += e.touches[0].clientX - lastPanX;
+            Z.panY += e.touches[0].clientY - lastPanY;
+            lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+            clampPan(); apply();
+          }
+        }, { passive: false });
+        wrap.addEventListener('touchend', (e) => {
+          if (e.touches.length < 2) isPinching = false;
+          if (e.touches.length < 1) isPanning = false;
+          if (e.touches.length === 0) {
+            const now = Date.now();
+            if (now - lastTap < 300 && Z.scale > 1.05) { e.preventDefault(); reset(true); }
+            lastTap = now;
+          }
+        });
+        // Desktop: scroll wheel zooms
+        wrap.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
+        }, { passive: false });
+      })();
+      return { zoomBy: zoomBy, reset: reset, state: Z };
+    }
+    const arcadeZoom = makeMapZoom('arcadeMapWrap', 'arcadeMapSvg');
+    function arcadeZoomBy(factor) { arcadeZoom.zoomBy(factor); }
+    function arcadeResetZoom(animate) { arcadeZoom.reset(animate); }
+    function arcadeStopTimers() {
+      if (AG.timerId) { clearInterval(AG.timerId); AG.timerId = null; }
+      if (AG.advanceId) { clearTimeout(AG.advanceId); AG.advanceId = null; }
+    }
+
+    function arcadeShowToast(text, kind, ms) {
+      const t = document.getElementById('arcadeToast');
+      if (!t) return;
+      t.textContent = text;
+      t.className = 'arcade-toast is-show' + (kind ? ' is-' + kind : '');
+      clearTimeout(AG._toastId);
+      AG._toastId = setTimeout(() => { t.className = 'arcade-toast'; }, ms || 1100);
+    }
+
+    function arcadeUpdateHud() {
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+      set('arcadeScore', AG.score);
+      set('arcadeStreak', AG.streak);
+      set('arcadeProgress', Math.min(AG.idx + 1, AG.game.runLength) + '/' + AG.game.runLength);
+    }
+
+    // Begin a run. seed optional — generated if absent. mode optional —
+    // falls back to the game's defaultMode (or its single generator).
+    // Duel runs are async: live Census data loads before round 1 (the seed
+    // also picks the dataset, so a shared seed = same stat + same pairs).
+    async function arcadeStartRun(gameId, seed, mode) {
+      const game = ARCADE_GAMES[gameId];
+      if (!game || !game.playable) { arcadeShowHub(); return; }
+      if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'wrong'); return; }
+      if (AG.loading) return;
+
+      AG.game = game;
+      AG.mode = (game.modes && mode && game.modes[mode]) ? mode : (game.defaultMode || 'classic');
+      AG.seed = seed || Math.random().toString(36).slice(2, 8);
+      const rng = arcadeMakeRng(AG.seed);
+
+      if (game.kind === 'duel') {
+        const sets = arcadeDuelSets();
+        const dataset = sets[Math.floor(rng() * sets.length)];
+        AG.loading = true;
+        arcadeShowToast('Loading live Census data…', 'correct');
+        try {
+          const data = await fetchCensusData(dataset);
+          const pool = arcadeStateNames().filter(s => isFinite(data[s]));
+          if (pool.length < 10) throw new Error('not enough states with data');
+          AG.duelDataset = dataset;
+          AG.duelData = data;
+          AG.prompts = arcadePickPairs(game.runLength, rng, pool);
+        } catch (err) {
+          AG.loading = false;
+          console.error('Stat Duel data load failed:', err);
+          arcadeShowToast('Live data unavailable right now — try another game', 'wrong');
+          arcadeShowHub();
+          return;
+        }
+        AG.loading = false;
+      } else {
+        const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
+        AG.prompts = gen(rng);
+      }
+
+      AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
+
+      document.getElementById('arcadeHub').style.display = 'none';
+      document.getElementById('arcadeGame').style.display = 'flex';
+      document.getElementById('arcadeComplete').style.display = 'none';
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.toggle('is-duel', game.kind === 'duel');
+      arcadeClearMarks();
+      arcadeClearPaint();
+      arcadeResetZoom();
+      arcadeUpdateHud();
+      arcadeNextPrompt();
+    }
+
+    function arcadeNextPrompt() {
+      arcadeStopTimers();
+      arcadeClearMarks();
+      AG.answered = false;
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.remove('is-locked');
+
+      if (AG.idx >= AG.game.runLength) { arcadeComplete(); return; }
+
+      const prompt = document.getElementById('arcadePrompt');
+      const pop = document.getElementById('arcadePromptPop');
+      let popText;
+      if (AG.game.kind === 'duel') {
+        const pair = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Higher ' + AG.duelDataset.title + ' — tap your pick';
+        popText = pair.a + ' or ' + pair.b + '?';
+        const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
+        if (pa) pa.classList.add('arcade-state--duel');
+        if (pb) pb.classList.add('arcade-state--duel');
+      } else {
+        const target = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Find: ' + target;
+        popText = target;
+      }
+      // Big center-screen pop of the prompt (taps pass through it)
+      if (pop) {
+        pop.textContent = popText;
+        pop.classList.remove('is-pop');
+        void pop.offsetWidth; // restart the CSS animation
+        pop.classList.add('is-pop');
+      }
+      arcadeUpdateHud();
+      arcadeStartTimer();
+    }
+
+    function arcadeStartTimer() {
+      const fill = document.getElementById('arcadeTimerFill');
+      const dur = AG.game.perPrompt * 1000;
+      AG.deadline = Date.now() + dur;
+      if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
+      AG.timerId = setInterval(() => {
+        const remain = AG.deadline - Date.now();
+        const pct = Math.max(0, remain / dur) * 100;
+        if (fill) {
+          fill.style.width = pct + '%';
+          fill.classList.toggle('is-low', pct < 25);
+        }
+        if (remain <= 0) arcadeResolve(null); // timeout = miss
+      }, 90);
+    }
+
+    // Tap handler registered on every state path.
+    function arcadeOnTap(name) {
+      if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
+      if (AG.game.kind === 'duel') {
+        const pair = AG.prompts[AG.idx];
+        if (name !== pair.a && name !== pair.b) return; // belt + CSS pointer-events braces
+      }
+      arcadeResolve(name);
+    }
+
+    // Resolve the current prompt. tapped===null means timeout.
+    function arcadeResolve(tapped) {
+      if (AG.answered) return;
+      AG.answered = true;
+      arcadeStopTimers();
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.add('is-locked');
+
+      const isDuel = AG.game.kind === 'duel';
+      let target, correct, valueLine = '';
+      if (isDuel) {
+        const pair = AG.prompts[AG.idx];
+        const va = AG.duelData[pair.a], vb = AG.duelData[pair.b];
+        target = (va >= vb) ? pair.a : pair.b; // the state to paint / reveal
+        correct = tapped === target || (tapped && AG.duelData[tapped] !== undefined && va === vb);
+        const fmt = AG.duelDataset.format;
+        valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
+      } else {
+        target = AG.prompts[AG.idx];
+        correct = tapped === target;
+      }
+      const s = AG.game.scoring;
+
+      if (correct) {
+        const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
+        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        AG.streak += 1;
+        AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
+        const streakBonus = AG.streak >= s.streakThreshold
+          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+        const gained = s.base + timeBonus + streakBonus;
+        AG.score += gained;
+        AG.correct += 1;
+        const tp = arcadeStatePath(target);
+        if (tp) {
+          tp.classList.add('arcade-state--correct');
+          // Persistent paint: the green flash (!important) plays over it, then
+          // the inline fill stays for the rest of the run.
+          tp.style.fill = ARCADE_PAINT_COLORS[AG.paintIdx % ARCADE_PAINT_COLORS.length];
+          tp.classList.add('arcade-state--painted');
+          AG.paintIdx += 1;
+        }
+        arcadeShowToast('+' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '') + (valueLine ? ' · ' + valueLine : ''), 'correct', valueLine ? 1500 : 1100);
+      } else {
+        AG.streak = 0;
+        const tp = arcadeStatePath(target);
+        if (tp) tp.classList.add('arcade-state--reveal');
+        if (tapped && tapped !== target) {
+          const wp = arcadeStatePath(tapped);
+          if (wp) wp.classList.add('arcade-state--wrong');
+        }
+        if (isDuel) {
+          arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
+        } else {
+          arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
+        }
+      }
+      arcadeUpdateHud();
+      AG.idx += 1;
+      // Duel reveals show real values — give them a beat longer to read.
+      AG.advanceId = setTimeout(arcadeNextPrompt, isDuel ? (correct ? 1100 : 1600) : (correct ? 650 : 1150));
+    }
+
+    // --- localStorage best score (anon; signed-in sync is a later phase) ---
+    // Per-mode keys; 'classic' keeps the unsuffixed legacy key so bests
+    // recorded before modes existed still count.
+    function arcadeBestKey(gameId, mode) {
+      const suffix = (mode && mode !== 'classic') ? '_' + mode : '';
+      return 'tappymaps_arcade_' + gameId + suffix + '_best';
+    }
+    function arcadeGetBest(gameId, mode) {
+      try { return JSON.parse(localStorage.getItem(arcadeBestKey(gameId, mode))) || null; }
+      catch (_) { return null; }
+    }
+    function arcadeMedalFor(game, score) {
+      const m = game.medals;
+      if (score >= m.gold) return { key: 'gold', label: 'Gold', emoji: '🥇' };
+      if (score >= m.silver) return { key: 'silver', label: 'Silver', emoji: '🥈' };
+      if (score >= m.bronze) return { key: 'bronze', label: 'Bronze', emoji: '🥉' };
+      return { key: 'none', label: 'Run complete', emoji: '🗺️' };
+    }
+
+    function arcadeComplete() {
+      arcadeStopTimers();
+      const game = AG.game;
+      const medal = arcadeMedalFor(game, AG.score);
+
+      const prev = arcadeGetBest(game.id, AG.mode);
+      const isBest = !prev || AG.score > prev.score;
+      if (isBest) {
+        try { localStorage.setItem(arcadeBestKey(game.id, AG.mode), JSON.stringify({ score: AG.score, medal: medal.key })); } catch (_) {}
+      }
+
+      const modeLabel = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].label : '';
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+      set('arcadeMedal', medal.emoji);
+      set('arcadeCompleteTitle', medal.key === 'none' ? 'Nice run!' : medal.label + '!');
+      set('arcadeCompleteScore', AG.score);
+      set('arcadeCompleteDetail', AG.correct + ' of ' + game.runLength + ' correct · best streak ' + AG.bestStreak + (modeLabel ? ' · ' + modeLabel : ''));
+      set('arcadeCompleteBest', isBest ? 'New personal best!' : 'Your best: ' + (prev ? prev.score : 0));
+      const status = document.getElementById('arcadeShareStatus');
+      if (status) status.textContent = '';
+      document.getElementById('arcadeComplete').style.display = 'flex';
+      if (typeof trackEvent === 'function') {
+        trackEvent('arcade_run_complete', { game: game.id, mode: AG.mode, score: AG.score, correct: AG.correct, medal: medal.key });
+      }
+    }
+
+    function arcadeShareUrl() {
+      const modeQ = (AG.mode && AG.mode !== 'classic') ? '&mode=' + AG.mode : '';
+      return window.location.origin + '/games/arcade/' + AG.game.id + '?seed=' + AG.seed + modeQ;
+    }
+    function arcadeShareRun() {
+      const url = arcadeShareUrl();
+      const status = document.getElementById('arcadeShareStatus');
+      const text = 'I scored ' + AG.score + ' on Tappymaps ' + AG.game.name + ' — beat me: ' + url;
+      const done = (msg) => { if (status) status.textContent = msg; };
+      if (navigator.share) {
+        navigator.share({ title: 'Tappymaps ' + AG.game.name, text: text, url: url })
+          .then(() => done('Shared!')).catch(() => arcadeCopy(url, done));
+      } else {
+        arcadeCopy(url, done);
+      }
+    }
+    function arcadeCopy(url, done) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => done('Link copied — same 10 states.'))
+          .catch(() => done('Copy failed — link: ' + url));
+      } else {
+        done('Share link: ' + url);
+      }
+    }
+
+    // --- Hub tile grid ---
+    function arcadeRenderHub() {
+      const grid = document.getElementById('arcadeTileGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      const medalFor = (best) => best ? ({ gold: '🥇', silver: '🥈', bronze: '🥉', none: '🗺️' }[best.medal] || '') : '';
+      Object.values(ARCADE_GAMES).forEach(game => {
+        if (game.playable && game.modes) {
+          // Variant tile: one button per mode, per-mode best shown on the button.
+          const div = document.createElement('div');
+          div.className = 'arcade-tile';
+          const buttons = Object.keys(game.modes).map(m => {
+            const best = arcadeGetBest(game.id, m);
+            const label = game.modes[m].label + (best ? ' · ' + medalFor(best) + best.score : ' →');
+            const q = m === (game.defaultMode || 'classic') ? '' : '?mode=' + m;
+            return '<a class="arcade-tile-mode-btn" data-route href="/games/arcade/' + game.id + q + '">' + label + '</a>';
+          }).join('');
+          div.innerHTML =
+            '<div class="arcade-tile-name">' + game.name + '</div>' +
+            '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
+            '<div class="arcade-tile-modes">' + buttons + '</div>' +
+            '<p class="arcade-tile-mode-desc">Shuffle repeats states — no ruling out what you already found.</p>';
+          grid.appendChild(div);
+        } else if (game.playable) {
+          const a = document.createElement('a');
+          a.className = 'arcade-tile';
+          a.href = '/games/arcade/' + game.id;
+          a.setAttribute('data-route', '');
+          const best = arcadeGetBest(game.id);
+          a.innerHTML =
+            '<div class="arcade-tile-name">' + game.name + '</div>' +
+            '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
+            '<div class="arcade-tile-meta">' +
+              (best
+                ? '<span class="arcade-tile-medal">' + medalFor(best) + '</span><span>Best <span class="arcade-tile-best">' + best.score + '</span></span>'
+                : '<span class="arcade-tile-best">Play →</span>') +
+            '</div>';
+          grid.appendChild(a);
+        } else {
+          const div = document.createElement('div');
+          div.className = 'arcade-tile arcade-tile--soon';
+          div.innerHTML =
+            '<div class="arcade-tile-name">' + game.name + '</div>' +
+            '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
+            '<div class="arcade-tile-soon-chip">Coming soon</div>';
+          grid.appendChild(div);
+        }
+      });
+    }
+    function arcadeShowHub() {
+      arcadeStopTimers();
+      const g = document.getElementById('arcadeStatesGroup');
+      if (g) g.classList.remove('is-duel');
+      document.getElementById('arcadeGame').style.display = 'none';
+      document.getElementById('arcadeComplete').style.display = 'none';
+      arcadeRenderHub();
+      document.getElementById('arcadeHub').style.display = 'flex';
+    }
+
+    // --- Wire shell buttons once (delegated where the node is stable) ---
+    (function arcadeWireButtons() {
+      const onClick = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
+      onClick('arcadeBackBtn', () => Router.navigate('/games/arcade'));
+      onClick('arcadeToHub', () => Router.navigate('/games/arcade'));
+      onClick('arcadePlayAgain', () => { if (AG.game) arcadeStartRun(AG.game.id, null, AG.mode); });
+      onClick('arcadeZoomIn', () => arcadeZoomBy(1.4));
+      onClick('arcadeZoomOut', () => arcadeZoomBy(1 / 1.4));
+      onClick('arcadeZoomReset', () => arcadeResetZoom(true));
+      onClick('arcadeShareBtn', arcadeShareRun);
+    })();
+
+    // --- Mode registration ---
+    Modes.Arcade = {
+      enter(route) {
+        const el = document.getElementById('modeArcade');
+        if (el) el.style.display = 'flex';
+        const sub = route && route.sub;
+        if (sub && ARCADE_GAMES[sub] && ARCADE_GAMES[sub].playable) {
+          // Deep link / shared run — honor ?seed= and ?mode= if present.
+          const params = new URLSearchParams(window.location.search);
+          arcadeStartRun(sub, params.get('seed') || null, params.get('mode') || null);
+        } else {
+          arcadeShowHub();
+        }
+      },
+      exit() {
+        arcadeStopTimers();
+        arcadeResetZoom();
+        const el = document.getElementById('modeArcade');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const sub = route && route.sub;
+        const game = sub && ARCADE_GAMES[sub];
+        if (game) {
+          return {
+            title: game.name + ' — Tappymaps Arcade',
+            description: game.tagline + ' Free geography games on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/arcade/' + game.id,
+          };
+        }
+        return {
+          title: 'Arcade — Tappymaps',
+          description: 'Fast geography games. All free. Play Find the State and more on Tappymaps.',
+          canonical: 'https://tappymaps.com/games/arcade',
+        };
+      },
+    };
+    Router.register('games/arcade', Modes.Arcade);
+
+    // =====================================================================
+    // GeoDraft (Phase 2b) — Category Draft vs the AI (best of 5) + Practice.
+    // Spec §7 MVP. Own svg (third map) built from cached topology, exactly
+    // like Arcade: touches none of the editor's export-critical paths.
+    // Census categories REUSE the editor's data layer (fetchCensusData +
+    // sessionStorage cache); static categories are bundled so GeoDraft is
+    // playable even if /api/census is down.
+    // =====================================================================
+
+    // Static category data. Area = published Census total-area figures
+    // (sq mi). Statehood = year admitted to the Union. Borders = number of
+    // bordering states, counting the Four Corners point touches.
+    const DRAFT_AREA = { 'Alabama':52420,'Alaska':665384,'Arizona':113990,'Arkansas':53179,'California':163695,'Colorado':104094,'Connecticut':5543,'Delaware':2489,'Florida':65758,'Georgia':59425,'Hawaii':10932,'Idaho':83569,'Illinois':57914,'Indiana':36420,'Iowa':56273,'Kansas':82278,'Kentucky':40408,'Louisiana':52378,'Maine':35380,'Maryland':12406,'Massachusetts':10554,'Michigan':96714,'Minnesota':86936,'Mississippi':48432,'Missouri':69707,'Montana':147040,'Nebraska':77348,'Nevada':110572,'New Hampshire':9349,'New Jersey':8723,'New Mexico':121590,'New York':54555,'North Carolina':53819,'North Dakota':70698,'Ohio':44826,'Oklahoma':69899,'Oregon':98379,'Pennsylvania':46054,'Rhode Island':1545,'South Carolina':32020,'South Dakota':77116,'Tennessee':42144,'Texas':268596,'Utah':84897,'Vermont':9616,'Virginia':42775,'Washington':71298,'West Virginia':24230,'Wisconsin':65496,'Wyoming':97813 };
+    const DRAFT_STATEHOOD = { 'Delaware':1787,'Pennsylvania':1787,'New Jersey':1787,'Georgia':1788,'Connecticut':1788,'Massachusetts':1788,'Maryland':1788,'South Carolina':1788,'New Hampshire':1788,'Virginia':1788,'New York':1788,'North Carolina':1789,'Rhode Island':1790,'Vermont':1791,'Kentucky':1792,'Tennessee':1796,'Ohio':1803,'Louisiana':1812,'Indiana':1816,'Mississippi':1817,'Illinois':1818,'Alabama':1819,'Maine':1820,'Missouri':1821,'Arkansas':1836,'Michigan':1837,'Florida':1845,'Texas':1845,'Iowa':1846,'Wisconsin':1848,'California':1850,'Minnesota':1858,'Oregon':1859,'Kansas':1861,'West Virginia':1863,'Nevada':1864,'Nebraska':1867,'Colorado':1876,'North Dakota':1889,'South Dakota':1889,'Montana':1889,'Washington':1889,'Idaho':1890,'Wyoming':1890,'Utah':1896,'Oklahoma':1907,'New Mexico':1912,'Arizona':1912,'Alaska':1959,'Hawaii':1959 };
+    const DRAFT_BORDERS = { 'Alabama':4,'Alaska':0,'Arizona':5,'Arkansas':6,'California':3,'Colorado':7,'Connecticut':3,'Delaware':3,'Florida':2,'Georgia':5,'Hawaii':0,'Idaho':6,'Illinois':5,'Indiana':4,'Iowa':6,'Kansas':4,'Kentucky':7,'Louisiana':3,'Maine':1,'Maryland':4,'Massachusetts':5,'Michigan':3,'Minnesota':4,'Mississippi':4,'Missouri':8,'Montana':4,'Nebraska':6,'Nevada':5,'New Hampshire':3,'New Jersey':3,'New Mexico':5,'New York':5,'North Carolina':4,'North Dakota':3,'Ohio':5,'Oklahoma':6,'Oregon':4,'Pennsylvania':6,'Rhode Island':2,'South Carolina':2,'South Dakota':6,'Tennessee':8,'Texas':4,'Utah':6,'Vermont':3,'Virginia':5,'Washington':2,'West Virginia':5,'Wisconsin':4,'Wyoming':6 };
+
+    // Category registry — lazy + memoized for the same TDZ reason as
+    // arcadeStateNames(): DATA_MAP_DATASETS is declared later in the block.
+    let _draftCats = null;
+    function draftCategories() {
+      if (_draftCats) return _draftCats;
+      const cats = [
+        { id: 'area', title: 'Total Area', desc: 'Total area in square miles.', format: 'number', values: DRAFT_AREA, noise: 0.10 },
+        { id: 'statehood', title: 'Oldest States', desc: 'Year admitted to the Union — earliest wins.', format: 'year', inverted: true, values: DRAFT_STATEHOOD, noise: 0.10, rule: 'Earliest total wins' },
+        { id: 'borders', title: 'Most Neighbors', desc: 'Bordering states (Four Corners counts).', format: 'number', values: DRAFT_BORDERS, noise: 0.08 },
+        { id: 'name-length', title: 'Longest Names', desc: 'Letters in the state name.', format: 'number', computed: true, noise: 0.06 },
+        { id: 'name-length-short', title: 'Shortest Names', desc: 'Letters in the state name — shortest wins.', format: 'number', computed: true, inverted: true, noise: 0.06, rule: 'Lowest total wins' },
+      ];
+      DATA_MAP_DATASETS.filter(d => !d.years).forEach(d => {
+        cats.push({ id: 'census-' + d.id, title: d.title, desc: d.desc, format: d.format, census: d, noise: 0.30 });
+      });
+      _draftCats = cats;
+      return cats;
+    }
+    async function draftLoadValues(cat) {
+      if (cat.computed) {
+        const out = {};
+        arcadeStateNames().forEach(n => { out[n] = n.replace(/[^A-Za-z]/g, '').length; });
+        return out;
+      }
+      if (cat.values) return cat.values;
+      const data = await fetchCensusData(cat.census);
+      const out = {};
+      arcadeStateNames().forEach(n => { if (isFinite(data[n])) out[n] = data[n]; });
+      if (Object.keys(out).length < 45) throw new Error('incomplete data for ' + cat.id);
+      return out;
+    }
+
+    const DRAFT_YOU_COLOR = '#F97316', DRAFT_AI_COLOR = '#8b5cf6';
+    const DG = {
+      phase: 'idle', seed: '', rng: null,
+      cats: [], vals: [], round: 0, youWins: 0, aiWins: 0, ties: 0,
+      available: null, youPicks: [], aiPicks: [], aiOrder: [],
+      picksPerSide: 3, turn: 'you',
+      timerId: null, deadline: 0, aiId: null, revealId: null,
+      loading: false, decided: false,
+    };
+
+    let _draftMapBuilt = false;
+    function draftBuildMap() {
+      if (_draftMapBuilt) return true;
+      const group = document.getElementById('draftStatesGroup');
+      const topology = (typeof appState !== 'undefined') ? appState.topologyData : null;
+      if (!group || !topology || typeof topojson === 'undefined') return false;
+      const features = topojson.feature(topology, topology.objects.states).features;
+      const pathGen = (geo) => {
+        let d = '';
+        const rings = (geo.type === 'Polygon') ? [geo.coordinates]
+          : (geo.type === 'MultiPolygon') ? geo.coordinates : [];
+        rings.forEach(poly => poly.forEach(ring => {
+          d += 'M' + ring.map(p => p.join(',')).join('L') + 'Z';
+        }));
+        return d;
+      };
+      features.forEach(feature => {
+        const fips = String(feature.id).padStart(2, '0');
+        const name = fipsToState[fips] || feature.properties?.name || ('Unknown ' + feature.id);
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        el.setAttribute('d', pathGen(feature.geometry));
+        el.setAttribute('data-state', name);
+        if (nonColorable.has(name)) {
+          el.setAttribute('class', 'draft-state draft-state--dc');
+        } else {
+          el.setAttribute('class', 'draft-state');
+          el.addEventListener('click', () => draftOnTap(name));
+        }
+        group.appendChild(el);
+      });
+      _draftMapBuilt = true;
+      return true;
+    }
+    function draftStatePath(name) {
+      return document.querySelector('#draftStatesGroup .draft-state[data-state="' + name + '"]');
+    }
+    const draftZoom = makeMapZoom('draftMapWrap', 'draftMapSvg');
+
+    function draftStopTimers() {
+      if (DG.timerId) { clearInterval(DG.timerId); DG.timerId = null; }
+      if (DG.aiId) { clearTimeout(DG.aiId); DG.aiId = null; }
+      if (DG.revealId) { clearTimeout(DG.revealId); DG.revealId = null; }
+    }
+    function draftShowView(which) {
+      ['draftHub', 'draftMatch', 'draftPractice'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === which) ? 'flex' : 'none';
+      });
+    }
+    function draftSet(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+
+    // --- Match lifecycle ---------------------------------------------------
+    async function draftStartMatch(seed) {
+      if (DG.loading) return;
+      if (!draftBuildMap()) { draftShowView('draftHub'); return; }
+      DG.loading = true;
+      draftShowView('draftMatch');
+      document.getElementById('draftReveal').style.display = 'none';
+      document.getElementById('draftComplete').style.display = 'none';
+      draftSet('draftCatTitle', 'Drawing categories…');
+      draftSet('draftCatDesc', '');
+      draftSet('draftTurnLabel', 'Loading…');
+
+      DG.seed = seed || Math.random().toString(36).slice(2, 8);
+      DG.rng = arcadeMakeRng('draft:' + DG.seed);
+      const shuffled = draftCategories().slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(DG.rng() * (i + 1));
+        const t = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = t;
+      }
+      const cats = [], vals = [];
+      for (const cat of shuffled) {
+        if (cats.length === 5) break;
+        try {
+          const v = await draftLoadValues(cat);
+          cats.push(cat); vals.push(v);
+        } catch (_) { /* census down for this one — next candidate */ }
+      }
+      DG.loading = false;
+      if (cats.length < 5) {
+        draftSet('draftCatTitle', 'Category data unavailable — try again shortly.');
+        setTimeout(() => draftShowView('draftHub'), 1600);
+        return;
+      }
+      DG.cats = cats; DG.vals = vals;
+      DG.round = 0; DG.youWins = 0; DG.aiWins = 0; DG.ties = 0; DG.decided = false;
+      draftStartRound();
+    }
+
+    function draftClearMapMarks() {
+      document.querySelectorAll('#draftStatesGroup .draft-state').forEach(p => {
+        p.style.fill = '';
+        p.classList.remove('draft-state--taken');
+      });
+    }
+    function draftRenderPips() {
+      const pip = (w) => '●'.repeat(w) + '○'.repeat(Math.max(0, 3 - w));
+      draftSet('draftPipsYou', pip(DG.youWins));
+      draftSet('draftPipsAi', pip(DG.aiWins));
+    }
+    function draftRenderRosters() {
+      const fill = (ulId, picks) => {
+        const ul = document.getElementById(ulId);
+        if (!ul) return;
+        ul.innerHTML = '';
+        picks.forEach(n => {
+          const li = document.createElement('li');
+          li.textContent = n;
+          ul.appendChild(li);
+        });
+      };
+      fill('draftRosterYou', DG.youPicks);
+      fill('draftRosterAi', DG.aiPicks);
+    }
+
+    function draftStartRound() {
+      draftStopTimers();
+      const cat = DG.cats[DG.round], vals = DG.vals[DG.round];
+      DG.available = new Set(arcadeStateNames().filter(n => isFinite(vals[n])));
+      DG.youPicks = []; DG.aiPicks = []; DG.phase = 'pick';
+
+      // AI "reputation model": true ranking + per-round gaussian noise. The
+      // AI roughly knows the big categories but misjudges by a few ranks
+      // (more on obscure Census stats, less on area/statehood).
+      const ranked = Array.from(DG.available).sort((a, b) => cat.inverted ? vals[a] - vals[b] : vals[b] - vals[a]);
+      const gauss = () => (DG.rng() + DG.rng() + DG.rng() + DG.rng() - 2) / 2; // ~N(0, 0.29)
+      DG.aiOrder = ranked
+        .map((n, i) => ({ n: n, s: i + gauss() * cat.noise * 150 }))
+        .sort((x, y) => x.s - y.s)
+        .map(o => o.n);
+
+      draftClearMapMarks();
+      draftZoom.reset();
+      draftSet('draftRoundLabel', 'Round ' + (DG.round + 1) + ' · Best of 5');
+      draftSet('draftCatTitle', cat.title);
+      draftSet('draftCatDesc', cat.desc);
+      draftSet('draftCatRule', cat.rule || (cat.inverted ? 'Lowest total wins' : 'Highest total wins'));
+      draftRenderPips();
+      draftRenderRosters();
+      document.getElementById('draftReveal').style.display = 'none';
+      draftSetTurn('you');
+    }
+
+    function draftSetTurn(turn) {
+      DG.turn = turn;
+      const group = document.getElementById('draftStatesGroup');
+      if (turn === 'you') {
+        draftSet('draftTurnLabel', 'Your pick — ' + (DG.picksPerSide - DG.youPicks.length) + ' left');
+        if (group) group.classList.remove('is-locked');
+        draftStartPickTimer();
+      } else {
+        draftSet('draftTurnLabel', 'AI is picking…');
+        if (group) group.classList.add('is-locked');
+        DG.aiId = setTimeout(draftAiPick, 700 + Math.floor(DG.rng() * 600));
+      }
+    }
+    function draftStartPickTimer() {
+      const fill = document.getElementById('draftTimerFill');
+      const dur = 7000;
+      DG.deadline = Date.now() + dur;
+      if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
+      DG.timerId = setInterval(() => {
+        const remain = DG.deadline - Date.now();
+        const pct = Math.max(0, remain / dur) * 100;
+        if (fill) {
+          fill.style.width = pct + '%';
+          fill.classList.toggle('is-low', pct < 25);
+        }
+        if (remain <= 0) {
+          clearInterval(DG.timerId); DG.timerId = null;
+          const arr = Array.from(DG.available);
+          draftCommitPick('you', arr[Math.floor(DG.rng() * arr.length)]); // time's up — random pick
+        }
+      }, 90);
+    }
+    function draftOnTap(name) {
+      if (DG.phase !== 'pick' || DG.turn !== 'you') return;
+      if (!DG.available || !DG.available.has(name)) return;
+      if (DG.timerId) { clearInterval(DG.timerId); DG.timerId = null; }
+      draftCommitPick('you', name);
+    }
+    function draftAiPick() {
+      const pick = DG.aiOrder.find(n => DG.available.has(n));
+      draftCommitPick('ai', pick);
+    }
+    function draftCommitPick(who, name) {
+      if (!name || DG.phase !== 'pick') return;
+      DG.available.delete(name);
+      (who === 'you' ? DG.youPicks : DG.aiPicks).push(name);
+      const p = draftStatePath(name);
+      if (p) {
+        p.style.fill = (who === 'you') ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR;
+        p.classList.add('draft-state--taken');
+      }
+      draftRenderRosters();
+      if (DG.youPicks.length === DG.picksPerSide && DG.aiPicks.length === DG.picksPerSide) {
+        draftRevealRound();
+        return;
+      }
+      draftSetTurn(who === 'you' ? 'ai' : 'you');
+    }
+
+    function draftRevealRound() {
+      DG.phase = 'reveal';
+      draftStopTimers();
+      const cat = DG.cats[DG.round], vals = DG.vals[DG.round];
+      const picks = DG.youPicks.map(n => ({ n: n, who: 'you' }))
+        .concat(DG.aiPicks.map(n => ({ n: n, who: 'ai' })));
+      picks.sort((a, b) => cat.inverted ? vals[a.n] - vals[b.n] : vals[b.n] - vals[a.n]);
+      const youTotal = DG.youPicks.reduce((s, n) => s + vals[n], 0);
+      const aiTotal = DG.aiPicks.reduce((s, n) => s + vals[n], 0);
+      let winner;
+      if (youTotal === aiTotal) winner = 'tie';
+      else winner = ((youTotal > aiTotal) !== !!cat.inverted) ? 'you' : 'ai';
+      if (winner === 'you') DG.youWins += 1;
+      else if (winner === 'ai') DG.aiWins += 1;
+      else DG.ties += 1;
+      DG.decided = DG.youWins === 3 || DG.aiWins === 3 || DG.round === 4;
+
+      draftSet('draftRevealTitle', cat.title + ' — the reveal');
+      const list = document.getElementById('draftRevealList');
+      const totals = document.getElementById('draftRevealTotals');
+      const nextBtn = document.getElementById('draftRevealNext');
+      if (list) list.innerHTML = '';
+      if (totals) { totals.classList.remove('is-in'); totals.innerHTML = ''; }
+      if (nextBtn) nextBtn.textContent = DG.decided ? 'See final result' : 'Next round';
+      const items = [];
+      picks.forEach((p, i) => {
+        const li = document.createElement('li');
+        li.className = 'who-' + p.who;
+        li.innerHTML = '<span class="rank">' + (i + 1) + '</span>'
+          + '<span class="name">' + p.n + '</span>'
+          + '<span class="val">' + arcadeFormatVal(vals[p.n], cat.format) + '</span>'
+          + '<span class="who">' + (p.who === 'you' ? 'YOU' : 'AI') + '</span>';
+        if (list) list.appendChild(li);
+        items.push(li);
+      });
+      document.getElementById('draftReveal').style.display = 'flex';
+      let i = 0;
+      (function step() {
+        if (i < items.length) {
+          items[i].classList.add('is-in');
+          i += 1;
+          DG.revealId = setTimeout(step, 480);
+        } else if (totals) {
+          const f = (v) => arcadeFormatVal(v, cat.format);
+          const line = (winner === 'tie') ? 'Dead tie — no pip.'
+            : (winner === 'you' ? 'You take the round!' : 'AI takes the round.');
+          totals.innerHTML = 'You ' + f(youTotal) + ' · AI ' + f(aiTotal) + '<br>' + line;
+          totals.classList.add('is-in');
+          draftRenderPips();
+        }
+      })();
+      if (typeof trackEvent === 'function') {
+        trackEvent('draft_round_complete', { category: cat.id, round: DG.round + 1, winner: winner });
+      }
+    }
+    function draftNextRound() {
+      draftStopTimers();
+      if (DG.decided) { draftShowComplete(); return; }
+      DG.round += 1;
+      draftStartRound();
+    }
+    function draftShowComplete() {
+      DG.phase = 'done';
+      const won = DG.youWins > DG.aiWins;
+      const drew = DG.youWins === DG.aiWins;
+      draftSet('draftCompleteTitle', drew ? 'A draw!' : (won ? 'You win the draft! 🏆' : 'The AI takes it.'));
+      draftSet('draftCompleteDetail', 'Final score ' + DG.youWins + '–' + DG.aiWins
+        + (DG.ties ? ' with ' + DG.ties + ' tied round' + (DG.ties > 1 ? 's' : '') : '')
+        + ' · match seed ' + DG.seed);
+      const status = document.getElementById('draftShareStatus');
+      if (status) status.textContent = '';
+      document.getElementById('draftComplete').style.display = 'flex';
+      if (typeof trackEvent === 'function') {
+        trackEvent('draft_match_complete', { youWins: DG.youWins, aiWins: DG.aiWins, seed: DG.seed });
+      }
+    }
+    function draftShareMatch() {
+      const url = window.location.origin + '/games/draft/category?seed=' + DG.seed;
+      const result = DG.youWins > DG.aiWins ? 'beat the AI ' + DG.youWins + '-' + DG.aiWins
+        : 'went ' + DG.youWins + '-' + DG.aiWins + ' against the AI';
+      const text = 'I ' + result + ' on Tappymaps GeoDraft — same categories, your turn: ' + url;
+      const status = document.getElementById('draftShareStatus');
+      const done = (msg) => { if (status) status.textContent = msg; };
+      if (navigator.share) {
+        navigator.share({ title: 'Tappymaps GeoDraft', text: text, url: url })
+          .then(() => done('Shared!')).catch(() => arcadeCopy(url, done));
+      } else {
+        arcadeCopy(url, done);
+      }
+    }
+
+    // --- Practice ----------------------------------------------------------
+    let _draftPracticeFilled = false;
+    function draftShowPractice() {
+      draftShowView('draftPractice');
+      const sel = document.getElementById('draftPracticeSelect');
+      if (sel && !_draftPracticeFilled) {
+        _draftPracticeFilled = true;
+        draftCategories().forEach((c, i) => {
+          const o = document.createElement('option');
+          o.value = String(i);
+          o.textContent = c.title;
+          sel.appendChild(o);
+        });
+        sel.addEventListener('change', () => draftRenderPractice(Number(sel.value)));
+      }
+      draftRenderPractice(sel ? Number(sel.value || 0) : 0);
+    }
+    async function draftRenderPractice(idx) {
+      const cat = draftCategories()[idx];
+      const list = document.getElementById('draftPracticeList');
+      if (!cat || !list) return;
+      draftSet('draftPracticeDesc', cat.desc + (cat.inverted ? ' (lowest ranks first)' : ''));
+      list.innerHTML = '<li>Loading…</li>';
+      try {
+        const vals = await draftLoadValues(cat);
+        const ranked = arcadeStateNames().filter(n => isFinite(vals[n]))
+          .sort((a, b) => cat.inverted ? vals[a] - vals[b] : vals[b] - vals[a]);
+        let max = 0;
+        ranked.forEach(n => { if (Math.abs(vals[n]) > max) max = Math.abs(vals[n]); });
+        if (!max) max = 1;
+        list.innerHTML = '';
+        ranked.forEach((n, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = '<span class="rank">' + (i + 1) + '</span>'
+            + '<span class="name">' + n + '</span>'
+            + '<span class="bar-track"><span class="bar" style="width:' + Math.max(2, Math.round(Math.abs(vals[n]) / max * 100)) + '%;display:block"></span></span>'
+            + '<span class="val">' + arcadeFormatVal(vals[n], cat.format) + '</span>';
+          list.appendChild(li);
+        });
+      } catch (_) {
+        list.innerHTML = '<li>Live data unavailable for this category right now.</li>';
+      }
+    }
+
+    // --- Wire buttons (nodes are static in the markup) ----------------------
+    (function draftWireButtons() {
+      const onClick = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
+      onClick('draftBackBtn', () => Router.navigate('/games/draft'));
+      onClick('draftToHub', () => Router.navigate('/games/draft'));
+      onClick('draftPracticeBack', () => Router.navigate('/games/draft'));
+      onClick('draftRevealNext', draftNextRound);
+      onClick('draftPlayAgain', () => { document.getElementById('draftComplete').style.display = 'none'; draftStartMatch(); });
+      onClick('draftShareBtn', draftShareMatch);
+      onClick('draftZoomIn', () => draftZoom.zoomBy(1.4));
+      onClick('draftZoomOut', () => draftZoom.zoomBy(1 / 1.4));
+      onClick('draftZoomReset', () => draftZoom.reset(true));
+    })();
+
+    // --- Mode registration ---------------------------------------------------
+    Modes.Draft = {
+      enter(route) {
+        const el = document.getElementById('modeDraft');
+        if (el) el.style.display = 'flex';
+        const sub = route && route.sub;
+        if (sub === 'category') {
+          const params = new URLSearchParams(window.location.search);
+          draftStartMatch(params.get('seed') || null);
+        } else if (sub === 'practice') {
+          draftShowPractice();
+        } else {
+          draftShowView('draftHub');
+        }
+      },
+      exit() {
+        draftStopTimers();
+        draftZoom.reset();
+        const el = document.getElementById('modeDraft');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const sub = route && route.sub;
+        if (sub === 'category') {
+          return {
+            title: 'Category Draft — Tappymaps GeoDraft',
+            description: 'Draft states head-to-head against the AI. Real numbers decide who wins. Free on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/draft/category',
+          };
+        }
+        if (sub === 'practice') {
+          return {
+            title: 'GeoDraft Practice — Tappymaps',
+            description: 'Learn every GeoDraft category with all 50 state values revealed. Free on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/draft/practice',
+          };
+        }
+        return {
+          title: 'GeoDraft — Tappymaps',
+          description: 'The state-drafting strategy game. Draft 3 states per category, best of 5 vs the AI. Free on Tappymaps.',
+          canonical: 'https://tappymaps.com/games/draft',
+        };
+      },
+    };
+    Router.register('games/draft', Modes.Draft);
+
 
     // ============================================================================
     // INITIALIZATION
@@ -7144,7 +8869,27 @@
       { id: 'pop_under18', title: 'Population Under 18', desc: 'Percent of population under age 18', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B09001_001E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081'], pro: true },
       { id: 'broadband', title: 'Broadband Internet', desc: 'Percent of households with broadband internet', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B28002_004E','B28002_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7f7f7','#d9d9d9','#bdbdbd','#737373','#252525'], pro: true },
       { id: 'snap', title: 'SNAP/Food Stamps', desc: 'Percent of households receiving SNAP benefits', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B22010_002E','B22010_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff5f0','#fcbba1','#fb6a4a','#cb181d','#67000d'], pro: true },
-      { id: 'disability', title: 'Disability Rate', desc: 'Percent of civilian population with a disability', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B18101_004E','B18101_007E','B18101_010E','B18101_013E','B18101_016E','B18101_019E','B18101_023E','B18101_026E','B18101_029E','B18101_032E','B18101_035E','B18101_038E','B01003_001E'], compute: function(v) { var d=0; for(var i=0;i<v.length-1;i++) d+=v[i]; return ((d/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#fff7f3','#fde0dd','#fcc5c0','#f768a1','#ae017e'], pro: true }
+      { id: 'disability', title: 'Disability Rate', desc: 'Percent of civilian population with a disability', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B18101_004E','B18101_007E','B18101_010E','B18101_013E','B18101_016E','B18101_019E','B18101_023E','B18101_026E','B18101_029E','B18101_032E','B18101_035E','B18101_038E','B01003_001E'], compute: function(v) { var d=0; for(var i=0;i<v.length-1;i++) d+=v[i]; return ((d/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#fff7f3','#fde0dd','#fcc5c0','#f768a1','#ae017e'], pro: true },
+      // --- Expansion wave (2026-06) — every variable verified against the live
+      // ACS 1-year 2023 registry before shipping. duel:true marks stats that
+      // read well in Arcade games ("Which has more X?").
+      { id: 'work_from_home', title: 'Work From Home', desc: 'Percent of workers who work from home', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08301_021E','B08301_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcfd','#bfd3e6','#8c96c6','#88419d','#4d004b'], pro: true, duel: true },
+      { id: 'public_transit', title: 'Public Transit Commuters', desc: 'Percent of workers commuting by public transportation', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08301_010E','B08301_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fbff','#c8ddf0','#73b3d8','#2879b9','#08306b'], pro: true, duel: true },
+      { id: 'super_commuters', title: 'Super Commuters', desc: 'Percent of workers with a 60+ minute commute', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08303_012E','B08303_013E','B08303_001E'], compute: function(v) { return (((v[0]+v[1]) / v[2]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff5eb','#fdd0a2','#fd8d3c','#d94801','#7f2704'], pro: true, duel: true },
+      { id: 'no_vehicle', title: 'No-Vehicle Households', desc: 'Percent of households without a vehicle', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08201_002E','B08201_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7f4f9','#d4b9da','#df65b0','#ce1256','#67001f'], pro: true, duel: true },
+      { id: 'vacation_homes', title: 'Vacation Homes', desc: 'Percent of housing for seasonal or recreational use', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25004_006E','B25001_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081'], pro: true, duel: true },
+      { id: 'mobile_homes', title: 'Mobile Homes', desc: 'Percent of housing units that are mobile homes', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25024_010E','B25024_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffe5','#fee391','#fe9929','#cc4c02','#662506'], pro: true, duel: true },
+      { id: 'median_year_built', title: 'Median Home Age (Year Built)', desc: 'Median year housing structures were built', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25035_001E'], format: 'year', colorScale: ['#8c510a','#d8b365','#f6e8c3','#5ab4ac','#01665e'], pro: true },
+      { id: 'mortgage_free', title: 'Homes Owned Free & Clear', desc: 'Percent of owned homes with no mortgage', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25081_002E','B25081_001E'], compute: function(v) { return (((v[1]-v[0]) / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true, duel: true },
+      { id: 'household_size', title: 'Average Household Size', desc: 'Average number of people per household', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25010_001E'], format: 'decimal1', colorScale: ['#edf8fb','#b2e2e2','#66c2a4','#2ca25f','#006d2c'], pro: true, duel: true },
+      { id: 'living_alone', title: 'Living Alone', desc: 'Percent of households that are one person living alone', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B11001_008E','B11001_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff7fb','#d0d1e6','#74a9cf','#0570b0','#023858'], pro: true, duel: true },
+      { id: 'hh_with_kids', title: 'Households with Children', desc: 'Percent of households with people under 18', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B11005_002E','B11005_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff7ec','#fdd49e','#fc8d59','#d7301f','#7f0000'], pro: true, duel: true },
+      { id: 'never_married', title: 'Never Married', desc: 'Percent of adults 15+ who have never married', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B12001_003E','B12001_012E','B12001_001E'], compute: function(v) { return (((v[0]+v[1]) / v[2]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f2f0f7','#cbc9e2','#9e9ac8','#6a51a3','#3f007d'], pro: true, duel: true },
+      { id: 'divorced', title: 'Divorced', desc: 'Percent of adults 15+ who are divorced', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B12001_010E','B12001_019E','B12001_001E'], compute: function(v) { return (((v[0]+v[1]) / v[2]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fee5d9','#fcae91','#fb6a4a','#cb181d','#67000d'], pro: true, duel: true },
+      { id: 'non_english', title: 'Language Other Than English', desc: 'Percent speaking a language other than English at home', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['C16001_001E','C16001_002E'], compute: function(v) { return (((v[0]-v[1]) / v[0]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcfd','#ccece6','#66c2a4','#238b45','#00441b'], pro: true, duel: true },
+      { id: 'homegrown', title: 'Born in Their State', desc: 'Percent of residents born in the state they live in', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B05002_003E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff7fb','#d0aecd','#df65b0','#980043','#67001f'], pro: true, duel: true },
+      { id: 'movers', title: 'Moved in the Past Year', desc: 'Percent of residents who changed homes in the last year', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B07003_001E','B07003_004E'], compute: function(v) { return (((v[0]-v[1]) / v[0]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffcc','#a1dab4','#41b6c4','#2c7fb8','#253494'], pro: true, duel: true },
+      { id: 'self_employment', title: 'Self-Employment Income', desc: 'Percent of households with self-employment income', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19053_002E','B19053_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffd4','#fed98e','#fe9929','#d95f0e','#993404'], pro: true, duel: true }
     ];
 
     const FIPS_TO_STATE = {
@@ -7165,12 +8910,27 @@
     async function fetchCensusData(dataset) {
       async function fetchYear(year) {
         var vars = dataset.variables.join(',');
+        var survey = dataset.survey || 'acs1';
         // Routed through our same-origin proxy (/api/census) because api.census.gov
         // sends no CORS header and the browser blocks a direct cross-origin fetch.
-        var url = '/api/census?year=' + encodeURIComponent(year) + '&vars=' + encodeURIComponent(vars);
-        var resp = await fetch(url);
-        if (!resp.ok) throw new Error('Census API returned ' + resp.status + ' for year ' + year);
-        var rows = await resp.json();
+        var url = '/api/census?year=' + encodeURIComponent(year) + '&vars=' + encodeURIComponent(vars) + '&survey=' + survey;
+        // Per-session cache: ACS data is static per year, and games re-request
+        // the same datasets the editor loads.
+        var cacheKey = 'tappymaps_census_' + survey + '_' + year + '_' + vars;
+        var rows = null;
+        try { rows = JSON.parse(sessionStorage.getItem(cacheKey)); } catch (_) {}
+        if (!rows) {
+          var resp = await fetch(url);
+          if (!resp.ok) {
+            // The proxy returns { error } JSON with an actionable message
+            // (e.g. a missing CENSUS_API_KEY) — surface it instead of a bare status.
+            var msg = 'Census API returned ' + resp.status + ' for year ' + year;
+            try { var body = await resp.json(); if (body && body.error) msg = body.error; } catch (_) {}
+            throw new Error(msg);
+          }
+          rows = await resp.json();
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(rows)); } catch (_) {}
+        }
         var header = rows[0];
         var result = {};
         for (var i = 1; i < rows.length; i++) {
@@ -7222,6 +8982,8 @@
         if (dataset.format === 'currency') label = '$' + Math.round(lo).toLocaleString() + ' – $' + Math.round(hi).toLocaleString();
         else if (dataset.format === 'percent') label = lo.toFixed(1) + '% – ' + hi.toFixed(1) + '%';
         else if (dataset.format === 'decimal') label = lo.toFixed(3) + ' – ' + hi.toFixed(3);
+        else if (dataset.format === 'decimal1') label = lo.toFixed(2) + ' – ' + hi.toFixed(2);
+        else if (dataset.format === 'year') label = Math.round(lo) + ' – ' + Math.round(hi);
         else label = Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString();
         appState.legendEntries.push({ label: label, color: midColor });
       }

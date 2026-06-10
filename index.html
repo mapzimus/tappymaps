@@ -2608,6 +2608,18 @@
       }
       .arcade-tile-medal { font-size: 16px; }
       .arcade-tile-best { font-weight: 700; color: var(--arcade); }
+      /* Mode buttons (Classic / Shuffle) on tiles for games with variants */
+      .arcade-tile-modes { display: flex; gap: 8px; margin-top: 12px; }
+      .arcade-tile-mode-btn {
+        flex: 1; text-align: center; text-decoration: none;
+        padding: 9px 10px; border-radius: 9px;
+        border: 1px solid var(--arcade);
+        color: var(--text, #f0f9ff); font-size: 13px; font-weight: 700;
+        background: transparent;
+      }
+      .arcade-tile-mode-btn:first-child { background: var(--arcade); color: #fff; }
+      .arcade-tile-mode-btn:hover { filter: brightness(1.08); }
+      .arcade-tile-mode-desc { font-size: 11px; opacity: 0.55; margin: 6px 0 0; }
       .arcade-tile-soon-chip {
         margin-top: auto;
         font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
@@ -2638,6 +2650,28 @@
         flex: 1; min-width: 0;
         font-size: clamp(16px, 2.4vw, 24px); font-weight: 800;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      /* Big center-screen prompt pop. pointer-events:none so fast players can
+         tap the map straight through it while it's still fading. */
+      .arcade-prompt-pop {
+        position: absolute; left: 50%; top: 36%;
+        transform: translate(-50%, -50%) scale(0.8);
+        font-size: clamp(30px, 6vw, 58px); font-weight: 800;
+        color: var(--text, #f0f9ff); text-align: center;
+        background: color-mix(in srgb, var(--surface, #1e293b) 84%, transparent);
+        border: 2px solid var(--arcade);
+        border-radius: 18px; padding: 10px 28px;
+        max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        opacity: 0; pointer-events: none; z-index: 4;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+      }
+      .arcade-prompt-pop.is-pop { animation: arcadePromptPop 1.3s ease forwards; }
+      @keyframes arcadePromptPop {
+        0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+        10%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+        18%  { transform: translate(-50%, -50%) scale(1); }
+        70%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -62%) scale(0.9); }
       }
       .arcade-stats { flex: none; display: flex; gap: 14px; }
       .arcade-stat { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
@@ -2680,6 +2714,26 @@
       }
       @keyframes arcadePulse { 0% { opacity: 0.4; } 100% { opacity: 1; } }
       #arcadeStatesGroup.is-locked { pointer-events: none; }
+      /* Painted states keep an inline fill set by arcadeResolve; the transient
+         --correct/--wrong/--reveal classes above still win via !important. */
+      .arcade-state--painted { stroke: var(--bg, #0F172A); }
+
+      /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it */
+      .arcade-zoom-controls {
+        position: absolute; right: 10px; bottom: 12px;
+        display: flex; flex-direction: column; gap: 7px; z-index: 3;
+      }
+      .arcade-zoom-btn {
+        width: 42px; height: 42px; border-radius: 10px;
+        background: color-mix(in srgb, var(--surface, #1e293b) 88%, transparent);
+        border: 1px solid var(--border, #334155);
+        color: var(--text, #f0f9ff); font-size: 20px; font-weight: 700;
+        cursor: pointer; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .arcade-zoom-btn:hover { border-color: var(--arcade); }
+      .arcade-zoom-btn--reset { font-size: 15px; display: none; }
+      .arcade-map-wrap.is-zoomed .arcade-zoom-btn--reset { display: flex; }
 
       .arcade-rotate-hint { display: none; }
 
@@ -3229,6 +3283,12 @@
         <svg id="arcadeMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap the named state">
           <g id="arcadeStatesGroup" transform="translate(5, -20) scale(0.95)"></g>
         </svg>
+        <div class="arcade-prompt-pop" id="arcadePromptPop" aria-hidden="true"></div>
+        <div class="arcade-zoom-controls">
+          <button type="button" class="arcade-zoom-btn" id="arcadeZoomIn" aria-label="Zoom in">+</button>
+          <button type="button" class="arcade-zoom-btn" id="arcadeZoomOut" aria-label="Zoom out">−</button>
+          <button type="button" class="arcade-zoom-btn arcade-zoom-btn--reset" id="arcadeZoomReset" aria-label="Reset zoom">⤾</button>
+        </div>
         <div class="arcade-rotate-hint" aria-hidden="true">Best played in landscape — rotate your phone.</div>
       </div>
       <div class="arcade-toast" id="arcadeToast" aria-live="polite"></div>
@@ -4301,8 +4361,14 @@
         perPrompt: 8,            // seconds per prompt
         scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
         medals: { bronze: 150, silver: 280, gold: 400 },
-        // generator(rng) → ordered list of prompt state names (no repeats)
-        generator: (rng) => arcadePickStates(10, rng),
+        // Run variants. Classic = 10 distinct states, paint as you go.
+        // Shuffle = sampled with replacement (no back-to-back repeats), so a
+        // state you already found can come up again — no elimination guessing.
+        defaultMode: 'classic',
+        modes: {
+          classic: { label: 'Classic', generator: (rng) => arcadePickStates(10, rng) },
+          shuffle: { label: 'Shuffle', generator: (rng) => arcadePickShuffle(10, rng) },
+        },
       },
       'speed-run': {
         id: 'speed-run', name: 'Speed Run',
@@ -4354,11 +4420,28 @@
       }
       return pool.slice(0, n);
     }
+    // Sample N states WITH replacement (Shuffle mode). No immediate
+    // back-to-back repeat, but a state can absolutely come up again later.
+    function arcadePickShuffle(n, rng) {
+      const pool = arcadeStateNames();
+      const out = [];
+      let prev = null;
+      for (let i = 0; i < n; i++) {
+        let pick = pool[Math.floor(rng() * pool.length)];
+        while (pick === prev) pick = pool[Math.floor(rng() * pool.length)];
+        out.push(pick); prev = pick;
+      }
+      return out;
+    }
+
+    // Bright fills cycled onto correctly-found states — the map fills with
+    // color as you play, like a mini Create session.
+    const ARCADE_PAINT_COLORS = ['#0EA5E9','#F97316','#22c55e','#a855f7','#eab308','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#06b6d4','#84cc16','#fb923c'];
 
     // --- Live run state ---
     const AG = {
-      game: null, prompts: [], idx: 0, seed: '',
-      score: 0, streak: 0, bestStreak: 0, correct: 0,
+      game: null, mode: 'classic', prompts: [], idx: 0, seed: '',
+      score: 0, streak: 0, bestStreak: 0, correct: 0, paintIdx: 0,
       answered: false, deadline: 0, timerId: null, advanceId: null,
     };
     let _arcadeMapBuilt = false;
@@ -4406,6 +4489,94 @@
       document.querySelectorAll('#arcadeStatesGroup .arcade-state')
         .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal'));
     }
+    // Strip the persistent paint fills — run start only, NOT between prompts.
+    function arcadeClearPaint() {
+      document.querySelectorAll('#arcadeStatesGroup .arcade-state').forEach(p => {
+        p.style.fill = '';
+        p.classList.remove('arcade-state--painted');
+      });
+    }
+
+    // --- Map zoom (pinch / pan / wheel / buttons / double-tap reset) -------
+    // Mirrors the Create editor's pattern (Block 1) but binds to the Arcade's
+    // OWN svg. preventDefault during pinch/pan also suppresses the synthetic
+    // click, so dragging never registers as a state tap.
+    const AZ = { scale: 1, panX: 0, panY: 0 };
+    function arcadeApplyZoom() {
+      const svg = document.getElementById('arcadeMapSvg');
+      const wrap = document.getElementById('arcadeMapWrap');
+      if (!svg) return;
+      svg.style.transform = 'translate(' + AZ.panX + 'px, ' + AZ.panY + 'px) scale(' + AZ.scale + ')';
+      svg.style.transformOrigin = 'center center';
+      if (wrap) wrap.classList.toggle('is-zoomed', AZ.scale > 1.05);
+    }
+    function arcadeClampPan() {
+      const wrap = document.getElementById('arcadeMapWrap');
+      if (!wrap) return;
+      const rect = wrap.getBoundingClientRect();
+      const maxPan = (AZ.scale - 1) * Math.max(rect.width, rect.height) / 2;
+      AZ.panX = Math.max(-maxPan, Math.min(maxPan, AZ.panX));
+      AZ.panY = Math.max(-maxPan, Math.min(maxPan, AZ.panY));
+    }
+    function arcadeZoomBy(factor) {
+      AZ.scale = Math.max(1, Math.min(6, AZ.scale * factor));
+      arcadeClampPan();
+      arcadeApplyZoom();
+    }
+    function arcadeResetZoom(animate) {
+      AZ.scale = 1; AZ.panX = 0; AZ.panY = 0;
+      const svg = document.getElementById('arcadeMapSvg');
+      if (svg && animate) {
+        svg.style.transition = 'transform 0.25s ease';
+        setTimeout(() => { svg.style.transition = ''; }, 260);
+      }
+      arcadeApplyZoom();
+    }
+    (function arcadeWireZoom() {
+      const wrap = document.getElementById('arcadeMapWrap');
+      if (!wrap) return;
+      let lastPinchDist = 0, isPinching = false, isPanning = false;
+      let lastPanX = 0, lastPanY = 0, lastTap = 0;
+      const dist = (t) => {
+        const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+      };
+      wrap.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) { isPinching = true; lastPinchDist = dist(e.touches); }
+        else if (e.touches.length === 1 && AZ.scale > 1.05) {
+          isPanning = true; lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+        }
+      }, { passive: true });
+      wrap.addEventListener('touchmove', (e) => {
+        if (isPinching && e.touches.length === 2) {
+          e.preventDefault();
+          const d = dist(e.touches);
+          AZ.scale = Math.max(1, Math.min(6, AZ.scale * (d / lastPinchDist)));
+          lastPinchDist = d;
+          arcadeClampPan(); arcadeApplyZoom();
+        } else if (isPanning && e.touches.length === 1 && AZ.scale > 1.05) {
+          e.preventDefault();
+          AZ.panX += e.touches[0].clientX - lastPanX;
+          AZ.panY += e.touches[0].clientY - lastPanY;
+          lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+          arcadeClampPan(); arcadeApplyZoom();
+        }
+      }, { passive: false });
+      wrap.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) isPinching = false;
+        if (e.touches.length < 1) isPanning = false;
+        if (e.touches.length === 0) {
+          const now = Date.now();
+          if (now - lastTap < 300 && AZ.scale > 1.05) { e.preventDefault(); arcadeResetZoom(true); }
+          lastTap = now;
+        }
+      });
+      // Desktop: scroll wheel zooms
+      wrap.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        arcadeZoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
+      }, { passive: false });
+    })();
     function arcadeStopTimers() {
       if (AG.timerId) { clearInterval(AG.timerId); AG.timerId = null; }
       if (AG.advanceId) { clearTimeout(AG.advanceId); AG.advanceId = null; }
@@ -4427,21 +4598,26 @@
       set('arcadeProgress', Math.min(AG.idx + 1, AG.game.runLength) + '/' + AG.game.runLength);
     }
 
-    // Begin a run. seed optional — generated if absent.
-    function arcadeStartRun(gameId, seed) {
+    // Begin a run. seed optional — generated if absent. mode optional —
+    // falls back to the game's defaultMode (or its single generator).
+    function arcadeStartRun(gameId, seed, mode) {
       const game = ARCADE_GAMES[gameId];
       if (!game || !game.playable) { arcadeShowHub(); return; }
       if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'wrong'); return; }
 
       AG.game = game;
+      AG.mode = (game.modes && mode && game.modes[mode]) ? mode : (game.defaultMode || 'classic');
+      const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
       AG.seed = seed || Math.random().toString(36).slice(2, 8);
-      AG.prompts = game.generator(arcadeMakeRng(AG.seed));
-      AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0;
+      AG.prompts = gen(arcadeMakeRng(AG.seed));
+      AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
 
       document.getElementById('arcadeHub').style.display = 'none';
       document.getElementById('arcadeGame').style.display = 'flex';
       document.getElementById('arcadeComplete').style.display = 'none';
       arcadeClearMarks();
+      arcadeClearPaint();
+      arcadeResetZoom();
       arcadeUpdateHud();
       arcadeNextPrompt();
     }
@@ -4458,6 +4634,14 @@
       const target = AG.prompts[AG.idx];
       const prompt = document.getElementById('arcadePrompt');
       if (prompt) prompt.textContent = 'Find: ' + target;
+      // Big center-screen pop of the state name (taps pass through it)
+      const pop = document.getElementById('arcadePromptPop');
+      if (pop) {
+        pop.textContent = target;
+        pop.classList.remove('is-pop');
+        void pop.offsetWidth; // restart the CSS animation
+        pop.classList.add('is-pop');
+      }
       arcadeUpdateHud();
       arcadeStartTimer();
     }
@@ -4507,7 +4691,14 @@
         AG.score += gained;
         AG.correct += 1;
         const tp = arcadeStatePath(target);
-        if (tp) tp.classList.add('arcade-state--correct');
+        if (tp) {
+          tp.classList.add('arcade-state--correct');
+          // Persistent paint: the green flash (!important) plays over it, then
+          // the inline fill stays for the rest of the run.
+          tp.style.fill = ARCADE_PAINT_COLORS[AG.paintIdx % ARCADE_PAINT_COLORS.length];
+          tp.classList.add('arcade-state--painted');
+          AG.paintIdx += 1;
+        }
         arcadeShowToast('+' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''), 'correct');
       } else {
         AG.streak = 0;
@@ -4525,9 +4716,14 @@
     }
 
     // --- localStorage best score (anon; signed-in sync is a later phase) ---
-    function arcadeBestKey(gameId) { return 'tappymaps_arcade_' + gameId + '_best'; }
-    function arcadeGetBest(gameId) {
-      try { return JSON.parse(localStorage.getItem(arcadeBestKey(gameId))) || null; }
+    // Per-mode keys; 'classic' keeps the unsuffixed legacy key so bests
+    // recorded before modes existed still count.
+    function arcadeBestKey(gameId, mode) {
+      const suffix = (mode && mode !== 'classic') ? '_' + mode : '';
+      return 'tappymaps_arcade_' + gameId + suffix + '_best';
+    }
+    function arcadeGetBest(gameId, mode) {
+      try { return JSON.parse(localStorage.getItem(arcadeBestKey(gameId, mode))) || null; }
       catch (_) { return null; }
     }
     function arcadeMedalFor(game, score) {
@@ -4543,28 +4739,30 @@
       const game = AG.game;
       const medal = arcadeMedalFor(game, AG.score);
 
-      const prev = arcadeGetBest(game.id);
+      const prev = arcadeGetBest(game.id, AG.mode);
       const isBest = !prev || AG.score > prev.score;
       if (isBest) {
-        try { localStorage.setItem(arcadeBestKey(game.id), JSON.stringify({ score: AG.score, medal: medal.key })); } catch (_) {}
+        try { localStorage.setItem(arcadeBestKey(game.id, AG.mode), JSON.stringify({ score: AG.score, medal: medal.key })); } catch (_) {}
       }
 
+      const modeLabel = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].label : '';
       const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
       set('arcadeMedal', medal.emoji);
       set('arcadeCompleteTitle', medal.key === 'none' ? 'Nice run!' : medal.label + '!');
       set('arcadeCompleteScore', AG.score);
-      set('arcadeCompleteDetail', AG.correct + ' of ' + game.runLength + ' correct · best streak ' + AG.bestStreak);
+      set('arcadeCompleteDetail', AG.correct + ' of ' + game.runLength + ' correct · best streak ' + AG.bestStreak + (modeLabel ? ' · ' + modeLabel : ''));
       set('arcadeCompleteBest', isBest ? 'New personal best!' : 'Your best: ' + (prev ? prev.score : 0));
       const status = document.getElementById('arcadeShareStatus');
       if (status) status.textContent = '';
       document.getElementById('arcadeComplete').style.display = 'flex';
       if (typeof trackEvent === 'function') {
-        trackEvent('arcade_run_complete', { game: game.id, score: AG.score, correct: AG.correct, medal: medal.key });
+        trackEvent('arcade_run_complete', { game: game.id, mode: AG.mode, score: AG.score, correct: AG.correct, medal: medal.key });
       }
     }
 
     function arcadeShareUrl() {
-      return window.location.origin + '/games/arcade/' + AG.game.id + '?seed=' + AG.seed;
+      const modeQ = (AG.mode && AG.mode !== 'classic') ? '&mode=' + AG.mode : '';
+      return window.location.origin + '/games/arcade/' + AG.game.id + '?seed=' + AG.seed + modeQ;
     }
     function arcadeShareRun() {
       const url = arcadeShareUrl();
@@ -4592,20 +4790,36 @@
       const grid = document.getElementById('arcadeTileGrid');
       if (!grid) return;
       grid.innerHTML = '';
+      const medalFor = (best) => best ? ({ gold: '🥇', silver: '🥈', bronze: '🥉', none: '🗺️' }[best.medal] || '') : '';
       Object.values(ARCADE_GAMES).forEach(game => {
-        if (game.playable) {
+        if (game.playable && game.modes) {
+          // Variant tile: one button per mode, per-mode best shown on the button.
+          const div = document.createElement('div');
+          div.className = 'arcade-tile';
+          const buttons = Object.keys(game.modes).map(m => {
+            const best = arcadeGetBest(game.id, m);
+            const label = game.modes[m].label + (best ? ' · ' + medalFor(best) + best.score : ' →');
+            const q = m === (game.defaultMode || 'classic') ? '' : '?mode=' + m;
+            return '<a class="arcade-tile-mode-btn" data-route href="/games/arcade/' + game.id + q + '">' + label + '</a>';
+          }).join('');
+          div.innerHTML =
+            '<div class="arcade-tile-name">' + game.name + '</div>' +
+            '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
+            '<div class="arcade-tile-modes">' + buttons + '</div>' +
+            '<p class="arcade-tile-mode-desc">Shuffle repeats states — no ruling out what you already found.</p>';
+          grid.appendChild(div);
+        } else if (game.playable) {
           const a = document.createElement('a');
           a.className = 'arcade-tile';
           a.href = '/games/arcade/' + game.id;
           a.setAttribute('data-route', '');
           const best = arcadeGetBest(game.id);
-          const medalEmoji = best ? ({ gold: '🥇', silver: '🥈', bronze: '🥉', none: '🗺️' }[best.medal] || '') : '';
           a.innerHTML =
             '<div class="arcade-tile-name">' + game.name + '</div>' +
             '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
             '<div class="arcade-tile-meta">' +
               (best
-                ? '<span class="arcade-tile-medal">' + medalEmoji + '</span><span>Best <span class="arcade-tile-best">' + best.score + '</span></span>'
+                ? '<span class="arcade-tile-medal">' + medalFor(best) + '</span><span>Best <span class="arcade-tile-best">' + best.score + '</span></span>'
                 : '<span class="arcade-tile-best">Play →</span>') +
             '</div>';
           grid.appendChild(a);
@@ -4633,7 +4847,10 @@
       const onClick = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
       onClick('arcadeBackBtn', () => Router.navigate('/games/arcade'));
       onClick('arcadeToHub', () => Router.navigate('/games/arcade'));
-      onClick('arcadePlayAgain', () => { if (AG.game) arcadeStartRun(AG.game.id); });
+      onClick('arcadePlayAgain', () => { if (AG.game) arcadeStartRun(AG.game.id, null, AG.mode); });
+      onClick('arcadeZoomIn', () => arcadeZoomBy(1.4));
+      onClick('arcadeZoomOut', () => arcadeZoomBy(1 / 1.4));
+      onClick('arcadeZoomReset', () => arcadeResetZoom(true));
       onClick('arcadeShareBtn', arcadeShareRun);
     })();
 
@@ -4644,15 +4861,16 @@
         if (el) el.style.display = 'flex';
         const sub = route && route.sub;
         if (sub && ARCADE_GAMES[sub] && ARCADE_GAMES[sub].playable) {
-          // Deep link / shared run — honor ?seed= if present.
+          // Deep link / shared run — honor ?seed= and ?mode= if present.
           const params = new URLSearchParams(window.location.search);
-          arcadeStartRun(sub, params.get('seed') || null);
+          arcadeStartRun(sub, params.get('seed') || null, params.get('mode') || null);
         } else {
           arcadeShowHub();
         }
       },
       exit() {
         arcadeStopTimers();
+        arcadeResetZoom();
         const el = document.getElementById('modeArcade');
         if (el) el.style.display = 'none';
       },

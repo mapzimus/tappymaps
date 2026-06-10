@@ -2690,13 +2690,16 @@
       }
       .arcade-timer-fill.is-low { background: var(--error, #ef4444); }
 
+      /* Mirror the Create editor's .map-container so the whole US (Florida,
+         the Alaska + Hawaii insets) frames identically — flex column, the SVG
+         is flex:1 width:100% via the global svg rule, no forced height. */
       .arcade-map-wrap {
         flex: 1; position: relative;
-        display: flex; align-items: center; justify-content: center;
-        padding: 8px; min-height: 0;
+        display: flex; flex-direction: column;
+        min-height: 0; overflow: hidden;
         background: var(--bg, #0F172A);
       }
-      #arcadeMapSvg { width: 100%; height: 100%; max-height: 100%; }
+      #arcadeMapSvg { width: 100%; }
       .arcade-state {
         fill: var(--surface-raised, #243044);
         stroke: var(--bg, #0F172A);
@@ -2726,10 +2729,18 @@
         stroke: var(--arcade); stroke-width: 2;
         animation: arcadePulse .5s ease;
       }
+      /* Neighbor Challenge: the "center" state glows and is not tappable */
+      .arcade-state--center {
+        fill: var(--arcade) !important;
+        stroke: #fff; stroke-width: 2;
+        pointer-events: none;
+        animation: arcadePulse .5s ease;
+      }
 
-      /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it */
+      /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it.
+         Top-right so they never sit over Florida or the AK/HI insets. */
       .arcade-zoom-controls {
-        position: absolute; right: 10px; bottom: 12px;
+        position: absolute; right: 10px; top: 10px;
         display: flex; flex-direction: column; gap: 7px; z-index: 3;
       }
       .arcade-zoom-btn {
@@ -2875,11 +2886,11 @@
       .draft-main { flex: 1; display: flex; min-height: 0; }
       .draft-map-wrap {
         flex: 1; position: relative;
-        display: flex; align-items: center; justify-content: center;
-        padding: 8px; min-height: 0;
+        display: flex; flex-direction: column;
+        min-height: 0; overflow: hidden;
         background: var(--bg, #0F172A);
       }
-      #draftMapSvg { width: 100%; height: 100%; max-height: 100%; }
+      #draftMapSvg { width: 100%; }
       .draft-state {
         fill: var(--surface-raised, #243044);
         stroke: var(--bg, #0F172A);
@@ -2983,6 +2994,38 @@
         .draft-roster { flex: 1; }
         #draftPracticeList li .name { width: 105px; }
       }
+
+      /* ===================================================================
+         Embed (Phase 3 — Distribution). Chrome-less view of a shared map for
+         iframes / Reddit / link unfurls. Reuses the live #mapContainer (moved
+         in once) so what you embed is pixel-identical to what you export.
+         =================================================================== */
+      #modeEmbed {
+        display: none;
+        flex-direction: column;
+        height: 100vh;
+        background: var(--bg);
+      }
+      body[data-mode="embed"] #modeEmbed { display: flex; }
+      #embedMapHost {
+        flex: 1; position: relative;
+        display: flex; flex-direction: column; min-height: 0;
+      }
+      #embedMapHost #mapContainer { flex: 1; }
+      /* Editor-only chrome that rides inside #mapContainer is hidden in embeds */
+      body[data-mode="embed"] #statsBar { display: none !important; }
+      body[data-mode="embed"] #mapTitle,
+      body[data-mode="embed"] #mapSubtitle { cursor: default; }
+      .embed-footer {
+        flex: none;
+        display: flex; align-items: center; justify-content: center; gap: 5px;
+        padding: 7px 10px;
+        font-size: 12px; color: var(--text-muted, #94a3b8);
+        background: var(--surface, #1e293b);
+        border-top: 1px solid var(--border, #334155);
+      }
+      .embed-footer a { color: var(--accent, #0EA5E9); text-decoration: none; font-weight: 700; }
+      .embed-footer.is-hidden { display: none; }
 
       /* Create mode (Phase 1) — landscape-first 5-panel rail layout */
       #modeCreate {
@@ -3306,9 +3349,9 @@
         <div class="hub-card-label">GAMES</div>
         <ul class="hub-card-list">
           <li>→ Find the State</li>
-          <li>→ Speed Run</li>
+          <li>→ Stat Duel</li>
+          <li>→ Neighbor Challenge</li>
           <li>→ GeoDraft</li>
-          <li>→ All games</li>
         </ul>
       </a>
       <!-- Note: hub cards navigate to the section; the Games card lands on the
@@ -3446,7 +3489,7 @@
       <header class="arcade-hub-header">
         <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
         <h2 class="arcade-hub-title">Arcade</h2>
-        <p class="arcade-hub-sub">Fast geography games. All free.</p>
+        <p class="arcade-hub-sub">Five fast geography games. All free.</p>
       </header>
       <div class="arcade-tile-grid" id="arcadeTileGrid"><!-- tiles injected by arcadeRenderHub() --></div>
       <footer class="arcade-hub-footer"><a href="/games/draft" data-route>GeoDraft →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
@@ -3588,6 +3631,16 @@
       <select id="draftPracticeSelect" aria-label="Pick a category"></select>
       <p class="draft-practice-desc" id="draftPracticeDesc"></p>
       <ol id="draftPracticeList"></ol>
+    </div>
+  </div>
+
+  <!-- Embed (Phase 3) — chrome-less map for iframes. #mapContainer is moved
+       into #embedMapHost once on first entry (setupEmbed), so the embed shows
+       the exact same rendered map/legend/logo as an export. -->
+  <div class="mode" id="modeEmbed" style="display:none">
+    <div id="embedMapHost"></div>
+    <div class="embed-footer" id="embedFooter">
+      <span>Made with</span><a href="https://tappymaps.com" target="_blank" rel="noopener">tappymaps.com</a>
     </div>
   </div>
 
@@ -3834,6 +3887,9 @@
             On mobile, long-press the image to save to camera roll
           </div>
           <button class="btn secondary btn-pro" id="copyShareLinkBtn">🔗 Copy Share Link
+            <span class="pro-badge">PRO</span>
+          </button>
+          <button class="btn secondary btn-pro" id="copyEmbedLinkBtn">&lt;/&gt; Copy Embed Link
             <span class="pro-badge">PRO</span>
           </button>
           <button class="btn secondary btn-pro" id="saveConfigBtn">💾 Save Config
@@ -4165,6 +4221,15 @@
       setLink('canonical', canonical || window.location.href);
     }
 
+    // Per-map OG image: the /api/render endpoint rasterizes the encoded state
+    // (carried in the URL fragment) into a PNG link-preview. Returns undefined
+    // when there's no map state, so updateMetaTags falls back to the brand OG.
+    function mapOgImageUrl() {
+      const h = window.location.hash.slice(1);
+      if (!h) return undefined;
+      return window.location.origin + '/api/render?m=' + encodeURIComponent(h) + '&format=png';
+    }
+
     function setMeta(name, content) {
       const sel = name.startsWith('og:')
         ? `meta[property="${name}"]`
@@ -4328,7 +4393,7 @@
 
     registerComingSoon('design/gallery', 'Gallery', 'Phase 4 — Gallery');
     // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
-    registerComingSoon('embed',          'Embed',   'Phase 5 — Distribution');
+    // embed is a real mode now (Phase 3) — registered below as Modes.Embed.
     registerComingSoon('about',          'About',   'Coming soon — Marketing');
     registerComingSoon('pricing',        'Pricing', 'Coming soon — Marketing');
     Router.register('__notFound__', {
@@ -4604,6 +4669,9 @@
         }
         // Default to Map panel.
         if (typeof switchPanel === 'function') switchPanel('map');
+        // First-visit welcome card — only ever in the editor, never the Hub
+        // or games (its own guards skip it once seen / when a map is loaded).
+        if (typeof showOnboarding === 'function') showOnboarding();
       },
       exit() {
         const el = document.getElementById('modeCreate');
@@ -4615,10 +4683,66 @@
           title: titleField + ' — Tappymaps',
           description: 'Color a US states map. Tap. Color. Share.',
           canonical: 'https://tappymaps.com/design/make',
+          ogImage: mapOgImageUrl(),
         };
       },
     };
     Router.register('design/make', Modes.Create);
+
+    // --- Embed mode (Phase 3 — Distribution) ------------------------------
+    // Chrome-less view of a shared map at /embed#<base64-state>. Moves the
+    // live #mapContainer in once (preserving every export-fidelity detail —
+    // legend anchoring, logo, source line) and decodes the fragment with the
+    // same loadStateFromURL the editor uses. Always-on footer except when the
+    // host opts out (?chrome=0 or ?source=devvit, e.g. Reddit's own frame).
+    let _embedDone = false;
+    function setupEmbed() {
+      if (_embedDone) return;
+      const host = document.getElementById('embedMapHost');
+      const mc = document.getElementById('mapContainer');
+      if (host && mc) { host.appendChild(mc); _embedDone = true; }
+    }
+    Modes.Embed = {
+      enter(route) {
+        setupEmbed();
+        const el = document.getElementById('modeEmbed');
+        if (el) el.style.display = 'flex';
+        // init() already decoded the fragment into #mapContainer; re-run only
+        // if we somehow arrived without state (e.g. client-side nav).
+        if (typeof loadStateFromURL === 'function' &&
+            (!appState.stateColors || Object.keys(appState.stateColors).length === 0) &&
+            window.location.hash.length > 1) {
+          try { loadStateFromURL(); } catch (e) { console.warn('embed load:', e); }
+        }
+        // Make the on-map title/subtitle non-editable in an embed.
+        ['mapTitle', 'mapSubtitle'].forEach(id => {
+          const n = document.getElementById(id); if (n) n.setAttribute('contenteditable', 'false');
+        });
+        // Footer: hidden for Devvit / explicit chrome=0 hosts.
+        const params = new URLSearchParams(window.location.search);
+        const noChrome = params.get('chrome') === '0' || params.get('source') === 'devvit';
+        const footer = document.getElementById('embedFooter');
+        if (footer) footer.classList.toggle('is-hidden', noChrome);
+        // Anchor the legend now that the map is laid out and visible.
+        if (typeof updateLegendPosition === 'function') {
+          requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} });
+        }
+      },
+      exit() {
+        const el = document.getElementById('modeEmbed');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const t = (typeof appState !== 'undefined' && appState.mapTitle) ? appState.mapTitle : 'Map';
+        return {
+          title: t + ' — Tappymaps',
+          description: 'A US map made with Tappymaps. Tap. Color. Share.',
+          canonical: 'https://tappymaps.com/embed',
+          ogImage: mapOgImageUrl(),
+        };
+      },
+    };
+    Router.register('embed', Modes.Embed);
 
     // ======================================================================
     // ARCADE (Phase 2) — shared game shell + Find the State
@@ -4660,13 +4784,40 @@
         scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
         medals: { bronze: 150, silver: 280, gold: 400 },
       },
-      'speed-run': {
-        id: 'speed-run', name: 'Speed Run',
-        tagline: 'Name all 50 states as fast as you can.', playable: false,
-      },
       'state-capitals': {
-        id: 'state-capitals', name: 'State Capitals',
-        tagline: 'Match each state to its capital city.', playable: false,
+        id: 'state-capitals',
+        name: 'State Capitals',
+        tagline: 'We name a capital city. Tap the state it belongs to.',
+        playable: true,
+        kind: 'capitals',        // single-tap, but the target is derived from a capital
+        runLength: 10,
+        perPrompt: 9,
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+        generator: (rng) => arcadePickCapitals(10, rng),
+      },
+      'neighbor-challenge': {
+        id: 'neighbor-challenge',
+        name: 'Neighbor Challenge',
+        tagline: 'We name a state. Tap every state that borders it before the clock runs out.',
+        playable: true,
+        kind: 'neighbors',       // multi-tap: find ALL bordering states per prompt
+        runLength: 8,
+        perPrompt: 14,
+        scoring: { base: 0, timeBonusMax: 20, streakThreshold: 3, streakStep: 6, streakCap: 30, perNeighbor: 7, completion: 18 },
+        medals: { bronze: 280, silver: 470, gold: 620 },
+        generator: (rng) => arcadePickNeighborCenters(8, rng),
+      },
+      'speed-run': {
+        id: 'speed-run',
+        name: 'Speed Run',
+        tagline: 'Find all 50 states. One run, beat the clock, chase the streak.',
+        playable: true,
+        runLength: 50,
+        perPrompt: 5,
+        scoring: { base: 10, timeBonusMax: 12, streakThreshold: 5, streakStep: 3, streakCap: 40 },
+        medals: { bronze: 500, silver: 850, gold: 1150 },
+        generator: (rng) => arcadePickStates(50, rng),
       },
     };
 
@@ -4727,6 +4878,99 @@
     // Bright fills cycled onto correctly-found states — the map fills with
     // color as you play, like a mini Create session.
     const ARCADE_PAINT_COLORS = ['#0EA5E9','#F97316','#22c55e','#a855f7','#eab308','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#06b6d4','#84cc16','#fb923c'];
+
+    // --- State Capitals (50) — drives the State Capitals game --------------
+    const STATE_CAPITALS = {
+      'Alabama':'Montgomery','Alaska':'Juneau','Arizona':'Phoenix','Arkansas':'Little Rock',
+      'California':'Sacramento','Colorado':'Denver','Connecticut':'Hartford','Delaware':'Dover',
+      'Florida':'Tallahassee','Georgia':'Atlanta','Hawaii':'Honolulu','Idaho':'Boise',
+      'Illinois':'Springfield','Indiana':'Indianapolis','Iowa':'Des Moines','Kansas':'Topeka',
+      'Kentucky':'Frankfort','Louisiana':'Baton Rouge','Maine':'Augusta','Maryland':'Annapolis',
+      'Massachusetts':'Boston','Michigan':'Lansing','Minnesota':'Saint Paul','Mississippi':'Jackson',
+      'Missouri':'Jefferson City','Montana':'Helena','Nebraska':'Lincoln','Nevada':'Carson City',
+      'New Hampshire':'Concord','New Jersey':'Trenton','New Mexico':'Santa Fe','New York':'Albany',
+      'North Carolina':'Raleigh','North Dakota':'Bismarck','Ohio':'Columbus','Oklahoma':'Oklahoma City',
+      'Oregon':'Salem','Pennsylvania':'Harrisburg','Rhode Island':'Providence','South Carolina':'Columbia',
+      'South Dakota':'Pierre','Tennessee':'Nashville','Texas':'Austin','Utah':'Salt Lake City',
+      'Vermont':'Montpelier','Virginia':'Richmond','Washington':'Olympia','West Virginia':'Charleston',
+      'Wisconsin':'Madison','Wyoming':'Cheyenne',
+    };
+
+    // --- State adjacency — drives Neighbor Challenge ----------------------
+    // Land borders between the 50 states (Four Corners point-touches counted,
+    // DC not counted). Verified two ways at load in dev: each list length
+    // equals the DRAFT_BORDERS count, and the relation is symmetric.
+    const STATE_ADJACENCY = {
+      'Alabama':['Florida','Georgia','Tennessee','Mississippi'],
+      'Alaska':[],
+      'Arizona':['California','Nevada','Utah','New Mexico','Colorado'],
+      'Arkansas':['Missouri','Tennessee','Mississippi','Louisiana','Texas','Oklahoma'],
+      'California':['Oregon','Nevada','Arizona'],
+      'Colorado':['Wyoming','Nebraska','Kansas','Oklahoma','New Mexico','Utah','Arizona'],
+      'Connecticut':['New York','Massachusetts','Rhode Island'],
+      'Delaware':['Maryland','Pennsylvania','New Jersey'],
+      'Florida':['Georgia','Alabama'],
+      'Georgia':['Florida','Alabama','Tennessee','North Carolina','South Carolina'],
+      'Hawaii':[],
+      'Idaho':['Washington','Oregon','Nevada','Utah','Wyoming','Montana'],
+      'Illinois':['Wisconsin','Iowa','Missouri','Kentucky','Indiana'],
+      'Indiana':['Illinois','Michigan','Ohio','Kentucky'],
+      'Iowa':['Minnesota','Wisconsin','Illinois','Missouri','Nebraska','South Dakota'],
+      'Kansas':['Nebraska','Missouri','Oklahoma','Colorado'],
+      'Kentucky':['Indiana','Ohio','West Virginia','Virginia','Tennessee','Missouri','Illinois'],
+      'Louisiana':['Texas','Arkansas','Mississippi'],
+      'Maine':['New Hampshire'],
+      'Maryland':['Virginia','West Virginia','Pennsylvania','Delaware'],
+      'Massachusetts':['Rhode Island','Connecticut','New York','Vermont','New Hampshire'],
+      'Michigan':['Ohio','Indiana','Wisconsin'],
+      'Minnesota':['Wisconsin','Iowa','South Dakota','North Dakota'],
+      'Mississippi':['Louisiana','Arkansas','Tennessee','Alabama'],
+      'Missouri':['Iowa','Illinois','Kentucky','Tennessee','Arkansas','Oklahoma','Kansas','Nebraska'],
+      'Montana':['Idaho','Wyoming','South Dakota','North Dakota'],
+      'Nebraska':['South Dakota','Iowa','Missouri','Kansas','Colorado','Wyoming'],
+      'Nevada':['Oregon','Idaho','Utah','Arizona','California'],
+      'New Hampshire':['Maine','Massachusetts','Vermont'],
+      'New Jersey':['New York','Pennsylvania','Delaware'],
+      'New Mexico':['Arizona','Utah','Colorado','Oklahoma','Texas'],
+      'New York':['New Jersey','Pennsylvania','Connecticut','Massachusetts','Vermont'],
+      'North Carolina':['Virginia','Tennessee','Georgia','South Carolina'],
+      'North Dakota':['Minnesota','South Dakota','Montana'],
+      'Ohio':['Michigan','Indiana','Kentucky','West Virginia','Pennsylvania'],
+      'Oklahoma':['Kansas','Missouri','Arkansas','Texas','New Mexico','Colorado'],
+      'Oregon':['Washington','Idaho','Nevada','California'],
+      'Pennsylvania':['New York','New Jersey','Delaware','Maryland','West Virginia','Ohio'],
+      'Rhode Island':['Connecticut','Massachusetts'],
+      'South Carolina':['North Carolina','Georgia'],
+      'South Dakota':['North Dakota','Minnesota','Iowa','Nebraska','Wyoming','Montana'],
+      'Tennessee':['Kentucky','Virginia','North Carolina','Georgia','Alabama','Mississippi','Arkansas','Missouri'],
+      'Texas':['New Mexico','Oklahoma','Arkansas','Louisiana'],
+      'Utah':['Idaho','Wyoming','Colorado','New Mexico','Arizona','Nevada'],
+      'Vermont':['New York','New Hampshire','Massachusetts'],
+      'Virginia':['Maryland','West Virginia','Kentucky','Tennessee','North Carolina'],
+      'Washington':['Oregon','Idaho'],
+      'West Virginia':['Pennsylvania','Maryland','Virginia','Kentucky','Ohio'],
+      'Wisconsin':['Michigan','Minnesota','Iowa','Illinois'],
+      'Wyoming':['Montana','South Dakota','Nebraska','Colorado','Utah','Idaho'],
+    };
+
+    // n distinct {state, capital} prompts (State Capitals game).
+    function arcadePickCapitals(n, rng) {
+      return arcadePickStates(n, rng).map(s => ({ state: s, capital: STATE_CAPITALS[s] }));
+    }
+    // n distinct center states that actually have neighbors (Neighbor Challenge).
+    function arcadePickNeighborCenters(n, rng) {
+      const pool = arcadeStateNames().filter(s => (STATE_ADJACENCY[s] || []).length > 0);
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+      }
+      return pool.slice(0, n);
+    }
+    // The state the player must tap for a single-target prompt: find/speed-run
+    // prompts are plain strings; capitals prompts are { state, capital }.
+    function arcadeSingleTarget(entry) {
+      return (typeof entry === 'string') ? entry : entry.state;
+    }
 
     // --- Stat Duel: reuses the Create editor's Census data layer -----------
     // Lazy for the same reason as arcadeStateNames(): DATA_MAP_DATASETS is
@@ -4808,7 +5052,7 @@
     }
     function arcadeClearMarks() {
       document.querySelectorAll('#arcadeStatesGroup .arcade-state')
-        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal', 'arcade-state--duel'));
+        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal', 'arcade-state--duel', 'arcade-state--center'));
     }
     // Strip the persistent paint fills — run start only, NOT between prompts.
     function arcadeClearPaint() {
@@ -4991,14 +5235,29 @@
 
       const prompt = document.getElementById('arcadePrompt');
       const pop = document.getElementById('arcadePromptPop');
+      const kind = AG.game.kind;
       let popText;
-      if (AG.game.kind === 'duel') {
+      if (kind === 'duel') {
         const pair = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Higher ' + AG.duelDataset.title + ' — tap your pick';
         popText = pair.a + ' or ' + pair.b + '?';
         const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
         if (pa) pa.classList.add('arcade-state--duel');
         if (pb) pb.classList.add('arcade-state--duel');
+      } else if (kind === 'neighbors') {
+        const center = AG.prompts[AG.idx];
+        const needed = STATE_ADJACENCY[center] || [];
+        AG.nbCenter = center;
+        AG.nbNeeded = new Set(needed);
+        AG.nbFound = new Set();
+        const cp = arcadeStatePath(center);
+        if (cp) cp.classList.add('arcade-state--center');
+        if (prompt) prompt.textContent = 'Borders of ' + center + ' — tap all ' + needed.length;
+        popText = center + ' — find its ' + needed.length + ' neighbors';
+      } else if (kind === 'capitals') {
+        const entry = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Capital: ' + entry.capital + ' — tap the state';
+        popText = entry.capital + '?';
       } else {
         const target = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Find: ' + target;
@@ -5027,18 +5286,87 @@
           fill.style.width = pct + '%';
           fill.classList.toggle('is-low', pct < 25);
         }
-        if (remain <= 0) arcadeResolve(null); // timeout = miss
+        if (remain <= 0) arcadeTimeout(); // timeout = miss
       }, 90);
+    }
+    // Timeout dispatch — neighbors ends the multi-tap round, others resolve.
+    function arcadeTimeout() {
+      if (AG.game.kind === 'neighbors') arcadeResolveNeighbors(false, null);
+      else arcadeResolve(null);
     }
 
     // Tap handler registered on every state path.
     function arcadeOnTap(name) {
       if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
-      if (AG.game.kind === 'duel') {
+      const kind = AG.game.kind;
+      if (kind === 'duel') {
         const pair = AG.prompts[AG.idx];
         if (name !== pair.a && name !== pair.b) return; // belt + CSS pointer-events braces
+        arcadeResolve(name);
+        return;
       }
+      if (kind === 'neighbors') { arcadeNeighborTap(name); return; }
       arcadeResolve(name);
+    }
+
+    // Neighbor Challenge: accumulate taps until all borders are found (success)
+    // or a wrong tap / timeout ends the round (miss). Correct neighbors score
+    // and paint live; a completion bonus + time + streak land on full success.
+    function arcadeNeighborTap(name) {
+      if (AG.answered) return;
+      if (name === AG.nbCenter) return;            // the center is not an answer
+      if (AG.nbFound.has(name)) return;            // already found
+      const s = AG.game.scoring;
+      if (AG.nbNeeded.has(name)) {
+        AG.nbFound.add(name);
+        AG.score += s.perNeighbor;
+        const tp = arcadeStatePath(name);
+        if (tp) {
+          tp.classList.add('arcade-state--correct', 'arcade-state--painted');
+          tp.style.fill = ARCADE_PAINT_COLORS[AG.paintIdx % ARCADE_PAINT_COLORS.length];
+          AG.paintIdx += 1;
+        }
+        arcadeUpdateHud();
+        if (AG.nbFound.size === AG.nbNeeded.size) {
+          arcadeResolveNeighbors(true, null);
+        } else {
+          arcadeShowToast('+' + s.perNeighbor + ' · ' + AG.nbFound.size + '/' + AG.nbNeeded.size, 'correct', 800);
+        }
+      } else {
+        arcadeResolveNeighbors(false, name);       // wrong tap ends the round
+      }
+    }
+
+    function arcadeResolveNeighbors(success, wrongName) {
+      if (AG.answered) return;
+      AG.answered = true;
+      arcadeStopTimers();
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.add('is-locked');
+      const s = AG.game.scoring;
+      const total = AG.nbNeeded.size, found = AG.nbFound.size;
+
+      if (success) {
+        const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
+        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        AG.streak += 1;
+        AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
+        const streakBonus = AG.streak >= s.streakThreshold
+          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+        const gained = s.completion + timeBonus + streakBonus;
+        AG.score += gained;
+        AG.correct += 1;
+        arcadeShowToast('All ' + total + ' borders! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''), 'correct', 1300);
+      } else {
+        AG.streak = 0;
+        // Reveal the borders the player missed.
+        AG.nbNeeded.forEach(n => { if (!AG.nbFound.has(n)) { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); } });
+        if (wrongName) { const wp = arcadeStatePath(wrongName); if (wp) wp.classList.add('arcade-state--wrong'); }
+        arcadeShowToast((wrongName ? wrongName + " doesn't border " + AG.nbCenter : 'Time!') + ' · ' + found + '/' + total, 'wrong', 1600);
+      }
+      arcadeUpdateHud();
+      AG.idx += 1;
+      AG.advanceId = setTimeout(arcadeNextPrompt, success ? 900 : 1700);
     }
 
     // Resolve the current prompt. tapped===null means timeout.
@@ -5059,7 +5387,7 @@
         const fmt = AG.duelDataset.format;
         valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
       } else {
-        target = AG.prompts[AG.idx];
+        target = arcadeSingleTarget(AG.prompts[AG.idx]); // string, or {state,capital}.state
         correct = tapped === target;
       }
       const s = AG.game.scoring;
@@ -5222,6 +5550,17 @@
           grid.appendChild(div);
         }
       });
+      // GeoDraft is its own mode (/games/draft) but belongs in the games
+      // lineup — surface it as a tile right here in the Arcade hub.
+      const draft = document.createElement('a');
+      draft.className = 'arcade-tile';
+      draft.href = '/games/draft';
+      draft.setAttribute('data-route', '');
+      draft.innerHTML =
+        '<div class="arcade-tile-name">GeoDraft</div>' +
+        '<p class="arcade-tile-tag">Draft states head-to-head vs the AI. Real numbers decide. Best of 5.</p>' +
+        '<div class="arcade-tile-meta"><span class="arcade-tile-best">Play →</span></div>';
+      grid.appendChild(draft);
     }
     function arcadeShowHub() {
       arcadeStopTimers();
@@ -5755,7 +6094,9 @@
       renderNorthArrow();
       renderScaleBar();
       updateStatsBar();
-      showOnboarding();
+      // NOTE: onboarding is NOT shown here — init() runs for every route
+      // (including the Hub and the games). It is triggered from
+      // Modes.Create.enter() so the welcome card only appears in the editor.
       trackEvent('page_load', { hasHash: !!window.location.hash.slice(1) });
       updateProGates();
       await initializeAuth();
@@ -5778,6 +6119,7 @@
       if (hasVisited || hasHash || hasColors) return;
 
       const overlay = document.getElementById('onboardingOverlay');
+      if (!overlay || overlay.classList.contains('active')) return; // idempotent across re-entries
       overlay.classList.add('active');
 
       document.getElementById('onboardingStart').addEventListener('click', () => {
@@ -7297,6 +7639,20 @@
         trackEvent('copy_share_link', { title: appState.mapTitle });
       }).catch(() => {
         showMessage('Failed to copy link', 'error');
+      });
+    }
+
+    // Embed link (Phase 3) — a chrome-less /embed#<state> URL plus a ready-to-
+    // paste <iframe>. Same encoded state as the share link, different route.
+    function copyEmbedLink() {
+      const encoded = encodeStateToURL();
+      const embedURL = `${window.location.origin}/embed#${encoded}`;
+      const iframe = `<iframe src="${embedURL}" width="640" height="480" style="border:0;border-radius:12px" loading="lazy" title="${(appState.mapTitle || 'Tappymaps map').replace(/"/g, '&quot;')}"></iframe>`;
+      navigator.clipboard.writeText(iframe).then(() => {
+        showMessage('Embed code copied — paste it anywhere!', 'success');
+        trackEvent('copy_embed_link', { title: appState.mapTitle });
+      }).catch(() => {
+        showMessage('Embed link: ' + embedURL, 'info');
       });
     }
 
@@ -9518,6 +9874,11 @@
       document.getElementById('copyShareLinkBtn').addEventListener('click', () => {
         if (!gateProFeature('share links')) return;
         copyShareLink();
+      });
+      const embedBtn = document.getElementById('copyEmbedLinkBtn');
+      if (embedBtn) embedBtn.addEventListener('click', () => {
+        if (!gateProFeature('embed links')) return;
+        copyEmbedLink();
       });
       document.getElementById('saveConfigBtn').addEventListener('click', () => {
         if (!gateProFeature('save config')) return;

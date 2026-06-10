@@ -2690,13 +2690,16 @@
       }
       .arcade-timer-fill.is-low { background: var(--error, #ef4444); }
 
+      /* Mirror the Create editor's .map-container so the whole US (Florida,
+         the Alaska + Hawaii insets) frames identically — flex column, the SVG
+         is flex:1 width:100% via the global svg rule, no forced height. */
       .arcade-map-wrap {
         flex: 1; position: relative;
-        display: flex; align-items: center; justify-content: center;
-        padding: 8px; min-height: 0;
+        display: flex; flex-direction: column;
+        min-height: 0; overflow: hidden;
         background: var(--bg, #0F172A);
       }
-      #arcadeMapSvg { width: 100%; height: 100%; max-height: 100%; }
+      #arcadeMapSvg { width: 100%; }
       .arcade-state {
         fill: var(--surface-raised, #243044);
         stroke: var(--bg, #0F172A);
@@ -2734,9 +2737,10 @@
         animation: arcadePulse .5s ease;
       }
 
-      /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it */
+      /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it.
+         Top-right so they never sit over Florida or the AK/HI insets. */
       .arcade-zoom-controls {
-        position: absolute; right: 10px; bottom: 12px;
+        position: absolute; right: 10px; top: 10px;
         display: flex; flex-direction: column; gap: 7px; z-index: 3;
       }
       .arcade-zoom-btn {
@@ -2882,11 +2886,11 @@
       .draft-main { flex: 1; display: flex; min-height: 0; }
       .draft-map-wrap {
         flex: 1; position: relative;
-        display: flex; align-items: center; justify-content: center;
-        padding: 8px; min-height: 0;
+        display: flex; flex-direction: column;
+        min-height: 0; overflow: hidden;
         background: var(--bg, #0F172A);
       }
-      #draftMapSvg { width: 100%; height: 100%; max-height: 100%; }
+      #draftMapSvg { width: 100%; }
       .draft-state {
         fill: var(--surface-raised, #243044);
         stroke: var(--bg, #0F172A);
@@ -4611,6 +4615,9 @@
         }
         // Default to Map panel.
         if (typeof switchPanel === 'function') switchPanel('map');
+        // First-visit welcome card — only ever in the editor, never the Hub
+        // or games (its own guards skip it once seen / when a map is loaded).
+        if (typeof showOnboarding === 'function') showOnboarding();
       },
       exit() {
         const el = document.getElementById('modeCreate');
@@ -5433,6 +5440,17 @@
           grid.appendChild(div);
         }
       });
+      // GeoDraft is its own mode (/games/draft) but belongs in the games
+      // lineup — surface it as a tile right here in the Arcade hub.
+      const draft = document.createElement('a');
+      draft.className = 'arcade-tile';
+      draft.href = '/games/draft';
+      draft.setAttribute('data-route', '');
+      draft.innerHTML =
+        '<div class="arcade-tile-name">GeoDraft</div>' +
+        '<p class="arcade-tile-tag">Draft states head-to-head vs the AI. Real numbers decide. Best of 5.</p>' +
+        '<div class="arcade-tile-meta"><span class="arcade-tile-best">Play →</span></div>';
+      grid.appendChild(draft);
     }
     function arcadeShowHub() {
       arcadeStopTimers();
@@ -5966,7 +5984,9 @@
       renderNorthArrow();
       renderScaleBar();
       updateStatsBar();
-      showOnboarding();
+      // NOTE: onboarding is NOT shown here — init() runs for every route
+      // (including the Hub and the games). It is triggered from
+      // Modes.Create.enter() so the welcome card only appears in the editor.
       trackEvent('page_load', { hasHash: !!window.location.hash.slice(1) });
       updateProGates();
       await initializeAuth();
@@ -5989,6 +6009,7 @@
       if (hasVisited || hasHash || hasColors) return;
 
       const overlay = document.getElementById('onboardingOverlay');
+      if (!overlay || overlay.classList.contains('active')) return; // idempotent across re-entries
       overlay.classList.add('active');
 
       document.getElementById('onboardingStart').addEventListener('click', () => {

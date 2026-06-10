@@ -2808,6 +2808,182 @@
         .arcade-prompt { font-size: 15px; }
       }
 
+      /* ===================================================================
+         GeoDraft (Phase 2b) — Category Draft vs the AI + Practice. Games
+         surface: orange accent per brand spec §8. Own svg, like Arcade.
+         =================================================================== */
+      #modeDraft {
+        --arcade: #F97316;
+        background: var(--bg, #0F172A);
+        color: var(--text, #f0f9ff);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+      #draftHub {
+        flex: 1; flex-direction: column; align-items: center;
+        padding: 36px 20px 24px; overflow-y: auto;
+      }
+      .draft-hub-title { font-size: 30px; font-weight: 800; margin: 14px 0 2px; }
+      .draft-hub-sub { font-size: 14px; opacity: 0.7; margin: 0 0 22px; }
+      .draft-hub-cards {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 14px; width: 100%; max-width: 860px;
+      }
+      .draft-card {
+        display: block; text-decoration: none; color: inherit;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 14px; padding: 18px;
+        transition: transform .12s ease, border-color .12s ease;
+      }
+      a.draft-card:hover { transform: translateY(-2px); border-color: var(--arcade); }
+      .draft-card-name { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+      .draft-card-tag { font-size: 13px; opacity: 0.7; margin: 0 0 12px; line-height: 1.35; }
+      .draft-card-cta { font-weight: 700; color: var(--arcade); font-size: 13px; }
+      .draft-card--soon { opacity: 0.55; }
+      .draft-card-soon-chip {
+        display: inline-block; font-size: 11px; font-weight: 700;
+        border: 1px solid var(--border, #334155); border-radius: 999px; padding: 3px 10px;
+      }
+      .draft-hub-footer { margin-top: 26px; font-size: 13px; }
+      .draft-hub-footer a { color: var(--arcade); text-decoration: none; }
+
+      #draftMatch { flex: 1; flex-direction: column; min-height: 0; position: relative; }
+      .draft-bar {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 14px;
+        background: var(--surface, #1e293b);
+        border-bottom: 1px solid var(--border, #334155);
+      }
+      .draft-round { font-size: 14px; font-weight: 800; flex: 1; min-width: 0; }
+      .draft-pips { font-size: 13px; font-weight: 700; display: flex; gap: 12px; white-space: nowrap; }
+      .draft-pips .you { color: #F97316; }
+      .draft-pips .ai { color: #8b5cf6; }
+      .draft-category {
+        display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--border, #334155);
+      }
+      .draft-cat-title { font-size: 17px; font-weight: 800; color: var(--arcade); }
+      .draft-cat-desc { font-size: 12.5px; opacity: 0.7; flex: 1; min-width: 140px; }
+      .draft-cat-rule {
+        font-size: 11.5px; font-weight: 700; white-space: nowrap;
+        border: 1px solid var(--arcade); border-radius: 999px; padding: 2px 10px;
+      }
+      .draft-main { flex: 1; display: flex; min-height: 0; }
+      .draft-map-wrap {
+        flex: 1; position: relative;
+        display: flex; align-items: center; justify-content: center;
+        padding: 8px; min-height: 0;
+        background: var(--bg, #0F172A);
+      }
+      #draftMapSvg { width: 100%; height: 100%; max-height: 100%; }
+      .draft-state {
+        fill: var(--surface-raised, #243044);
+        stroke: var(--bg, #0F172A);
+        stroke-width: 1.1;
+        cursor: pointer;
+        transition: fill .1s ease;
+      }
+      .draft-state:hover { fill: #38516e; }
+      .draft-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
+      .draft-state--taken { pointer-events: none; }
+      #draftStatesGroup.is-locked { pointer-events: none; }
+      .draft-turn {
+        position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
+        padding: 5px 14px; border-radius: 999px;
+        background: var(--surface, #1e293b); border: 1px solid var(--arcade);
+        font-size: 13px; font-weight: 700; white-space: nowrap; z-index: 3;
+      }
+      .draft-map-wrap.is-zoomed .arcade-zoom-btn--reset { display: flex; }
+      .draft-rosters {
+        width: 195px; border-left: 1px solid var(--border, #334155);
+        display: flex; flex-direction: column; gap: 12px;
+        padding: 12px; overflow-y: auto;
+      }
+      .draft-roster h4 {
+        margin: 0 0 6px; font-size: 11px; text-transform: uppercase;
+        letter-spacing: 0.6px;
+      }
+      .draft-roster--you h4 { color: #F97316; }
+      .draft-roster--ai h4 { color: #8b5cf6; }
+      .draft-roster ul { list-style: none; margin: 0; padding: 0; }
+      .draft-roster li { font-size: 13px; padding: 3px 0; border-bottom: 1px solid color-mix(in srgb, var(--border, #334155) 45%, transparent); }
+      .draft-reveal, .draft-complete {
+        position: absolute; inset: 0; z-index: 6;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--bg, #0F172A) 84%, transparent);
+        backdrop-filter: blur(6px); padding: 18px;
+      }
+      .draft-reveal-card, .draft-complete-card {
+        width: 100%; max-width: 430px;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 18px; padding: 20px 22px;
+        max-height: 94%; overflow-y: auto;
+      }
+      .draft-reveal-card h3 { margin: 0 0 12px; font-size: 18px; }
+      #draftRevealList { list-style: none; margin: 0; padding: 0; }
+      #draftRevealList li {
+        display: flex; align-items: center; gap: 9px;
+        font-size: 14px; padding: 5px 6px; border-radius: 7px;
+        opacity: 0; transform: translateY(7px);
+        transition: opacity .3s ease, transform .3s ease;
+      }
+      #draftRevealList li.is-in { opacity: 1; transform: none; }
+      #draftRevealList li .rank { width: 18px; opacity: 0.55; font-variant-numeric: tabular-nums; }
+      #draftRevealList li .name { flex: 1; font-weight: 600; }
+      #draftRevealList li .val { font-variant-numeric: tabular-nums; opacity: 0.85; }
+      #draftRevealList li .who {
+        font-size: 10px; font-weight: 800; border-radius: 5px; padding: 1px 7px;
+      }
+      #draftRevealList li.who-you .who { background: rgba(249,115,22,0.2); color: #F97316; }
+      #draftRevealList li.who-ai .who { background: rgba(139,92,246,0.2); color: #a78bfa; }
+      .draft-reveal-totals { margin: 14px 0 12px; font-weight: 800; font-size: 15px; min-height: 38px; opacity: 0; transition: opacity .3s ease; }
+      .draft-reveal-totals.is-in { opacity: 1; }
+      .draft-complete-card { text-align: center; }
+      .draft-complete-title { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
+      .draft-complete-detail { font-size: 14px; opacity: 0.8; margin: 0 0 18px; }
+      .draft-complete-actions { display: flex; flex-direction: column; gap: 9px; }
+
+      #draftPractice {
+        flex: 1; flex-direction: column;
+        width: 100%; max-width: 780px; margin: 0 auto;
+        padding: 18px 18px 30px; overflow-y: auto;
+      }
+      .draft-practice-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+      .draft-practice-bar h2 { font-size: 20px; font-weight: 800; margin: 0; flex: 1; }
+      #draftPracticeSelect {
+        width: 100%; margin: 10px 0 4px; padding: 10px 12px;
+        background: var(--surface, #1e293b); color: var(--text, #f0f9ff);
+        border: 1px solid var(--border, #334155); border-radius: 10px;
+        font-size: 14px; font-weight: 600;
+      }
+      .draft-practice-desc { font-size: 13px; opacity: 0.7; margin: 2px 0 12px; }
+      #draftPracticeList { list-style: none; margin: 0; padding: 0; }
+      #draftPracticeList li {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 13.5px; padding: 5px 6px;
+      }
+      #draftPracticeList li .rank { width: 22px; opacity: 0.55; font-variant-numeric: tabular-nums; }
+      #draftPracticeList li .name { width: 145px; font-weight: 600; }
+      #draftPracticeList li .bar-track { flex: 1; height: 9px; border-radius: 5px; background: var(--surface, #1e293b); overflow: hidden; }
+      #draftPracticeList li .bar { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #F97316, #fb923c); }
+      #draftPracticeList li .val { font-variant-numeric: tabular-nums; opacity: 0.85; min-width: 70px; text-align: right; }
+
+      @media (max-width: 720px) {
+        .draft-main { flex-direction: column; }
+        .draft-rosters {
+          width: auto; flex-direction: row; border-left: none;
+          border-top: 1px solid var(--border, #334155);
+          max-height: 120px;
+        }
+        .draft-roster { flex: 1; }
+        #draftPracticeList li .name { width: 105px; }
+      }
+
       /* Create mode (Phase 1) — landscape-first 5-panel rail layout */
       #modeCreate {
         display: none;            /* router toggles to flex */
@@ -3273,7 +3449,7 @@
         <p class="arcade-hub-sub">Fast geography games. All free.</p>
       </header>
       <div class="arcade-tile-grid" id="arcadeTileGrid"><!-- tiles injected by arcadeRenderHub() --></div>
-      <footer class="arcade-hub-footer"><a href="/" data-route>← Back to Tappymaps</a></footer>
+      <footer class="arcade-hub-footer"><a href="/games/draft" data-route>GeoDraft →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
     </div>
 
     <!-- Game view: shared shell (engine-owned chrome around the map) -->
@@ -3320,6 +3496,101 @@
       </div>
     </div>
   </div>
+
+  <!-- GeoDraft (Phase 2b) — Category Draft vs the AI + Practice. Own svg,
+       same self-contained pattern as Arcade. -->
+  <div class="mode" id="modeDraft" style="display:none">
+    <!-- Draft hub: pick a sub-mode -->
+    <div id="draftHub" style="display:none">
+      <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
+      <h2 class="draft-hub-title">GeoDraft</h2>
+      <p class="draft-hub-sub">Draft states head-to-head. Real numbers decide.</p>
+      <div class="draft-hub-cards">
+        <a class="draft-card" href="/games/draft/category" data-route>
+          <div class="draft-card-name">Category Draft</div>
+          <p class="draft-card-tag">Best of 5 vs the AI. Each round names a category — draft 3 states, highest total wins. Values stay hidden until the reveal.</p>
+          <span class="draft-card-cta">Play vs the AI →</span>
+        </a>
+        <a class="draft-card" href="/games/draft/practice" data-route>
+          <div class="draft-card-name">Practice</div>
+          <p class="draft-card-tag">Browse every category with all 50 values revealed. Learn what wins before you draft.</p>
+          <span class="draft-card-cta">Study up →</span>
+        </a>
+        <div class="draft-card draft-card--soon">
+          <div class="draft-card-name">Territory Draft</div>
+          <p class="draft-card-tag">25 picks each — claim the whole map blind, then random categories score it.</p>
+          <span class="draft-card-soon-chip">Coming soon</span>
+        </div>
+      </div>
+      <footer class="draft-hub-footer"><a href="/games/arcade" data-route>Arcade →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
+    </div>
+
+    <!-- Match view -->
+    <div id="draftMatch" style="display:none">
+      <header class="draft-bar">
+        <button type="button" class="arcade-back-btn" id="draftBackBtn" aria-label="Back to GeoDraft">←</button>
+        <div class="draft-round" id="draftRoundLabel">Round 1 · Best of 5</div>
+        <div class="draft-pips"><span class="you">You <span id="draftPipsYou">○○○</span></span><span class="ai">AI <span id="draftPipsAi">○○○</span></span></div>
+      </header>
+      <div class="draft-category">
+        <span class="draft-cat-title" id="draftCatTitle">Category</span>
+        <span class="draft-cat-desc" id="draftCatDesc"></span>
+        <span class="draft-cat-rule" id="draftCatRule">Highest total wins</span>
+      </div>
+      <div class="arcade-timer-track"><div class="arcade-timer-fill" id="draftTimerFill"></div></div>
+      <div class="draft-main">
+        <div class="draft-map-wrap" id="draftMapWrap">
+          <svg id="draftMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap a state to draft it"><g id="draftStatesGroup" transform="translate(5, -20) scale(0.95)"></g></svg>
+          <div class="draft-turn" id="draftTurnLabel">Your pick</div>
+          <div class="arcade-zoom-controls">
+            <button type="button" class="arcade-zoom-btn" id="draftZoomIn" aria-label="Zoom in">+</button>
+            <button type="button" class="arcade-zoom-btn" id="draftZoomOut" aria-label="Zoom out">−</button>
+            <button type="button" class="arcade-zoom-btn arcade-zoom-btn--reset" id="draftZoomReset" aria-label="Reset zoom">⤾</button>
+          </div>
+        </div>
+        <aside class="draft-rosters">
+          <div class="draft-roster draft-roster--you"><h4>You</h4><ul id="draftRosterYou"></ul></div>
+          <div class="draft-roster draft-roster--ai"><h4>AI</h4><ul id="draftRosterAi"></ul></div>
+        </aside>
+      </div>
+
+      <!-- Round reveal overlay -->
+      <div class="draft-reveal" id="draftReveal" style="display:none">
+        <div class="draft-reveal-card">
+          <h3 id="draftRevealTitle">The reveal</h3>
+          <ol id="draftRevealList"></ol>
+          <div class="draft-reveal-totals" id="draftRevealTotals"></div>
+          <button type="button" class="arcade-btn arcade-btn--primary" id="draftRevealNext" style="width:100%">Next round</button>
+        </div>
+      </div>
+
+      <!-- Match complete overlay -->
+      <div class="draft-complete" id="draftComplete" style="display:none">
+        <div class="draft-complete-card">
+          <h2 class="draft-complete-title" id="draftCompleteTitle">You win the draft!</h2>
+          <p class="draft-complete-detail" id="draftCompleteDetail"></p>
+          <div class="draft-complete-actions">
+            <button type="button" class="arcade-btn arcade-btn--primary" id="draftPlayAgain">Play again</button>
+            <button type="button" class="arcade-btn" id="draftShareBtn">Share this match</button>
+            <button type="button" class="arcade-btn" id="draftToHub">GeoDraft home</button>
+          </div>
+          <p class="arcade-share-status" id="draftShareStatus" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Practice view -->
+    <div id="draftPractice" style="display:none">
+      <div class="draft-practice-bar">
+        <button type="button" class="arcade-back-btn" id="draftPracticeBack" aria-label="Back to GeoDraft">←</button>
+        <h2>Practice — learn the categories</h2>
+      </div>
+      <select id="draftPracticeSelect" aria-label="Pick a category"></select>
+      <p class="draft-practice-desc" id="draftPracticeDesc"></p>
+      <ol id="draftPracticeList"></ol>
+    </div>
+  </div>
+
   <h1 class="sr-only">Tappymaps</h1>
   <div class="container">
     <!-- Sidebar -->
@@ -4057,7 +4328,6 @@
 
     registerComingSoon('design/gallery', 'Gallery', 'Phase 4 — Gallery');
     // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
-    registerComingSoon('games/draft',    'GeoDraft','Phase 3 — GeoDraft');
     registerComingSoon('embed',          'Embed',   'Phase 5 — Distribution');
     registerComingSoon('about',          'About',   'Coming soon — Marketing');
     registerComingSoon('pricing',        'Pricing', 'Coming soon — Marketing');
@@ -4548,86 +4818,93 @@
       });
     }
 
-    // --- Map zoom (pinch / pan / wheel / buttons / double-tap reset) -------
-    // Mirrors the Create editor's pattern (Block 1) but binds to the Arcade's
+    // --- Map zoom factory (pinch / pan / wheel / buttons / double-tap) -----
+    // Mirrors the Create editor's pattern (Block 1) but binds to a game's
     // OWN svg. preventDefault during pinch/pan also suppresses the synthetic
-    // click, so dragging never registers as a state tap.
-    const AZ = { scale: 1, panX: 0, panY: 0 };
-    function arcadeApplyZoom() {
-      const svg = document.getElementById('arcadeMapSvg');
-      const wrap = document.getElementById('arcadeMapWrap');
-      if (!svg) return;
-      svg.style.transform = 'translate(' + AZ.panX + 'px, ' + AZ.panY + 'px) scale(' + AZ.scale + ')';
-      svg.style.transformOrigin = 'center center';
-      if (wrap) wrap.classList.toggle('is-zoomed', AZ.scale > 1.05);
-    }
-    function arcadeClampPan() {
-      const wrap = document.getElementById('arcadeMapWrap');
-      if (!wrap) return;
-      const rect = wrap.getBoundingClientRect();
-      const maxPan = (AZ.scale - 1) * Math.max(rect.width, rect.height) / 2;
-      AZ.panX = Math.max(-maxPan, Math.min(maxPan, AZ.panX));
-      AZ.panY = Math.max(-maxPan, Math.min(maxPan, AZ.panY));
-    }
-    function arcadeZoomBy(factor) {
-      AZ.scale = Math.max(1, Math.min(6, AZ.scale * factor));
-      arcadeClampPan();
-      arcadeApplyZoom();
-    }
-    function arcadeResetZoom(animate) {
-      AZ.scale = 1; AZ.panX = 0; AZ.panY = 0;
-      const svg = document.getElementById('arcadeMapSvg');
-      if (svg && animate) {
-        svg.style.transition = 'transform 0.25s ease';
-        setTimeout(() => { svg.style.transition = ''; }, 260);
+    // click, so dragging never registers as a state tap. Shared by the
+    // Arcade and GeoDraft maps.
+    function makeMapZoom(wrapId, svgId) {
+      const Z = { scale: 1, panX: 0, panY: 0 };
+      function apply() {
+        const svg = document.getElementById(svgId);
+        const wrap = document.getElementById(wrapId);
+        if (!svg) return;
+        svg.style.transform = 'translate(' + Z.panX + 'px, ' + Z.panY + 'px) scale(' + Z.scale + ')';
+        svg.style.transformOrigin = 'center center';
+        if (wrap) wrap.classList.toggle('is-zoomed', Z.scale > 1.05);
       }
-      arcadeApplyZoom();
+      function clampPan() {
+        const wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        const rect = wrap.getBoundingClientRect();
+        const maxPan = (Z.scale - 1) * Math.max(rect.width, rect.height) / 2;
+        Z.panX = Math.max(-maxPan, Math.min(maxPan, Z.panX));
+        Z.panY = Math.max(-maxPan, Math.min(maxPan, Z.panY));
+      }
+      function zoomBy(factor) {
+        Z.scale = Math.max(1, Math.min(6, Z.scale * factor));
+        clampPan();
+        apply();
+      }
+      function reset(animate) {
+        Z.scale = 1; Z.panX = 0; Z.panY = 0;
+        const svg = document.getElementById(svgId);
+        if (svg && animate) {
+          svg.style.transition = 'transform 0.25s ease';
+          setTimeout(() => { svg.style.transition = ''; }, 260);
+        }
+        apply();
+      }
+      (function wire() {
+        const wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        let lastPinchDist = 0, isPinching = false, isPanning = false;
+        let lastPanX = 0, lastPanY = 0, lastTap = 0;
+        const dist = (t) => {
+          const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+          return Math.sqrt(dx * dx + dy * dy);
+        };
+        wrap.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 2) { isPinching = true; lastPinchDist = dist(e.touches); }
+          else if (e.touches.length === 1 && Z.scale > 1.05) {
+            isPanning = true; lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+          }
+        }, { passive: true });
+        wrap.addEventListener('touchmove', (e) => {
+          if (isPinching && e.touches.length === 2) {
+            e.preventDefault();
+            const d = dist(e.touches);
+            Z.scale = Math.max(1, Math.min(6, Z.scale * (d / lastPinchDist)));
+            lastPinchDist = d;
+            clampPan(); apply();
+          } else if (isPanning && e.touches.length === 1 && Z.scale > 1.05) {
+            e.preventDefault();
+            Z.panX += e.touches[0].clientX - lastPanX;
+            Z.panY += e.touches[0].clientY - lastPanY;
+            lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
+            clampPan(); apply();
+          }
+        }, { passive: false });
+        wrap.addEventListener('touchend', (e) => {
+          if (e.touches.length < 2) isPinching = false;
+          if (e.touches.length < 1) isPanning = false;
+          if (e.touches.length === 0) {
+            const now = Date.now();
+            if (now - lastTap < 300 && Z.scale > 1.05) { e.preventDefault(); reset(true); }
+            lastTap = now;
+          }
+        });
+        // Desktop: scroll wheel zooms
+        wrap.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
+        }, { passive: false });
+      })();
+      return { zoomBy: zoomBy, reset: reset, state: Z };
     }
-    (function arcadeWireZoom() {
-      const wrap = document.getElementById('arcadeMapWrap');
-      if (!wrap) return;
-      let lastPinchDist = 0, isPinching = false, isPanning = false;
-      let lastPanX = 0, lastPanY = 0, lastTap = 0;
-      const dist = (t) => {
-        const dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
-        return Math.sqrt(dx * dx + dy * dy);
-      };
-      wrap.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) { isPinching = true; lastPinchDist = dist(e.touches); }
-        else if (e.touches.length === 1 && AZ.scale > 1.05) {
-          isPanning = true; lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
-        }
-      }, { passive: true });
-      wrap.addEventListener('touchmove', (e) => {
-        if (isPinching && e.touches.length === 2) {
-          e.preventDefault();
-          const d = dist(e.touches);
-          AZ.scale = Math.max(1, Math.min(6, AZ.scale * (d / lastPinchDist)));
-          lastPinchDist = d;
-          arcadeClampPan(); arcadeApplyZoom();
-        } else if (isPanning && e.touches.length === 1 && AZ.scale > 1.05) {
-          e.preventDefault();
-          AZ.panX += e.touches[0].clientX - lastPanX;
-          AZ.panY += e.touches[0].clientY - lastPanY;
-          lastPanX = e.touches[0].clientX; lastPanY = e.touches[0].clientY;
-          arcadeClampPan(); arcadeApplyZoom();
-        }
-      }, { passive: false });
-      wrap.addEventListener('touchend', (e) => {
-        if (e.touches.length < 2) isPinching = false;
-        if (e.touches.length < 1) isPanning = false;
-        if (e.touches.length === 0) {
-          const now = Date.now();
-          if (now - lastTap < 300 && AZ.scale > 1.05) { e.preventDefault(); arcadeResetZoom(true); }
-          lastTap = now;
-        }
-      });
-      // Desktop: scroll wheel zooms
-      wrap.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        arcadeZoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
-      }, { passive: false });
-    })();
+    const arcadeZoom = makeMapZoom('arcadeMapWrap', 'arcadeMapSvg');
+    function arcadeZoomBy(factor) { arcadeZoom.zoomBy(factor); }
+    function arcadeResetZoom(animate) { arcadeZoom.reset(animate); }
     function arcadeStopTimers() {
       if (AG.timerId) { clearInterval(AG.timerId); AG.timerId = null; }
       if (AG.advanceId) { clearTimeout(AG.advanceId); AG.advanceId = null; }
@@ -5006,6 +5283,462 @@
       },
     };
     Router.register('games/arcade', Modes.Arcade);
+
+    // =====================================================================
+    // GeoDraft (Phase 2b) — Category Draft vs the AI (best of 5) + Practice.
+    // Spec §7 MVP. Own svg (third map) built from cached topology, exactly
+    // like Arcade: touches none of the editor's export-critical paths.
+    // Census categories REUSE the editor's data layer (fetchCensusData +
+    // sessionStorage cache); static categories are bundled so GeoDraft is
+    // playable even if /api/census is down.
+    // =====================================================================
+
+    // Static category data. Area = published Census total-area figures
+    // (sq mi). Statehood = year admitted to the Union. Borders = number of
+    // bordering states, counting the Four Corners point touches.
+    const DRAFT_AREA = { 'Alabama':52420,'Alaska':665384,'Arizona':113990,'Arkansas':53179,'California':163695,'Colorado':104094,'Connecticut':5543,'Delaware':2489,'Florida':65758,'Georgia':59425,'Hawaii':10932,'Idaho':83569,'Illinois':57914,'Indiana':36420,'Iowa':56273,'Kansas':82278,'Kentucky':40408,'Louisiana':52378,'Maine':35380,'Maryland':12406,'Massachusetts':10554,'Michigan':96714,'Minnesota':86936,'Mississippi':48432,'Missouri':69707,'Montana':147040,'Nebraska':77348,'Nevada':110572,'New Hampshire':9349,'New Jersey':8723,'New Mexico':121590,'New York':54555,'North Carolina':53819,'North Dakota':70698,'Ohio':44826,'Oklahoma':69899,'Oregon':98379,'Pennsylvania':46054,'Rhode Island':1545,'South Carolina':32020,'South Dakota':77116,'Tennessee':42144,'Texas':268596,'Utah':84897,'Vermont':9616,'Virginia':42775,'Washington':71298,'West Virginia':24230,'Wisconsin':65496,'Wyoming':97813 };
+    const DRAFT_STATEHOOD = { 'Delaware':1787,'Pennsylvania':1787,'New Jersey':1787,'Georgia':1788,'Connecticut':1788,'Massachusetts':1788,'Maryland':1788,'South Carolina':1788,'New Hampshire':1788,'Virginia':1788,'New York':1788,'North Carolina':1789,'Rhode Island':1790,'Vermont':1791,'Kentucky':1792,'Tennessee':1796,'Ohio':1803,'Louisiana':1812,'Indiana':1816,'Mississippi':1817,'Illinois':1818,'Alabama':1819,'Maine':1820,'Missouri':1821,'Arkansas':1836,'Michigan':1837,'Florida':1845,'Texas':1845,'Iowa':1846,'Wisconsin':1848,'California':1850,'Minnesota':1858,'Oregon':1859,'Kansas':1861,'West Virginia':1863,'Nevada':1864,'Nebraska':1867,'Colorado':1876,'North Dakota':1889,'South Dakota':1889,'Montana':1889,'Washington':1889,'Idaho':1890,'Wyoming':1890,'Utah':1896,'Oklahoma':1907,'New Mexico':1912,'Arizona':1912,'Alaska':1959,'Hawaii':1959 };
+    const DRAFT_BORDERS = { 'Alabama':4,'Alaska':0,'Arizona':5,'Arkansas':6,'California':3,'Colorado':7,'Connecticut':3,'Delaware':3,'Florida':2,'Georgia':5,'Hawaii':0,'Idaho':6,'Illinois':5,'Indiana':4,'Iowa':6,'Kansas':4,'Kentucky':7,'Louisiana':3,'Maine':1,'Maryland':4,'Massachusetts':5,'Michigan':3,'Minnesota':4,'Mississippi':4,'Missouri':8,'Montana':4,'Nebraska':6,'Nevada':5,'New Hampshire':3,'New Jersey':3,'New Mexico':5,'New York':5,'North Carolina':4,'North Dakota':3,'Ohio':5,'Oklahoma':6,'Oregon':4,'Pennsylvania':6,'Rhode Island':2,'South Carolina':2,'South Dakota':6,'Tennessee':8,'Texas':4,'Utah':6,'Vermont':3,'Virginia':5,'Washington':2,'West Virginia':5,'Wisconsin':4,'Wyoming':6 };
+
+    // Category registry — lazy + memoized for the same TDZ reason as
+    // arcadeStateNames(): DATA_MAP_DATASETS is declared later in the block.
+    let _draftCats = null;
+    function draftCategories() {
+      if (_draftCats) return _draftCats;
+      const cats = [
+        { id: 'area', title: 'Total Area', desc: 'Total area in square miles.', format: 'number', values: DRAFT_AREA, noise: 0.10 },
+        { id: 'statehood', title: 'Oldest States', desc: 'Year admitted to the Union — earliest wins.', format: 'year', inverted: true, values: DRAFT_STATEHOOD, noise: 0.10, rule: 'Earliest total wins' },
+        { id: 'borders', title: 'Most Neighbors', desc: 'Bordering states (Four Corners counts).', format: 'number', values: DRAFT_BORDERS, noise: 0.08 },
+        { id: 'name-length', title: 'Longest Names', desc: 'Letters in the state name.', format: 'number', computed: true, noise: 0.06 },
+        { id: 'name-length-short', title: 'Shortest Names', desc: 'Letters in the state name — shortest wins.', format: 'number', computed: true, inverted: true, noise: 0.06, rule: 'Lowest total wins' },
+      ];
+      DATA_MAP_DATASETS.filter(d => !d.years).forEach(d => {
+        cats.push({ id: 'census-' + d.id, title: d.title, desc: d.desc, format: d.format, census: d, noise: 0.30 });
+      });
+      _draftCats = cats;
+      return cats;
+    }
+    async function draftLoadValues(cat) {
+      if (cat.computed) {
+        const out = {};
+        arcadeStateNames().forEach(n => { out[n] = n.replace(/[^A-Za-z]/g, '').length; });
+        return out;
+      }
+      if (cat.values) return cat.values;
+      const data = await fetchCensusData(cat.census);
+      const out = {};
+      arcadeStateNames().forEach(n => { if (isFinite(data[n])) out[n] = data[n]; });
+      if (Object.keys(out).length < 45) throw new Error('incomplete data for ' + cat.id);
+      return out;
+    }
+
+    const DRAFT_YOU_COLOR = '#F97316', DRAFT_AI_COLOR = '#8b5cf6';
+    const DG = {
+      phase: 'idle', seed: '', rng: null,
+      cats: [], vals: [], round: 0, youWins: 0, aiWins: 0, ties: 0,
+      available: null, youPicks: [], aiPicks: [], aiOrder: [],
+      picksPerSide: 3, turn: 'you',
+      timerId: null, deadline: 0, aiId: null, revealId: null,
+      loading: false, decided: false,
+    };
+
+    let _draftMapBuilt = false;
+    function draftBuildMap() {
+      if (_draftMapBuilt) return true;
+      const group = document.getElementById('draftStatesGroup');
+      const topology = (typeof appState !== 'undefined') ? appState.topologyData : null;
+      if (!group || !topology || typeof topojson === 'undefined') return false;
+      const features = topojson.feature(topology, topology.objects.states).features;
+      const pathGen = (geo) => {
+        let d = '';
+        const rings = (geo.type === 'Polygon') ? [geo.coordinates]
+          : (geo.type === 'MultiPolygon') ? geo.coordinates : [];
+        rings.forEach(poly => poly.forEach(ring => {
+          d += 'M' + ring.map(p => p.join(',')).join('L') + 'Z';
+        }));
+        return d;
+      };
+      features.forEach(feature => {
+        const fips = String(feature.id).padStart(2, '0');
+        const name = fipsToState[fips] || feature.properties?.name || ('Unknown ' + feature.id);
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        el.setAttribute('d', pathGen(feature.geometry));
+        el.setAttribute('data-state', name);
+        if (nonColorable.has(name)) {
+          el.setAttribute('class', 'draft-state draft-state--dc');
+        } else {
+          el.setAttribute('class', 'draft-state');
+          el.addEventListener('click', () => draftOnTap(name));
+        }
+        group.appendChild(el);
+      });
+      _draftMapBuilt = true;
+      return true;
+    }
+    function draftStatePath(name) {
+      return document.querySelector('#draftStatesGroup .draft-state[data-state="' + name + '"]');
+    }
+    const draftZoom = makeMapZoom('draftMapWrap', 'draftMapSvg');
+
+    function draftStopTimers() {
+      if (DG.timerId) { clearInterval(DG.timerId); DG.timerId = null; }
+      if (DG.aiId) { clearTimeout(DG.aiId); DG.aiId = null; }
+      if (DG.revealId) { clearTimeout(DG.revealId); DG.revealId = null; }
+    }
+    function draftShowView(which) {
+      ['draftHub', 'draftMatch', 'draftPractice'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === which) ? 'flex' : 'none';
+      });
+    }
+    function draftSet(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+
+    // --- Match lifecycle ---------------------------------------------------
+    async function draftStartMatch(seed) {
+      if (DG.loading) return;
+      if (!draftBuildMap()) { draftShowView('draftHub'); return; }
+      DG.loading = true;
+      draftShowView('draftMatch');
+      document.getElementById('draftReveal').style.display = 'none';
+      document.getElementById('draftComplete').style.display = 'none';
+      draftSet('draftCatTitle', 'Drawing categories…');
+      draftSet('draftCatDesc', '');
+      draftSet('draftTurnLabel', 'Loading…');
+
+      DG.seed = seed || Math.random().toString(36).slice(2, 8);
+      DG.rng = arcadeMakeRng('draft:' + DG.seed);
+      const shuffled = draftCategories().slice();
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(DG.rng() * (i + 1));
+        const t = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = t;
+      }
+      const cats = [], vals = [];
+      for (const cat of shuffled) {
+        if (cats.length === 5) break;
+        try {
+          const v = await draftLoadValues(cat);
+          cats.push(cat); vals.push(v);
+        } catch (_) { /* census down for this one — next candidate */ }
+      }
+      DG.loading = false;
+      if (cats.length < 5) {
+        draftSet('draftCatTitle', 'Category data unavailable — try again shortly.');
+        setTimeout(() => draftShowView('draftHub'), 1600);
+        return;
+      }
+      DG.cats = cats; DG.vals = vals;
+      DG.round = 0; DG.youWins = 0; DG.aiWins = 0; DG.ties = 0; DG.decided = false;
+      draftStartRound();
+    }
+
+    function draftClearMapMarks() {
+      document.querySelectorAll('#draftStatesGroup .draft-state').forEach(p => {
+        p.style.fill = '';
+        p.classList.remove('draft-state--taken');
+      });
+    }
+    function draftRenderPips() {
+      const pip = (w) => '●'.repeat(w) + '○'.repeat(Math.max(0, 3 - w));
+      draftSet('draftPipsYou', pip(DG.youWins));
+      draftSet('draftPipsAi', pip(DG.aiWins));
+    }
+    function draftRenderRosters() {
+      const fill = (ulId, picks) => {
+        const ul = document.getElementById(ulId);
+        if (!ul) return;
+        ul.innerHTML = '';
+        picks.forEach(n => {
+          const li = document.createElement('li');
+          li.textContent = n;
+          ul.appendChild(li);
+        });
+      };
+      fill('draftRosterYou', DG.youPicks);
+      fill('draftRosterAi', DG.aiPicks);
+    }
+
+    function draftStartRound() {
+      draftStopTimers();
+      const cat = DG.cats[DG.round], vals = DG.vals[DG.round];
+      DG.available = new Set(arcadeStateNames().filter(n => isFinite(vals[n])));
+      DG.youPicks = []; DG.aiPicks = []; DG.phase = 'pick';
+
+      // AI "reputation model": true ranking + per-round gaussian noise. The
+      // AI roughly knows the big categories but misjudges by a few ranks
+      // (more on obscure Census stats, less on area/statehood).
+      const ranked = Array.from(DG.available).sort((a, b) => cat.inverted ? vals[a] - vals[b] : vals[b] - vals[a]);
+      const gauss = () => (DG.rng() + DG.rng() + DG.rng() + DG.rng() - 2) / 2; // ~N(0, 0.29)
+      DG.aiOrder = ranked
+        .map((n, i) => ({ n: n, s: i + gauss() * cat.noise * 150 }))
+        .sort((x, y) => x.s - y.s)
+        .map(o => o.n);
+
+      draftClearMapMarks();
+      draftZoom.reset();
+      draftSet('draftRoundLabel', 'Round ' + (DG.round + 1) + ' · Best of 5');
+      draftSet('draftCatTitle', cat.title);
+      draftSet('draftCatDesc', cat.desc);
+      draftSet('draftCatRule', cat.rule || (cat.inverted ? 'Lowest total wins' : 'Highest total wins'));
+      draftRenderPips();
+      draftRenderRosters();
+      document.getElementById('draftReveal').style.display = 'none';
+      draftSetTurn('you');
+    }
+
+    function draftSetTurn(turn) {
+      DG.turn = turn;
+      const group = document.getElementById('draftStatesGroup');
+      if (turn === 'you') {
+        draftSet('draftTurnLabel', 'Your pick — ' + (DG.picksPerSide - DG.youPicks.length) + ' left');
+        if (group) group.classList.remove('is-locked');
+        draftStartPickTimer();
+      } else {
+        draftSet('draftTurnLabel', 'AI is picking…');
+        if (group) group.classList.add('is-locked');
+        DG.aiId = setTimeout(draftAiPick, 700 + Math.floor(DG.rng() * 600));
+      }
+    }
+    function draftStartPickTimer() {
+      const fill = document.getElementById('draftTimerFill');
+      const dur = 7000;
+      DG.deadline = Date.now() + dur;
+      if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
+      DG.timerId = setInterval(() => {
+        const remain = DG.deadline - Date.now();
+        const pct = Math.max(0, remain / dur) * 100;
+        if (fill) {
+          fill.style.width = pct + '%';
+          fill.classList.toggle('is-low', pct < 25);
+        }
+        if (remain <= 0) {
+          clearInterval(DG.timerId); DG.timerId = null;
+          const arr = Array.from(DG.available);
+          draftCommitPick('you', arr[Math.floor(DG.rng() * arr.length)]); // time's up — random pick
+        }
+      }, 90);
+    }
+    function draftOnTap(name) {
+      if (DG.phase !== 'pick' || DG.turn !== 'you') return;
+      if (!DG.available || !DG.available.has(name)) return;
+      if (DG.timerId) { clearInterval(DG.timerId); DG.timerId = null; }
+      draftCommitPick('you', name);
+    }
+    function draftAiPick() {
+      const pick = DG.aiOrder.find(n => DG.available.has(n));
+      draftCommitPick('ai', pick);
+    }
+    function draftCommitPick(who, name) {
+      if (!name || DG.phase !== 'pick') return;
+      DG.available.delete(name);
+      (who === 'you' ? DG.youPicks : DG.aiPicks).push(name);
+      const p = draftStatePath(name);
+      if (p) {
+        p.style.fill = (who === 'you') ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR;
+        p.classList.add('draft-state--taken');
+      }
+      draftRenderRosters();
+      if (DG.youPicks.length === DG.picksPerSide && DG.aiPicks.length === DG.picksPerSide) {
+        draftRevealRound();
+        return;
+      }
+      draftSetTurn(who === 'you' ? 'ai' : 'you');
+    }
+
+    function draftRevealRound() {
+      DG.phase = 'reveal';
+      draftStopTimers();
+      const cat = DG.cats[DG.round], vals = DG.vals[DG.round];
+      const picks = DG.youPicks.map(n => ({ n: n, who: 'you' }))
+        .concat(DG.aiPicks.map(n => ({ n: n, who: 'ai' })));
+      picks.sort((a, b) => cat.inverted ? vals[a.n] - vals[b.n] : vals[b.n] - vals[a.n]);
+      const youTotal = DG.youPicks.reduce((s, n) => s + vals[n], 0);
+      const aiTotal = DG.aiPicks.reduce((s, n) => s + vals[n], 0);
+      let winner;
+      if (youTotal === aiTotal) winner = 'tie';
+      else winner = ((youTotal > aiTotal) !== !!cat.inverted) ? 'you' : 'ai';
+      if (winner === 'you') DG.youWins += 1;
+      else if (winner === 'ai') DG.aiWins += 1;
+      else DG.ties += 1;
+      DG.decided = DG.youWins === 3 || DG.aiWins === 3 || DG.round === 4;
+
+      draftSet('draftRevealTitle', cat.title + ' — the reveal');
+      const list = document.getElementById('draftRevealList');
+      const totals = document.getElementById('draftRevealTotals');
+      const nextBtn = document.getElementById('draftRevealNext');
+      if (list) list.innerHTML = '';
+      if (totals) { totals.classList.remove('is-in'); totals.innerHTML = ''; }
+      if (nextBtn) nextBtn.textContent = DG.decided ? 'See final result' : 'Next round';
+      const items = [];
+      picks.forEach((p, i) => {
+        const li = document.createElement('li');
+        li.className = 'who-' + p.who;
+        li.innerHTML = '<span class="rank">' + (i + 1) + '</span>'
+          + '<span class="name">' + p.n + '</span>'
+          + '<span class="val">' + arcadeFormatVal(vals[p.n], cat.format) + '</span>'
+          + '<span class="who">' + (p.who === 'you' ? 'YOU' : 'AI') + '</span>';
+        if (list) list.appendChild(li);
+        items.push(li);
+      });
+      document.getElementById('draftReveal').style.display = 'flex';
+      let i = 0;
+      (function step() {
+        if (i < items.length) {
+          items[i].classList.add('is-in');
+          i += 1;
+          DG.revealId = setTimeout(step, 480);
+        } else if (totals) {
+          const f = (v) => arcadeFormatVal(v, cat.format);
+          const line = (winner === 'tie') ? 'Dead tie — no pip.'
+            : (winner === 'you' ? 'You take the round!' : 'AI takes the round.');
+          totals.innerHTML = 'You ' + f(youTotal) + ' · AI ' + f(aiTotal) + '<br>' + line;
+          totals.classList.add('is-in');
+          draftRenderPips();
+        }
+      })();
+      if (typeof trackEvent === 'function') {
+        trackEvent('draft_round_complete', { category: cat.id, round: DG.round + 1, winner: winner });
+      }
+    }
+    function draftNextRound() {
+      draftStopTimers();
+      if (DG.decided) { draftShowComplete(); return; }
+      DG.round += 1;
+      draftStartRound();
+    }
+    function draftShowComplete() {
+      DG.phase = 'done';
+      const won = DG.youWins > DG.aiWins;
+      const drew = DG.youWins === DG.aiWins;
+      draftSet('draftCompleteTitle', drew ? 'A draw!' : (won ? 'You win the draft! 🏆' : 'The AI takes it.'));
+      draftSet('draftCompleteDetail', 'Final score ' + DG.youWins + '–' + DG.aiWins
+        + (DG.ties ? ' with ' + DG.ties + ' tied round' + (DG.ties > 1 ? 's' : '') : '')
+        + ' · match seed ' + DG.seed);
+      const status = document.getElementById('draftShareStatus');
+      if (status) status.textContent = '';
+      document.getElementById('draftComplete').style.display = 'flex';
+      if (typeof trackEvent === 'function') {
+        trackEvent('draft_match_complete', { youWins: DG.youWins, aiWins: DG.aiWins, seed: DG.seed });
+      }
+    }
+    function draftShareMatch() {
+      const url = window.location.origin + '/games/draft/category?seed=' + DG.seed;
+      const result = DG.youWins > DG.aiWins ? 'beat the AI ' + DG.youWins + '-' + DG.aiWins
+        : 'went ' + DG.youWins + '-' + DG.aiWins + ' against the AI';
+      const text = 'I ' + result + ' on Tappymaps GeoDraft — same categories, your turn: ' + url;
+      const status = document.getElementById('draftShareStatus');
+      const done = (msg) => { if (status) status.textContent = msg; };
+      if (navigator.share) {
+        navigator.share({ title: 'Tappymaps GeoDraft', text: text, url: url })
+          .then(() => done('Shared!')).catch(() => arcadeCopy(url, done));
+      } else {
+        arcadeCopy(url, done);
+      }
+    }
+
+    // --- Practice ----------------------------------------------------------
+    let _draftPracticeFilled = false;
+    function draftShowPractice() {
+      draftShowView('draftPractice');
+      const sel = document.getElementById('draftPracticeSelect');
+      if (sel && !_draftPracticeFilled) {
+        _draftPracticeFilled = true;
+        draftCategories().forEach((c, i) => {
+          const o = document.createElement('option');
+          o.value = String(i);
+          o.textContent = c.title;
+          sel.appendChild(o);
+        });
+        sel.addEventListener('change', () => draftRenderPractice(Number(sel.value)));
+      }
+      draftRenderPractice(sel ? Number(sel.value || 0) : 0);
+    }
+    async function draftRenderPractice(idx) {
+      const cat = draftCategories()[idx];
+      const list = document.getElementById('draftPracticeList');
+      if (!cat || !list) return;
+      draftSet('draftPracticeDesc', cat.desc + (cat.inverted ? ' (lowest ranks first)' : ''));
+      list.innerHTML = '<li>Loading…</li>';
+      try {
+        const vals = await draftLoadValues(cat);
+        const ranked = arcadeStateNames().filter(n => isFinite(vals[n]))
+          .sort((a, b) => cat.inverted ? vals[a] - vals[b] : vals[b] - vals[a]);
+        let max = 0;
+        ranked.forEach(n => { if (Math.abs(vals[n]) > max) max = Math.abs(vals[n]); });
+        if (!max) max = 1;
+        list.innerHTML = '';
+        ranked.forEach((n, i) => {
+          const li = document.createElement('li');
+          li.innerHTML = '<span class="rank">' + (i + 1) + '</span>'
+            + '<span class="name">' + n + '</span>'
+            + '<span class="bar-track"><span class="bar" style="width:' + Math.max(2, Math.round(Math.abs(vals[n]) / max * 100)) + '%;display:block"></span></span>'
+            + '<span class="val">' + arcadeFormatVal(vals[n], cat.format) + '</span>';
+          list.appendChild(li);
+        });
+      } catch (_) {
+        list.innerHTML = '<li>Live data unavailable for this category right now.</li>';
+      }
+    }
+
+    // --- Wire buttons (nodes are static in the markup) ----------------------
+    (function draftWireButtons() {
+      const onClick = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
+      onClick('draftBackBtn', () => Router.navigate('/games/draft'));
+      onClick('draftToHub', () => Router.navigate('/games/draft'));
+      onClick('draftPracticeBack', () => Router.navigate('/games/draft'));
+      onClick('draftRevealNext', draftNextRound);
+      onClick('draftPlayAgain', () => { document.getElementById('draftComplete').style.display = 'none'; draftStartMatch(); });
+      onClick('draftShareBtn', draftShareMatch);
+      onClick('draftZoomIn', () => draftZoom.zoomBy(1.4));
+      onClick('draftZoomOut', () => draftZoom.zoomBy(1 / 1.4));
+      onClick('draftZoomReset', () => draftZoom.reset(true));
+    })();
+
+    // --- Mode registration ---------------------------------------------------
+    Modes.Draft = {
+      enter(route) {
+        const el = document.getElementById('modeDraft');
+        if (el) el.style.display = 'flex';
+        const sub = route && route.sub;
+        if (sub === 'category') {
+          const params = new URLSearchParams(window.location.search);
+          draftStartMatch(params.get('seed') || null);
+        } else if (sub === 'practice') {
+          draftShowPractice();
+        } else {
+          draftShowView('draftHub');
+        }
+      },
+      exit() {
+        draftStopTimers();
+        draftZoom.reset();
+        const el = document.getElementById('modeDraft');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const sub = route && route.sub;
+        if (sub === 'category') {
+          return {
+            title: 'Category Draft — Tappymaps GeoDraft',
+            description: 'Draft states head-to-head against the AI. Real numbers decide who wins. Free on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/draft/category',
+          };
+        }
+        if (sub === 'practice') {
+          return {
+            title: 'GeoDraft Practice — Tappymaps',
+            description: 'Learn every GeoDraft category with all 50 state values revealed. Free on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/draft/practice',
+          };
+        }
+        return {
+          title: 'GeoDraft — Tappymaps',
+          description: 'The state-drafting strategy game. Draft 3 states per category, best of 5 vs the AI. Free on Tappymaps.',
+          canonical: 'https://tappymaps.com/games/draft',
+        };
+      },
+    };
+    Router.register('games/draft', Modes.Draft);
+
 
     // ============================================================================
     // INITIALIZATION

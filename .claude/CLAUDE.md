@@ -88,6 +88,27 @@ Validate editor edits with `_validate.py` — the cutover never touched the Mobi
 - Games surface uses the **orange** accent (`#F97316`) per brand §8, not the turquoise Design accent.
 - Block 1 (Mobile IIFE) must still be 33,371 chars after any Arcade edit — Arcade never touches it.
 
+### Arcade v2 (2026-06-10, same branch)
+
+First device test drove a gameplay overhaul of Find the State plus a second game:
+
+- **Prompt pop**: big center-screen state name (`#arcadePromptPop`, `pointer-events:none` so fast taps pass through it).
+- **Zoom**: `makeMapZoom(wrapId, svgId)` factory (pinch/pan/wheel/buttons/double-tap reset, 1x-6x) — instances for Arcade AND GeoDraft. `preventDefault` during pan suppresses the synthetic click, so dragging never taps a state.
+- **Paint-as-you-play**: correct finds keep a cycling inline fill (`ARCADE_PAINT_COLORS`) for the run; the transient `--correct/--wrong/--reveal` classes win over it via `!important`. `arcadeClearPaint()` runs at run start only.
+- **Modes**: games may define `modes: { classic, shuffle }` + `defaultMode`. Shuffle samples WITH replacement (no back-to-back) so painting can't be gamed by elimination. Mode rides `?mode=` in share URLs; best-score keys are suffixed per mode (`classic` keeps the legacy unsuffixed key).
+- **Stat Duel** (`kind:'duel'`): two highlighted states, tap the one higher on a real ACS stat. Reuses `fetchCensusData` + the `duel:true` entries in `DATA_MAP_DATASETS` + the sessionStorage census cache. The run seed picks dataset AND pairs. Duel runs are async (data loads before round 1) and fail soft back to the hub if /api/census is down.
+- **TDZ gotcha (bit us once)**: the Arcade/GeoDraft block evaluates BEFORE `fipsToState` / `nonColorable` / `DATA_MAP_DATASETS` are declared. NEVER read them at the top level of that block — lazy accessors only (`arcadeStateNames()`, `arcadeDuelSets()`, `draftCategories()`). A top-level read throws a ReferenceError that kills the entire main block at load (blank map, dormant-mobile-bar symptom) and `node --check` can NOT catch it.
+
+## GeoDraft (Phase 2b — same branch, 2026-06-10)
+
+`/games/draft` is a real mode now (was a ComingSoon stub): **Category Draft vs the AI** (best of 5) + **Practice**. Spec §7 MVP. Grep anchors: `id="modeDraft"` (markup), `#modeDraft {` (CSS), `draftCategories` (registry), `DG` (match state), `draftStartMatch`/`draftStartRound`/`draftCommitPick`/`draftRevealRound` (lifecycle), `Modes.Draft`.
+
+- Same isolation contract as Arcade: own SVG (`#draftStatesGroup`) from cached topology; touches none of the export-critical editor paths or Block 1.
+- **Categories (43)**: 5 bundled static (`DRAFT_AREA`, `DRAFT_STATEHOOD`, `DRAFT_BORDERS`, computed name lengths ×2) + 38 generated from non-trend `DATA_MAP_DATASETS`. Census categories load through `fetchCensusData` (cached); if census is down a match still draws the 5 static ones.
+- **Match shape**: 5 rounds, 3 picks/side alternating (player first), 7s pick timer (timeout = seeded random pick), values hidden until the animated highest-to-lowest reveal, totals decide, first to 3 wins. Ties award no pip.
+- **AI**: true ranking + per-round gaussian noise scaled by `cat.noise` (low on area/statehood, high on obscure census stats). Deterministic per seed.
+- `?seed=` reproduces the category draw + AI behavior; final screen shares a rematch URL.
+
 ## Git Workflow
 
 - Default branch: **`master`** — auto-deploys to tappymaps.com via Vercel
@@ -131,11 +152,11 @@ CSS `[data-theme="x"]` selectors with full token overrides. JS `themeList` array
 
 Token system: 30+ CSS custom properties on `:root`. Key tokens: `--accent` (#0EA5E9), `--error` (#ef4444), `--bg`, `--surface`, `--border`, `--text`. Light theme overrides via `[data-theme="light"]` AND legacy `body.light-mode` class (parallel migration — the class selectors are gradually being phased out).
 
-## Data Maps System (23 datasets)
+## Data Maps System (39 datasets)
 
-`DATA_MAP_DATASETS` array of US Census ACS 1-year datasets. `fetchCensusData(dataset)` supports both single-year (`dataset.year || 2023`) and two-year trend (`dataset.years: [2013, 2023]` returns percent-change). `executeDataMapLoad(datasetId, rampColors)` fetches, applies the color ramp, and updates the legend.
+`DATA_MAP_DATASETS` array of US Census ACS 1-year datasets (22 original + 17 added 2026-06-10, every variable code verified against the live ACS 2023 registry). `fetchCensusData(dataset)` supports single-year (`dataset.year || 2023`), two-year trend (`dataset.years: [2013, 2023]`), an allowlisted `dataset.survey` (`acs1`|`acs5`), a **sessionStorage cache** (games and the editor share responses), and surfaces the proxy's JSON error message on failure. `executeDataMapLoad(datasetId, rampColors)` fetches, applies the color ramp, and updates the legend. `duel:true` entries also power Arcade's Stat Duel and GeoDraft categories.
 
-No Census API key is sent — ACS data is public and the key is only for higher rate limits. The client uses keyless URLs.
+**Census now REQUIRES an API key** (the keyless grace period ended — keyless requests 302 to missing_key.html). The browser calls the same-origin proxy `/api/census`, which injects `CENSUS_API_KEY` from the deployment environment server-side. If data maps all fail with "Census API key required", the env var is missing/not-redeployed in Vercel — env vars only take effect on the NEXT deployment. Label formats: number, currency, percent, decimal, decimal1, year.
 
 ## Template System (28 fortified templates)
 

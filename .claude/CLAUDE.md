@@ -121,6 +121,14 @@ First device test drove a gameplay overhaul of Find the State plus a second game
 - **`/api/render` (OG-image renderer) — BUILT 2026-06-10.** `GET /api/render?m=<base64-state>&format=png|svg&w=<px>` re-draws the map server-side (no browser): `topojson-client` decodes the cached `us-atlas` topology, `buildMapSVG()` composes states + title + legend + source + logo into a poster SVG, and `@resvg/resvg-js` rasterizes SVG→PNG. Decodes the SAME `btoa(JSON.stringify(...))` state as the share fragment. Cached `immutable`. `buildMapSVG`/`decodeState` are exported for tests; verified locally (PNG renders, all 51 paths, handler 200/400 paths). `mapOgImageUrl()` in index.html points the embed + shared-editor `og:image` at it.
 - **Still TODO for Phase 3**: (1) crawler-facing OG — `og:image` is set client-side, so JS-executing unfurlers (Slack/Discord) get the per-map image but pure crawlers (FB/Twitter) need a server-rendered share route since state lives in the URL fragment; (2) the Devvit Reddit app (needs the pending Reddit dev account).
 
+## Gallery (Phase 4 — started 2026-06-10)
+
+`/design/gallery` is a real mode now (was a ComingSoon stub) — a tabbed browser for maps. Grep anchors: `id="modeGallery"` (markup), `#modeGallery {` (CSS), `Modes.Gallery` / `galleryRender` (mode), `GALLERY_MINE_KEY` / `gallerySaveMine` (storage), `saveCurrentMapToGallery` (editor button).
+
+- **MVP ships "My Maps" only**, persisted in `localStorage` (`tappymaps_my_maps`, capped 60, de-duped by encoded hash). The editor's **Save to My Maps** button (Save & Share, free — no Pro gate) stores `encodeStateToURL()` + title/subtitle. Cards thumbnail via the Phase 3 **`/api/render`** endpoint (`galleryThumb()`), so the gallery reuses the OG renderer. "Open" navigates to `/design/make#<hash>`.
+- **Recent / Featured tabs show a "coming soon" empty state** — they need the gallery backend (Supabase `user_maps` + publish/moderation), which is the next Phase 4 increment. Tabs are `/design/gallery/{recent,featured,mine}` (router `sub`); default is `mine`.
+- Reachable from the Hub footer (`gallery`) and the editor's **View Gallery** button. Design surface = turquoise accent.
+
 ## Git Workflow
 
 - Default branch: **`master`** — auto-deploys to tappymaps.com via Vercel

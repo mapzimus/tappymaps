@@ -3027,6 +3027,74 @@
       .embed-footer a { color: var(--accent, #0EA5E9); text-decoration: none; font-weight: 700; }
       .embed-footer.is-hidden { display: none; }
 
+      /* ===================================================================
+         Gallery (Phase 4) — browse maps. Design surface: turquoise accent.
+         MVP ships "My Maps" (localStorage) with /api/render thumbnails;
+         Recent/Featured await the gallery backend.
+         =================================================================== */
+      #modeGallery {
+        --gal: #0EA5E9;
+        display: none; flex-direction: column;
+        min-height: 100vh; background: var(--bg, #0F172A); color: var(--text, #f0f9ff);
+      }
+      body[data-mode="design/gallery"] #modeGallery { display: flex; }
+      .gallery-header {
+        display: flex; flex-direction: column; align-items: center;
+        padding: 30px 18px 10px; text-align: center;
+      }
+      .gallery-title { font-size: 30px; font-weight: 800; margin: 12px 0 2px; }
+      .gallery-sub { font-size: 14px; opacity: 0.7; margin: 0 0 18px; }
+      .gallery-tabs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+      .gallery-tab {
+        text-decoration: none; color: var(--text, #f0f9ff);
+        font-size: 14px; font-weight: 700;
+        padding: 8px 16px; border-radius: 999px;
+        border: 1px solid var(--border, #334155); background: transparent;
+      }
+      .gallery-tab.is-active { background: var(--gal); border-color: var(--gal); color: #fff; }
+      .gallery-tab:hover { border-color: var(--gal); }
+      .gallery-body {
+        flex: 1; width: 100%; max-width: 1100px; margin: 0 auto;
+        padding: 18px; box-sizing: border-box;
+      }
+      .gallery-grid {
+        display: grid; gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      }
+      .gallery-card {
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 14px; overflow: hidden;
+        display: flex; flex-direction: column;
+        transition: transform .12s ease, border-color .12s ease;
+      }
+      .gallery-card:hover { transform: translateY(-2px); border-color: var(--gal); }
+      .gallery-thumb {
+        width: 100%; aspect-ratio: 1200 / 986; object-fit: cover;
+        background: #fff; display: block; border-bottom: 1px solid var(--border, #334155);
+      }
+      .gallery-card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; }
+      .gallery-card-title { font-size: 15px; font-weight: 700; margin: 0 0 2px; }
+      .gallery-card-sub { font-size: 12px; opacity: 0.65; margin: 0 0 12px; flex: 1; }
+      .gallery-card-actions { display: flex; gap: 8px; }
+      .gallery-card-btn {
+        flex: 1; text-align: center; text-decoration: none; cursor: pointer;
+        font-size: 13px; font-weight: 700; padding: 8px; border-radius: 8px;
+        border: 1px solid var(--border, #334155); color: var(--text, #f0f9ff); background: transparent;
+      }
+      .gallery-card-btn--primary { background: var(--gal); border-color: var(--gal); color: #fff; }
+      .gallery-card-btn:hover { filter: brightness(1.08); }
+      .gallery-empty {
+        text-align: center; padding: 60px 20px; opacity: 0.85;
+        display: flex; flex-direction: column; align-items: center; gap: 12px;
+      }
+      .gallery-empty-icon { font-size: 44px; }
+      .gallery-empty h3 { margin: 0; font-size: 19px; }
+      .gallery-empty p { margin: 0; font-size: 14px; opacity: 0.7; max-width: 380px; }
+      .gallery-empty .gallery-card-btn { flex: none; padding: 10px 18px; }
+      .gallery-footer { text-align: center; padding: 18px; font-size: 13px; }
+      .gallery-footer a { color: var(--gal); text-decoration: none; font-weight: 700; }
+
       /* Create mode (Phase 1) — landscape-first 5-panel rail layout */
       #modeCreate {
         display: none;            /* router toggles to flex */
@@ -3359,6 +3427,8 @@
 
     </main>
     <footer class="hub-footer">
+      <a href="/design/gallery/mine" data-route>gallery</a>
+      <span class="hub-footer-sep"> · </span>
       <a href="/about" data-route>about</a>
       <span class="hub-footer-sep"> · </span>
       <a href="/pricing" data-route>pricing</a>
@@ -3634,6 +3704,23 @@
     </div>
   </div>
 
+  <!-- Gallery (Phase 4) — browse maps. MVP: My Maps from localStorage with
+       /api/render thumbnails; Recent/Featured await the gallery backend. -->
+  <div class="mode" id="modeGallery" style="display:none">
+    <header class="gallery-header">
+      <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
+      <h2 class="gallery-title">Gallery</h2>
+      <p class="gallery-sub">Maps made with Tappymaps.</p>
+      <nav class="gallery-tabs">
+        <a class="gallery-tab" data-route href="/design/gallery/recent">Recent</a>
+        <a class="gallery-tab" data-route href="/design/gallery/featured">Featured</a>
+        <a class="gallery-tab" data-route href="/design/gallery/mine">My Maps</a>
+      </nav>
+    </header>
+    <div class="gallery-body" id="galleryBody"></div>
+    <footer class="gallery-footer"><a href="/" data-route>← Tappymaps</a> &nbsp;·&nbsp; <a href="/design/make" data-route>Make a map →</a></footer>
+  </div>
+
   <!-- Embed (Phase 3) — chrome-less map for iframes. #mapContainer is moved
        into #embedMapHost once on first entry (setupEmbed), so the embed shows
        the exact same rendered map/legend/logo as an export. -->
@@ -3892,6 +3979,8 @@
           <button class="btn secondary btn-pro" id="copyEmbedLinkBtn">&lt;/&gt; Copy Embed Link
             <span class="pro-badge">PRO</span>
           </button>
+          <button class="btn secondary" id="saveToGalleryBtn">⭐ Save to My Maps</button>
+          <a class="btn secondary" id="viewGalleryBtn" data-route href="/design/gallery/mine" style="text-decoration:none; display:block; text-align:center;">🖼 View Gallery</a>
           <button class="btn secondary btn-pro" id="saveConfigBtn">💾 Save Config
             <span class="pro-badge">PRO</span>
           </button>
@@ -4391,7 +4480,7 @@
       });
     }
 
-    registerComingSoon('design/gallery', 'Gallery', 'Phase 4 — Gallery');
+    // design/gallery is a real mode now (Phase 4) — registered below as Modes.Gallery.
     // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
     // embed is a real mode now (Phase 3) — registered below as Modes.Embed.
     registerComingSoon('about',          'About',   'Coming soon — Marketing');
@@ -4743,6 +4832,114 @@
       },
     };
     Router.register('embed', Modes.Embed);
+
+    // --- Gallery (Phase 4) ------------------------------------------------
+    // MVP: "My Maps" persisted in localStorage with /api/render thumbnails.
+    // Recent + Featured need the gallery backend (Supabase user_maps), so
+    // they show a tasteful "coming soon" empty state for now.
+    const GALLERY_MINE_KEY = 'tappymaps_my_maps';
+    const GALLERY_MAX = 60;
+    function galleryGetMine() {
+      try { const a = JSON.parse(localStorage.getItem(GALLERY_MINE_KEY)); return Array.isArray(a) ? a : []; }
+      catch (_) { return []; }
+    }
+    function gallerySaveMine(hash, title, subtitle) {
+      if (!hash) return;
+      let mine = galleryGetMine().filter(m => m.hash !== hash);   // de-dupe, move to front
+      mine.unshift({ hash, title: title || 'Untitled map', subtitle: subtitle || '', ts: Date.now() });
+      if (mine.length > GALLERY_MAX) mine = mine.slice(0, GALLERY_MAX);
+      try { localStorage.setItem(GALLERY_MINE_KEY, JSON.stringify(mine)); } catch (_) {}
+    }
+    function galleryRemoveMine(hash) {
+      const mine = galleryGetMine().filter(m => m.hash !== hash);
+      try { localStorage.setItem(GALLERY_MINE_KEY, JSON.stringify(mine)); } catch (_) {}
+    }
+    // Called from the editor's "Save to My Maps" button.
+    function saveCurrentMapToGallery() {
+      if (typeof encodeStateToURL !== 'function') return;
+      const colored = Object.keys((appState && appState.stateColors) || {}).length;
+      if (colored < 1) { showMessage('Color at least one state first', 'info'); return; }
+      gallerySaveMine(encodeStateToURL(), appState.mapTitle, appState.mapSubtitle);
+      showMessage('Saved to My Maps — see the Gallery', 'success');
+      if (typeof trackEvent === 'function') trackEvent('gallery_save_mine', { title: appState.mapTitle });
+    }
+
+    function galleryThumb(hash) {
+      return window.location.origin + '/api/render?m=' + encodeURIComponent(hash) + '&format=png&w=600';
+    }
+    function galleryEscape(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function galleryRenderMine(body) {
+      const mine = galleryGetMine();
+      if (!mine.length) {
+        body.innerHTML = '<div class="gallery-empty">'
+          + '<div class="gallery-empty-icon">🗺️</div>'
+          + '<h3>No saved maps yet</h3>'
+          + '<p>Make a map, then hit <strong>Save to My Maps</strong> in Save &amp; Share. Your maps live in this browser.</p>'
+          + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="/design/make">Make a map</a>'
+          + '</div>';
+        return;
+      }
+      let html = '<div class="gallery-grid">';
+      mine.forEach(m => {
+        const editHref = '/design/make#' + m.hash;
+        html += '<div class="gallery-card">'
+          + '<img class="gallery-thumb" loading="lazy" alt="' + galleryEscape(m.title) + '" src="' + galleryEscape(galleryThumb(m.hash)) + '">'
+          + '<div class="gallery-card-body">'
+          + '<div class="gallery-card-title">' + galleryEscape(m.title) + '</div>'
+          + '<div class="gallery-card-sub">' + galleryEscape(m.subtitle || '') + '</div>'
+          + '<div class="gallery-card-actions">'
+          + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="' + galleryEscape(editHref) + '">Open</a>'
+          + '<button class="gallery-card-btn" data-remove="' + galleryEscape(m.hash) + '">Remove</button>'
+          + '</div></div></div>';
+      });
+      html += '</div>';
+      body.innerHTML = html;
+      body.querySelectorAll('[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => { galleryRemoveMine(btn.getAttribute('data-remove')); galleryRenderMine(body); });
+      });
+    }
+    function galleryRenderComingSoon(body, label) {
+      body.innerHTML = '<div class="gallery-empty">'
+        + '<div class="gallery-empty-icon">✨</div>'
+        + '<h3>' + label + ' is coming soon</h3>'
+        + '<p>Published maps from the whole community will show up here once accounts and the gallery backend land. For now, your own maps live under <strong>My Maps</strong>.</p>'
+        + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="/design/gallery/mine">Go to My Maps</a>'
+        + '</div>';
+    }
+    function galleryRender(tab) {
+      const body = document.getElementById('galleryBody');
+      if (!body) return;
+      document.querySelectorAll('#modeGallery .gallery-tab').forEach(a => {
+        a.classList.toggle('is-active', a.getAttribute('href') === '/design/gallery/' + tab);
+      });
+      if (tab === 'mine') galleryRenderMine(body);
+      else if (tab === 'featured') galleryRenderComingSoon(body, 'Featured');
+      else galleryRenderComingSoon(body, 'Recent');
+    }
+    Modes.Gallery = {
+      enter(route) {
+        const el = document.getElementById('modeGallery');
+        if (el) el.style.display = 'flex';
+        const tab = (route && route.sub) || 'mine';
+        galleryRender(tab);
+      },
+      exit() {
+        const el = document.getElementById('modeGallery');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const tab = (route && route.sub) || 'mine';
+        const label = tab === 'mine' ? 'My Maps' : tab === 'featured' ? 'Featured' : 'Recent';
+        return {
+          title: 'Gallery · ' + label + ' — Tappymaps',
+          description: 'Browse maps made with Tappymaps. Tap. Color. Share.',
+          canonical: 'https://tappymaps.com/design/gallery/' + tab,
+        };
+      },
+    };
+    Router.register('design/gallery', Modes.Gallery);
 
     // ======================================================================
     // ARCADE (Phase 2) — shared game shell + Find the State
@@ -9880,6 +10077,9 @@
         if (!gateProFeature('embed links')) return;
         copyEmbedLink();
       });
+      // Gallery (Phase 4) — save the current map locally (free; no Pro gate).
+      const saveGalBtn = document.getElementById('saveToGalleryBtn');
+      if (saveGalBtn) saveGalBtn.addEventListener('click', saveCurrentMapToGallery);
       document.getElementById('saveConfigBtn').addEventListener('click', () => {
         if (!gateProFeature('save config')) return;
         saveConfig();

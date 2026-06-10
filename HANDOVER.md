@@ -13,8 +13,9 @@
 - **Tester mode** — LIVE since 2026-05-23. Auth UI hidden, access code `tap26` unlocks Pro. REMOVE BEFORE PUBLIC LAUNCH.
 - **Source field autofill defeat** — LIVE since 2026-05-25. Three-layer fix (HTML + CSS + JS) prevents Chrome from autofilling the user's email into the Source citation field.
 - **Phase 1 (Mode router + Hub + Create rebuild)** — SHIPPED 2026-05-29 (cutover commit `619e309`). The editor now lives at `/design/make`; `/` is the Hub. Verified across desktop + mobile portrait/landscape. See the "Reimagining — Phase 1 shipped" section below.
+- **Phase 2 (Arcade engine + Find the State)** — BUILT 2026-06-10 on branch `claude/tappymaps-setup-launch-ceiqp1` (draft PR). `/games/arcade` is now a real mode: manifest-driven game shell + the first playable game (Find the State), seeded-share URLs, anon localStorage high scores, hub tile grid. Logic unit-tested against the real source; **needs a real-browser/device pass before merge to `master`** (no headless Chrome in the build env). Writeup: `docs/superpowers/plans/2026-06-10-tappymaps-phase-2-arcade.md`.
 
-**Your next action:** Phase 1 is live and verified. Next up is Phase 2+ (Arcade games / GeoDraft / Gallery / Distribution) — each phase needs its own design spec → plan → subagent execution. Before that, a short live-soak is worthwhile: let the new router + Create rail run in production and watch for console errors or routing edge cases the smoke test didn't cover.
+**Your next action:** Verify Phase 2 Arcade in a real browser (load `/games/arcade`, play Find the State end-to-end, check timer/toasts/medal/seeded-share). Once green, merge the PR. Then Phase 3 (Distribution: embeds + OG renderer + Devvit) or Phase 4 (Gallery + more games) — each gets its own spec → plan → build. Still open before public launch: remove Tester Mode (`tap26`), wire Arcade sign-in score sync, promote Find the State to landscape-required.
 
 ---
 

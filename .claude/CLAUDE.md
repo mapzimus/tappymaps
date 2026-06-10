@@ -75,6 +75,19 @@ The legacy single-page layout is **still in the file** — it is HIDDEN, not rem
 
 Validate editor edits with `_validate.py` — the cutover never touched the Mobile-UX IIFE (Block 1), so its char count must stay constant (33,371 chars) as proof you didn't disturb it.
 
+## Arcade (Phase 2 — SHIPPED to branch, 2026-06-10)
+
+`/games/arcade` is a real mode now (was a ComingSoon stub). It's a manifest-driven game shell + the first game, **Find the State**. Spec source: reimagining design §6 + §11. Full writeup: `docs/superpowers/plans/2026-06-10-tappymaps-phase-2-arcade.md`.
+
+**Key architecture decision: Arcade renders its OWN independent SVG, it does NOT share the editor's map.** The master spec imagined a shared `onStateTap` dispatcher across all modes, but Phase 1 never built it (the editor still calls `onStateClick` directly and re-parents the single `#mapContainer`). Rather than refactor the export-critical `#mapContainer` / `captureMapImage` path to be mode-shared, Arcade builds a second SVG (`#arcadeStatesGroup`) from the already-cached `appState.topologyData`. So **Arcade touches none of**: `#mapContainer`, `captureMapImage`, `onStateClick`, `appState.stateColors`, or the Mobile IIFE (Block 1). The two maps share TopoJSON data, not DOM.
+
+- All Arcade code is in the main script block (Block 0). Grep anchors: `id="modeArcade"` (markup), `#modeArcade {` (CSS), `const ARCADE_GAMES` (manifest registry), `Modes.Arcade` (mode), `arcadeBuildMap` (one-time SVG build), `arcadeStartRun`/`arcadeResolve`/`arcadeComplete` (run lifecycle), `arcadeMakeRng` (seeded RNG).
+- **Add a game** = add a `playable:true` entry to `ARCADE_GAMES` with `{ runLength, perPrompt, scoring, medals, generator(rng) }`. `playable:false` entries render as "Coming soon" tiles.
+- **Seeded share:** `?seed=<seed>` reproduces the same run (mulberry32 + string hash). Rides in `window.location.search` (parseRoute only reads pathname), so it survives the Vercel SPA rewrite.
+- **Scores:** anonymous localStorage only (`tappymaps_arcade_<id>_best`). Sign-in cross-device sync is DEFERRED (needs a Supabase `game_scores` table + the analytics rewire — pairs with Phase 4).
+- Games surface uses the **orange** accent (`#F97316`) per brand §8, not the turquoise Design accent.
+- Block 1 (Mobile IIFE) must still be 33,371 chars after any Arcade edit — Arcade never touches it.
+
 ## Git Workflow
 
 - Default branch: **`master`** — auto-deploys to tappymaps.com via Vercel

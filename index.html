@@ -2536,6 +2536,215 @@
         body[data-mode="design/make"] .rotate-overlay:not(.dismissed) { display: flex; }
       }
 
+      /* ===================================================================
+         Arcade (Phase 2) — game shell + Find the State. Games surface uses
+         the orange accent (#F97316) per brand spec §8. Self-contained: no
+         dependency on the editor's layout tokens.
+         =================================================================== */
+      #modeArcade {
+        --arcade: #F97316;
+        background: var(--bg, #0F172A);
+        color: var(--text, #f0f9ff);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+
+      /* --- Arcade hub (tile grid) --- */
+      #arcadeHub {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 32px 24px 24px;
+        box-sizing: border-box;
+      }
+      .arcade-hub-header { text-align: center; margin-bottom: 28px; }
+      .arcade-wordmark {
+        display: inline-flex; align-items: center; gap: 2px;
+        text-decoration: none; font-weight: 800; font-size: 20px;
+        margin-bottom: 14px;
+      }
+      .arcade-wordmark .wm-pin { width: 26px; height: 28px; margin-right: 4px; }
+      .arcade-wordmark .wm-tappy { color: var(--text, #f0f9ff); }
+      .arcade-wordmark .wm-maps { color: var(--accent, #0EA5E9); }
+      .arcade-hub-title {
+        font-size: 34px; font-weight: 800; margin: 4px 0 6px;
+        color: var(--arcade);
+      }
+      .arcade-hub-sub { font-size: 15px; opacity: 0.72; margin: 0; }
+      .arcade-tile-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 16px;
+        width: 100%;
+        max-width: 760px;
+        margin: 8px 0 24px;
+      }
+      .arcade-tile {
+        display: flex; flex-direction: column;
+        text-align: left;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 14px;
+        padding: 18px;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        transition: transform .12s ease, border-color .12s ease;
+      }
+      .arcade-tile:hover {
+        transform: translateY(-2px);
+        border-color: var(--arcade);
+      }
+      .arcade-tile--soon { cursor: default; opacity: 0.55; }
+      .arcade-tile--soon:hover { transform: none; border-color: var(--border, #334155); }
+      .arcade-tile-name { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+      .arcade-tile-tag { font-size: 13px; opacity: 0.7; margin: 0 0 14px; line-height: 1.35; }
+      .arcade-tile-meta {
+        margin-top: auto; display: flex; align-items: center; gap: 8px;
+        font-size: 13px;
+      }
+      .arcade-tile-medal { font-size: 16px; }
+      .arcade-tile-best { font-weight: 700; color: var(--arcade); }
+      .arcade-tile-soon-chip {
+        margin-top: auto;
+        font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+        text-transform: uppercase;
+        color: var(--text-muted, #94a3b8);
+      }
+      .arcade-hub-footer a {
+        color: var(--text-muted, #94a3b8); text-decoration: none; font-size: 14px;
+      }
+      .arcade-hub-footer a:hover { text-decoration: underline; }
+
+      /* --- Arcade game shell --- */
+      #arcadeGame { flex: 1; display: flex; flex-direction: column; position: relative; }
+      .arcade-game-bar {
+        display: flex; align-items: center; gap: 12px;
+        padding: 10px 14px;
+        background: var(--surface, #1e293b);
+        border-bottom: 1px solid var(--border, #334155);
+      }
+      .arcade-back-btn {
+        flex: none;
+        width: 38px; height: 38px; border-radius: 9px;
+        background: transparent; border: 1px solid var(--border, #334155);
+        color: var(--text, #f0f9ff); font-size: 18px; cursor: pointer;
+      }
+      .arcade-back-btn:hover { border-color: var(--arcade); }
+      .arcade-prompt {
+        flex: 1; min-width: 0;
+        font-size: clamp(16px, 2.4vw, 24px); font-weight: 800;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .arcade-stats { flex: none; display: flex; gap: 14px; }
+      .arcade-stat { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
+      .arcade-stat-label {
+        font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px;
+        opacity: 0.6;
+      }
+      .arcade-stat-val { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+      .arcade-stat--prog .arcade-stat-val { color: var(--arcade); }
+
+      .arcade-timer-track { height: 5px; background: var(--surface, #1e293b); width: 100%; }
+      .arcade-timer-fill {
+        height: 100%; width: 100%;
+        background: var(--arcade);
+        transition: width .1s linear, background .2s ease;
+      }
+      .arcade-timer-fill.is-low { background: var(--error, #ef4444); }
+
+      .arcade-map-wrap {
+        flex: 1; position: relative;
+        display: flex; align-items: center; justify-content: center;
+        padding: 8px; min-height: 0;
+        background: var(--bg, #0F172A);
+      }
+      #arcadeMapSvg { width: 100%; height: 100%; max-height: 100%; }
+      .arcade-state {
+        fill: var(--surface-raised, #243044);
+        stroke: var(--bg, #0F172A);
+        stroke-width: 1.1;
+        cursor: pointer;
+        transition: fill .1s ease;
+      }
+      .arcade-state:hover { fill: #38516e; }
+      .arcade-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
+      .arcade-state--correct { fill: var(--success, #22c55e) !important; }
+      .arcade-state--wrong { fill: var(--error, #ef4444) !important; }
+      .arcade-state--reveal {
+        fill: var(--success, #22c55e) !important;
+        animation: arcadePulse .9s ease;
+      }
+      @keyframes arcadePulse { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+      #arcadeStatesGroup.is-locked { pointer-events: none; }
+
+      .arcade-rotate-hint { display: none; }
+
+      .arcade-toast {
+        position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%) translateY(8px);
+        padding: 9px 18px; border-radius: 999px;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        font-size: 15px; font-weight: 700;
+        opacity: 0; pointer-events: none;
+        transition: opacity .18s ease, transform .18s ease;
+        white-space: nowrap;
+      }
+      .arcade-toast.is-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      .arcade-toast.is-correct { border-color: var(--success, #22c55e); color: var(--success, #4ade80); }
+      .arcade-toast.is-wrong { border-color: var(--error, #ef4444); color: var(--error, #f87171); }
+
+      /* --- Completion overlay --- */
+      .arcade-complete {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--bg, #0F172A) 82%, transparent);
+        backdrop-filter: blur(6px);
+        padding: 24px; z-index: 5;
+      }
+      .arcade-complete-card {
+        width: 100%; max-width: 360px; text-align: center;
+        background: var(--surface, #1e293b);
+        border: 1px solid var(--border, #334155);
+        border-radius: 18px;
+        padding: 26px 22px;
+      }
+      .arcade-medal { font-size: 52px; line-height: 1; margin-bottom: 6px; }
+      .arcade-complete-title { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
+      .arcade-complete-score {
+        font-size: 48px; font-weight: 800; color: var(--arcade);
+        font-variant-numeric: tabular-nums; line-height: 1;
+      }
+      .arcade-complete-detail { font-size: 14px; opacity: 0.8; margin: 10px 0 2px; }
+      .arcade-complete-best { font-size: 13px; opacity: 0.65; margin: 0 0 18px; min-height: 16px; }
+      .arcade-complete-actions { display: flex; flex-direction: column; gap: 9px; }
+      .arcade-btn {
+        padding: 11px 16px; border-radius: 10px;
+        border: 1px solid var(--border, #334155);
+        background: transparent; color: var(--text, #f0f9ff);
+        font-size: 15px; font-weight: 700; cursor: pointer;
+      }
+      .arcade-btn:hover { border-color: var(--arcade); }
+      .arcade-btn--primary { background: var(--arcade); border-color: var(--arcade); color: #fff; }
+      .arcade-btn--primary:hover { filter: brightness(1.06); }
+      .arcade-share-status { font-size: 13px; opacity: 0.75; margin: 12px 0 0; min-height: 16px; }
+
+      @media (max-width: 720px) and (orientation: portrait) {
+        .arcade-rotate-hint {
+          display: block; position: absolute; top: 8px; left: 50%;
+          transform: translateX(-50%);
+          background: var(--surface, #1e293b); border: 1px solid var(--arcade);
+          color: var(--text, #f0f9ff);
+          padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+          z-index: 3; white-space: nowrap;
+        }
+        .arcade-stat-val { font-size: 17px; }
+        .arcade-prompt { font-size: 15px; }
+      }
+
       /* Create mode (Phase 1) — landscape-first 5-panel rail layout */
       #modeCreate {
         display: none;            /* router toggles to flex */
@@ -2863,6 +3072,9 @@
           <li>→ All games</li>
         </ul>
       </a>
+      <!-- Note: hub cards navigate to the section; the Games card lands on the
+           Arcade hub where Find the State is one tap away. -->
+
     </main>
     <footer class="hub-footer">
       <a href="/about" data-route>about</a>
@@ -2983,6 +3195,60 @@
       <p class="coming-soon-body">is coming in <strong id="comingSoonPhase">a future phase</strong>.</p>
       <p class="coming-soon-sub">In the meantime, want to make a map?</p>
       <a href="/" data-route class="coming-soon-back">← Back to Tappymaps</a>
+    </div>
+  </div>
+
+  <!-- Arcade — Phase 2: shared game shell + Find the State (MVP game).
+       Self-contained: renders its OWN SVG from appState.topologyData, never
+       touches #mapContainer / captureMapImage / the editor. -->
+  <div class="mode" id="modeArcade" style="display:none">
+    <!-- Hub view: tile grid of all Arcade games -->
+    <div id="arcadeHub" style="display:none">
+      <header class="arcade-hub-header">
+        <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
+        <h2 class="arcade-hub-title">Arcade</h2>
+        <p class="arcade-hub-sub">Fast geography games. All free.</p>
+      </header>
+      <div class="arcade-tile-grid" id="arcadeTileGrid"><!-- tiles injected by arcadeRenderHub() --></div>
+      <footer class="arcade-hub-footer"><a href="/" data-route>← Back to Tappymaps</a></footer>
+    </div>
+
+    <!-- Game view: shared shell (engine-owned chrome around the map) -->
+    <div id="arcadeGame" style="display:none">
+      <header class="arcade-game-bar">
+        <button type="button" class="arcade-back-btn" id="arcadeBackBtn" aria-label="Back to Arcade">←</button>
+        <div class="arcade-prompt" id="arcadePrompt">Find the state</div>
+        <div class="arcade-stats">
+          <div class="arcade-stat"><span class="arcade-stat-label">Score</span><span class="arcade-stat-val" id="arcadeScore">0</span></div>
+          <div class="arcade-stat"><span class="arcade-stat-label">Streak</span><span class="arcade-stat-val" id="arcadeStreak">0</span></div>
+          <div class="arcade-stat"><span class="arcade-stat-label">Round</span><span class="arcade-stat-val" id="arcadeProgress">0/10</span></div>
+        </div>
+      </header>
+      <div class="arcade-timer-track"><div class="arcade-timer-fill" id="arcadeTimerFill"></div></div>
+      <div class="arcade-map-wrap" id="arcadeMapWrap">
+        <svg id="arcadeMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap the named state">
+          <g id="arcadeStatesGroup" transform="translate(5, -20) scale(0.95)"></g>
+        </svg>
+        <div class="arcade-rotate-hint" aria-hidden="true">Best played in landscape — rotate your phone.</div>
+      </div>
+      <div class="arcade-toast" id="arcadeToast" aria-live="polite"></div>
+
+      <!-- Completion overlay -->
+      <div class="arcade-complete" id="arcadeComplete" style="display:none">
+        <div class="arcade-complete-card">
+          <div class="arcade-medal" id="arcadeMedal">🥉</div>
+          <h2 class="arcade-complete-title" id="arcadeCompleteTitle">Run complete</h2>
+          <div class="arcade-complete-score" id="arcadeCompleteScore">0</div>
+          <p class="arcade-complete-detail" id="arcadeCompleteDetail">0 of 10 correct · best streak 0</p>
+          <p class="arcade-complete-best" id="arcadeCompleteBest"></p>
+          <div class="arcade-complete-actions">
+            <button type="button" class="arcade-btn arcade-btn--primary" id="arcadePlayAgain">Play again</button>
+            <button type="button" class="arcade-btn" id="arcadeShareBtn">Share my run</button>
+            <button type="button" class="arcade-btn" id="arcadeToHub">All games</button>
+          </div>
+          <p class="arcade-share-status" id="arcadeShareStatus" aria-live="polite"></p>
+        </div>
+      </div>
     </div>
   </div>
   <h1 class="sr-only">Tappymaps</h1>
@@ -3721,7 +3987,7 @@
     }
 
     registerComingSoon('design/gallery', 'Gallery', 'Phase 4 — Gallery');
-    registerComingSoon('games/arcade',   'Arcade',  'Phase 2 — Arcade');
+    // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
     registerComingSoon('games/draft',    'GeoDraft','Phase 3 — GeoDraft');
     registerComingSoon('embed',          'Embed',   'Phase 5 — Distribution');
     registerComingSoon('about',          'About',   'Coming soon — Marketing');
@@ -4014,6 +4280,390 @@
       },
     };
     Router.register('design/make', Modes.Create);
+
+    // ======================================================================
+    // ARCADE (Phase 2) — shared game shell + Find the State
+    // ----------------------------------------------------------------------
+    // Self-contained mode. Renders its OWN SVG from the already-loaded
+    // appState.topologyData (init() awaits loadUSMap before Router.dispatch),
+    // so it never touches #mapContainer, captureMapImage, or onStateClick.
+    // Games are manifest-driven so future games drop into ARCADE_GAMES.
+    // ======================================================================
+
+    // --- Game manifest registry (spec §6). `playable:false` → "coming soon" tile.
+    const ARCADE_GAMES = {
+      'find-state': {
+        id: 'find-state',
+        name: 'Find the State',
+        tagline: 'We name a state. Tap it on the map before the clock runs out.',
+        playable: true,
+        runLength: 10,
+        perPrompt: 8,            // seconds per prompt
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+        // generator(rng) → ordered list of prompt state names (no repeats)
+        generator: (rng) => arcadePickStates(10, rng),
+      },
+      'speed-run': {
+        id: 'speed-run', name: 'Speed Run',
+        tagline: 'Name all 50 states as fast as you can.', playable: false,
+      },
+      'state-capitals': {
+        id: 'state-capitals', name: 'State Capitals',
+        tagline: 'Match each state to its capital city.', playable: false,
+      },
+    };
+
+    // Colorable states (DC excluded) — derived once from the FIPS table.
+    const ARCADE_STATE_NAMES = Object.values(fipsToState).filter(n => !nonColorable.has(n));
+
+    // --- Seeded RNG (mulberry32) so a shared ?seed= reproduces the same run ---
+    function arcadeHashSeed(str) {
+      let h = 1779033703 ^ str.length;
+      for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+      }
+      return (h ^ (h >>> 16)) >>> 0;
+    }
+    function arcadeMakeRng(seedStr) {
+      let a = arcadeHashSeed(String(seedStr));
+      return function() {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    // Fisher-Yates pick of N distinct state names using a seeded rng.
+    function arcadePickStates(n, rng) {
+      const pool = ARCADE_STATE_NAMES.slice();
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+      }
+      return pool.slice(0, n);
+    }
+
+    // --- Live run state ---
+    const AG = {
+      game: null, prompts: [], idx: 0, seed: '',
+      score: 0, streak: 0, bestStreak: 0, correct: 0,
+      answered: false, deadline: 0, timerId: null, advanceId: null,
+    };
+    let _arcadeMapBuilt = false;
+
+    // Build the independent Arcade SVG once (paths + tap handlers).
+    function arcadeBuildMap() {
+      if (_arcadeMapBuilt) return true;
+      const group = document.getElementById('arcadeStatesGroup');
+      const topology = (typeof appState !== 'undefined') ? appState.topologyData : null;
+      if (!group || !topology || typeof topojson === 'undefined') return false;
+
+      const features = topojson.feature(topology, topology.objects.states).features;
+      const pathGen = (geo) => {
+        let d = '';
+        const rings = (geo.type === 'Polygon') ? [geo.coordinates]
+          : (geo.type === 'MultiPolygon') ? geo.coordinates : [];
+        rings.forEach(poly => poly.forEach(ring => {
+          d += 'M' + ring.map(p => p.join(',')).join('L') + 'Z';
+        }));
+        return d;
+      };
+
+      features.forEach(feature => {
+        const fips = String(feature.id).padStart(2, '0');
+        const name = fipsToState[fips] || feature.properties?.name || ('Unknown ' + feature.id);
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        el.setAttribute('d', pathGen(feature.geometry));
+        el.setAttribute('data-state', name);
+        if (nonColorable.has(name)) {
+          el.setAttribute('class', 'arcade-state arcade-state--dc');
+        } else {
+          el.setAttribute('class', 'arcade-state');
+          el.addEventListener('click', () => arcadeOnTap(name));
+        }
+        group.appendChild(el);
+      });
+      _arcadeMapBuilt = true;
+      return true;
+    }
+
+    function arcadeStatePath(name) {
+      return document.querySelector('#arcadeStatesGroup .arcade-state[data-state="' + name + '"]');
+    }
+    function arcadeClearMarks() {
+      document.querySelectorAll('#arcadeStatesGroup .arcade-state')
+        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal'));
+    }
+    function arcadeStopTimers() {
+      if (AG.timerId) { clearInterval(AG.timerId); AG.timerId = null; }
+      if (AG.advanceId) { clearTimeout(AG.advanceId); AG.advanceId = null; }
+    }
+
+    function arcadeShowToast(text, kind) {
+      const t = document.getElementById('arcadeToast');
+      if (!t) return;
+      t.textContent = text;
+      t.className = 'arcade-toast is-show' + (kind ? ' is-' + kind : '');
+      clearTimeout(AG._toastId);
+      AG._toastId = setTimeout(() => { t.className = 'arcade-toast'; }, 1100);
+    }
+
+    function arcadeUpdateHud() {
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+      set('arcadeScore', AG.score);
+      set('arcadeStreak', AG.streak);
+      set('arcadeProgress', Math.min(AG.idx + 1, AG.game.runLength) + '/' + AG.game.runLength);
+    }
+
+    // Begin a run. seed optional — generated if absent.
+    function arcadeStartRun(gameId, seed) {
+      const game = ARCADE_GAMES[gameId];
+      if (!game || !game.playable) { arcadeShowHub(); return; }
+      if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'wrong'); return; }
+
+      AG.game = game;
+      AG.seed = seed || Math.random().toString(36).slice(2, 8);
+      AG.prompts = game.generator(arcadeMakeRng(AG.seed));
+      AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0;
+
+      document.getElementById('arcadeHub').style.display = 'none';
+      document.getElementById('arcadeGame').style.display = 'flex';
+      document.getElementById('arcadeComplete').style.display = 'none';
+      arcadeClearMarks();
+      arcadeUpdateHud();
+      arcadeNextPrompt();
+    }
+
+    function arcadeNextPrompt() {
+      arcadeStopTimers();
+      arcadeClearMarks();
+      AG.answered = false;
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.remove('is-locked');
+
+      if (AG.idx >= AG.game.runLength) { arcadeComplete(); return; }
+
+      const target = AG.prompts[AG.idx];
+      const prompt = document.getElementById('arcadePrompt');
+      if (prompt) prompt.textContent = 'Find: ' + target;
+      arcadeUpdateHud();
+      arcadeStartTimer();
+    }
+
+    function arcadeStartTimer() {
+      const fill = document.getElementById('arcadeTimerFill');
+      const dur = AG.game.perPrompt * 1000;
+      AG.deadline = Date.now() + dur;
+      if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
+      AG.timerId = setInterval(() => {
+        const remain = AG.deadline - Date.now();
+        const pct = Math.max(0, remain / dur) * 100;
+        if (fill) {
+          fill.style.width = pct + '%';
+          fill.classList.toggle('is-low', pct < 25);
+        }
+        if (remain <= 0) arcadeResolve(null); // timeout = miss
+      }, 90);
+    }
+
+    // Tap handler registered on every state path.
+    function arcadeOnTap(name) {
+      if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
+      arcadeResolve(name);
+    }
+
+    // Resolve the current prompt. tapped===null means timeout.
+    function arcadeResolve(tapped) {
+      if (AG.answered) return;
+      AG.answered = true;
+      arcadeStopTimers();
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.add('is-locked');
+
+      const target = AG.prompts[AG.idx];
+      const correct = tapped === target;
+      const s = AG.game.scoring;
+
+      if (correct) {
+        const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
+        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        AG.streak += 1;
+        AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
+        const streakBonus = AG.streak >= s.streakThreshold
+          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+        const gained = s.base + timeBonus + streakBonus;
+        AG.score += gained;
+        AG.correct += 1;
+        const tp = arcadeStatePath(target);
+        if (tp) tp.classList.add('arcade-state--correct');
+        arcadeShowToast('+' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''), 'correct');
+      } else {
+        AG.streak = 0;
+        const tp = arcadeStatePath(target);
+        if (tp) tp.classList.add('arcade-state--reveal');
+        if (tapped) {
+          const wp = arcadeStatePath(tapped);
+          if (wp) wp.classList.add('arcade-state--wrong');
+        }
+        arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
+      }
+      arcadeUpdateHud();
+      AG.idx += 1;
+      AG.advanceId = setTimeout(arcadeNextPrompt, correct ? 650 : 1150);
+    }
+
+    // --- localStorage best score (anon; signed-in sync is a later phase) ---
+    function arcadeBestKey(gameId) { return 'tappymaps_arcade_' + gameId + '_best'; }
+    function arcadeGetBest(gameId) {
+      try { return JSON.parse(localStorage.getItem(arcadeBestKey(gameId))) || null; }
+      catch (_) { return null; }
+    }
+    function arcadeMedalFor(game, score) {
+      const m = game.medals;
+      if (score >= m.gold) return { key: 'gold', label: 'Gold', emoji: '🥇' };
+      if (score >= m.silver) return { key: 'silver', label: 'Silver', emoji: '🥈' };
+      if (score >= m.bronze) return { key: 'bronze', label: 'Bronze', emoji: '🥉' };
+      return { key: 'none', label: 'Run complete', emoji: '🗺️' };
+    }
+
+    function arcadeComplete() {
+      arcadeStopTimers();
+      const game = AG.game;
+      const medal = arcadeMedalFor(game, AG.score);
+
+      const prev = arcadeGetBest(game.id);
+      const isBest = !prev || AG.score > prev.score;
+      if (isBest) {
+        try { localStorage.setItem(arcadeBestKey(game.id), JSON.stringify({ score: AG.score, medal: medal.key })); } catch (_) {}
+      }
+
+      const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+      set('arcadeMedal', medal.emoji);
+      set('arcadeCompleteTitle', medal.key === 'none' ? 'Nice run!' : medal.label + '!');
+      set('arcadeCompleteScore', AG.score);
+      set('arcadeCompleteDetail', AG.correct + ' of ' + game.runLength + ' correct · best streak ' + AG.bestStreak);
+      set('arcadeCompleteBest', isBest ? 'New personal best!' : 'Your best: ' + (prev ? prev.score : 0));
+      const status = document.getElementById('arcadeShareStatus');
+      if (status) status.textContent = '';
+      document.getElementById('arcadeComplete').style.display = 'flex';
+      if (typeof trackEvent === 'function') {
+        trackEvent('arcade_run_complete', { game: game.id, score: AG.score, correct: AG.correct, medal: medal.key });
+      }
+    }
+
+    function arcadeShareUrl() {
+      return window.location.origin + '/games/arcade/' + AG.game.id + '?seed=' + AG.seed;
+    }
+    function arcadeShareRun() {
+      const url = arcadeShareUrl();
+      const status = document.getElementById('arcadeShareStatus');
+      const text = 'I scored ' + AG.score + ' on Tappymaps ' + AG.game.name + ' — beat me: ' + url;
+      const done = (msg) => { if (status) status.textContent = msg; };
+      if (navigator.share) {
+        navigator.share({ title: 'Tappymaps ' + AG.game.name, text: text, url: url })
+          .then(() => done('Shared!')).catch(() => arcadeCopy(url, done));
+      } else {
+        arcadeCopy(url, done);
+      }
+    }
+    function arcadeCopy(url, done) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => done('Link copied — same 10 states.'))
+          .catch(() => done('Copy failed — link: ' + url));
+      } else {
+        done('Share link: ' + url);
+      }
+    }
+
+    // --- Hub tile grid ---
+    function arcadeRenderHub() {
+      const grid = document.getElementById('arcadeTileGrid');
+      if (!grid) return;
+      grid.innerHTML = '';
+      Object.values(ARCADE_GAMES).forEach(game => {
+        if (game.playable) {
+          const a = document.createElement('a');
+          a.className = 'arcade-tile';
+          a.href = '/games/arcade/' + game.id;
+          a.setAttribute('data-route', '');
+          const best = arcadeGetBest(game.id);
+          const medalEmoji = best ? ({ gold: '🥇', silver: '🥈', bronze: '🥉', none: '🗺️' }[best.medal] || '') : '';
+          a.innerHTML =
+            '<div class="arcade-tile-name">' + game.name + '</div>' +
+            '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
+            '<div class="arcade-tile-meta">' +
+              (best
+                ? '<span class="arcade-tile-medal">' + medalEmoji + '</span><span>Best <span class="arcade-tile-best">' + best.score + '</span></span>'
+                : '<span class="arcade-tile-best">Play →</span>') +
+            '</div>';
+          grid.appendChild(a);
+        } else {
+          const div = document.createElement('div');
+          div.className = 'arcade-tile arcade-tile--soon';
+          div.innerHTML =
+            '<div class="arcade-tile-name">' + game.name + '</div>' +
+            '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
+            '<div class="arcade-tile-soon-chip">Coming soon</div>';
+          grid.appendChild(div);
+        }
+      });
+    }
+    function arcadeShowHub() {
+      arcadeStopTimers();
+      document.getElementById('arcadeGame').style.display = 'none';
+      document.getElementById('arcadeComplete').style.display = 'none';
+      arcadeRenderHub();
+      document.getElementById('arcadeHub').style.display = 'flex';
+    }
+
+    // --- Wire shell buttons once (delegated where the node is stable) ---
+    (function arcadeWireButtons() {
+      const onClick = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
+      onClick('arcadeBackBtn', () => Router.navigate('/games/arcade'));
+      onClick('arcadeToHub', () => Router.navigate('/games/arcade'));
+      onClick('arcadePlayAgain', () => { if (AG.game) arcadeStartRun(AG.game.id); });
+      onClick('arcadeShareBtn', arcadeShareRun);
+    })();
+
+    // --- Mode registration ---
+    Modes.Arcade = {
+      enter(route) {
+        const el = document.getElementById('modeArcade');
+        if (el) el.style.display = 'flex';
+        const sub = route && route.sub;
+        if (sub && ARCADE_GAMES[sub] && ARCADE_GAMES[sub].playable) {
+          // Deep link / shared run — honor ?seed= if present.
+          const params = new URLSearchParams(window.location.search);
+          arcadeStartRun(sub, params.get('seed') || null);
+        } else {
+          arcadeShowHub();
+        }
+      },
+      exit() {
+        arcadeStopTimers();
+        const el = document.getElementById('modeArcade');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const sub = route && route.sub;
+        const game = sub && ARCADE_GAMES[sub];
+        if (game) {
+          return {
+            title: game.name + ' — Tappymaps Arcade',
+            description: game.tagline + ' Free geography games on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/arcade/' + game.id,
+          };
+        }
+        return {
+          title: 'Arcade — Tappymaps',
+          description: 'Fast geography games. All free. Play Find the State and more on Tappymaps.',
+          canonical: 'https://tappymaps.com/games/arcade',
+        };
+      },
+    };
+    Router.register('games/arcade', Modes.Arcade);
 
     // ============================================================================
     // INITIALIZATION

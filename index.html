@@ -4314,8 +4314,18 @@
       },
     };
 
-    // Colorable states (DC excluded) — derived once from the FIPS table.
-    const ARCADE_STATE_NAMES = Object.values(fipsToState).filter(n => !nonColorable.has(n));
+    // Colorable states (DC excluded) — derived from the FIPS table on first
+    // use. MUST be lazy: this Arcade block evaluates BEFORE `fipsToState` /
+    // `nonColorable` are declared later in the script, so reading them at the
+    // top level here would throw a temporal-dead-zone ReferenceError and kill
+    // the whole main script block. By first call (a game start) they exist.
+    let _arcadeStateNames = null;
+    function arcadeStateNames() {
+      if (!_arcadeStateNames) {
+        _arcadeStateNames = Object.values(fipsToState).filter(n => !nonColorable.has(n));
+      }
+      return _arcadeStateNames;
+    }
 
     // --- Seeded RNG (mulberry32) so a shared ?seed= reproduces the same run ---
     function arcadeHashSeed(str) {
@@ -4337,7 +4347,7 @@
     }
     // Fisher-Yates pick of N distinct state names using a seeded rng.
     function arcadePickStates(n, rng) {
-      const pool = ARCADE_STATE_NAMES.slice();
+      const pool = arcadeStateNames().slice();
       for (let i = pool.length - 1; i > 0; i--) {
         const j = Math.floor(rng() * (i + 1));
         const t = pool[i]; pool[i] = pool[j]; pool[j] = t;

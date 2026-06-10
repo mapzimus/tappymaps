@@ -2995,6 +2995,38 @@
         #draftPracticeList li .name { width: 105px; }
       }
 
+      /* ===================================================================
+         Embed (Phase 3 — Distribution). Chrome-less view of a shared map for
+         iframes / Reddit / link unfurls. Reuses the live #mapContainer (moved
+         in once) so what you embed is pixel-identical to what you export.
+         =================================================================== */
+      #modeEmbed {
+        display: none;
+        flex-direction: column;
+        height: 100vh;
+        background: var(--bg);
+      }
+      body[data-mode="embed"] #modeEmbed { display: flex; }
+      #embedMapHost {
+        flex: 1; position: relative;
+        display: flex; flex-direction: column; min-height: 0;
+      }
+      #embedMapHost #mapContainer { flex: 1; }
+      /* Editor-only chrome that rides inside #mapContainer is hidden in embeds */
+      body[data-mode="embed"] #statsBar { display: none !important; }
+      body[data-mode="embed"] #mapTitle,
+      body[data-mode="embed"] #mapSubtitle { cursor: default; }
+      .embed-footer {
+        flex: none;
+        display: flex; align-items: center; justify-content: center; gap: 5px;
+        padding: 7px 10px;
+        font-size: 12px; color: var(--text-muted, #94a3b8);
+        background: var(--surface, #1e293b);
+        border-top: 1px solid var(--border, #334155);
+      }
+      .embed-footer a { color: var(--accent, #0EA5E9); text-decoration: none; font-weight: 700; }
+      .embed-footer.is-hidden { display: none; }
+
       /* Create mode (Phase 1) — landscape-first 5-panel rail layout */
       #modeCreate {
         display: none;            /* router toggles to flex */
@@ -3602,6 +3634,16 @@
     </div>
   </div>
 
+  <!-- Embed (Phase 3) — chrome-less map for iframes. #mapContainer is moved
+       into #embedMapHost once on first entry (setupEmbed), so the embed shows
+       the exact same rendered map/legend/logo as an export. -->
+  <div class="mode" id="modeEmbed" style="display:none">
+    <div id="embedMapHost"></div>
+    <div class="embed-footer" id="embedFooter">
+      <span>Made with</span><a href="https://tappymaps.com" target="_blank" rel="noopener">tappymaps.com</a>
+    </div>
+  </div>
+
   <h1 class="sr-only">Tappymaps</h1>
   <div class="container">
     <!-- Sidebar -->
@@ -3845,6 +3887,9 @@
             On mobile, long-press the image to save to camera roll
           </div>
           <button class="btn secondary btn-pro" id="copyShareLinkBtn">🔗 Copy Share Link
+            <span class="pro-badge">PRO</span>
+          </button>
+          <button class="btn secondary btn-pro" id="copyEmbedLinkBtn">&lt;/&gt; Copy Embed Link
             <span class="pro-badge">PRO</span>
           </button>
           <button class="btn secondary btn-pro" id="saveConfigBtn">💾 Save Config
@@ -4339,7 +4384,7 @@
 
     registerComingSoon('design/gallery', 'Gallery', 'Phase 4 — Gallery');
     // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
-    registerComingSoon('embed',          'Embed',   'Phase 5 — Distribution');
+    // embed is a real mode now (Phase 3) — registered below as Modes.Embed.
     registerComingSoon('about',          'About',   'Coming soon — Marketing');
     registerComingSoon('pricing',        'Pricing', 'Coming soon — Marketing');
     Router.register('__notFound__', {
@@ -4633,6 +4678,60 @@
       },
     };
     Router.register('design/make', Modes.Create);
+
+    // --- Embed mode (Phase 3 — Distribution) ------------------------------
+    // Chrome-less view of a shared map at /embed#<base64-state>. Moves the
+    // live #mapContainer in once (preserving every export-fidelity detail —
+    // legend anchoring, logo, source line) and decodes the fragment with the
+    // same loadStateFromURL the editor uses. Always-on footer except when the
+    // host opts out (?chrome=0 or ?source=devvit, e.g. Reddit's own frame).
+    let _embedDone = false;
+    function setupEmbed() {
+      if (_embedDone) return;
+      const host = document.getElementById('embedMapHost');
+      const mc = document.getElementById('mapContainer');
+      if (host && mc) { host.appendChild(mc); _embedDone = true; }
+    }
+    Modes.Embed = {
+      enter(route) {
+        setupEmbed();
+        const el = document.getElementById('modeEmbed');
+        if (el) el.style.display = 'flex';
+        // init() already decoded the fragment into #mapContainer; re-run only
+        // if we somehow arrived without state (e.g. client-side nav).
+        if (typeof loadStateFromURL === 'function' &&
+            (!appState.stateColors || Object.keys(appState.stateColors).length === 0) &&
+            window.location.hash.length > 1) {
+          try { loadStateFromURL(); } catch (e) { console.warn('embed load:', e); }
+        }
+        // Make the on-map title/subtitle non-editable in an embed.
+        ['mapTitle', 'mapSubtitle'].forEach(id => {
+          const n = document.getElementById(id); if (n) n.setAttribute('contenteditable', 'false');
+        });
+        // Footer: hidden for Devvit / explicit chrome=0 hosts.
+        const params = new URLSearchParams(window.location.search);
+        const noChrome = params.get('chrome') === '0' || params.get('source') === 'devvit';
+        const footer = document.getElementById('embedFooter');
+        if (footer) footer.classList.toggle('is-hidden', noChrome);
+        // Anchor the legend now that the map is laid out and visible.
+        if (typeof updateLegendPosition === 'function') {
+          requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} });
+        }
+      },
+      exit() {
+        const el = document.getElementById('modeEmbed');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const t = (typeof appState !== 'undefined' && appState.mapTitle) ? appState.mapTitle : 'Map';
+        return {
+          title: t + ' — Tappymaps',
+          description: 'A US map made with Tappymaps. Tap. Color. Share.',
+          canonical: 'https://tappymaps.com/embed',
+        };
+      },
+    };
+    Router.register('embed', Modes.Embed);
 
     // ======================================================================
     // ARCADE (Phase 2) — shared game shell + Find the State
@@ -7532,6 +7631,20 @@
       });
     }
 
+    // Embed link (Phase 3) — a chrome-less /embed#<state> URL plus a ready-to-
+    // paste <iframe>. Same encoded state as the share link, different route.
+    function copyEmbedLink() {
+      const encoded = encodeStateToURL();
+      const embedURL = `${window.location.origin}/embed#${encoded}`;
+      const iframe = `<iframe src="${embedURL}" width="640" height="480" style="border:0;border-radius:12px" loading="lazy" title="${(appState.mapTitle || 'Tappymaps map').replace(/"/g, '&quot;')}"></iframe>`;
+      navigator.clipboard.writeText(iframe).then(() => {
+        showMessage('Embed code copied — paste it anywhere!', 'success');
+        trackEvent('copy_embed_link', { title: appState.mapTitle });
+      }).catch(() => {
+        showMessage('Embed link: ' + embedURL, 'info');
+      });
+    }
+
     // ============================================================================
     // EXPORT & IMPORT
     // ============================================================================
@@ -9750,6 +9863,11 @@
       document.getElementById('copyShareLinkBtn').addEventListener('click', () => {
         if (!gateProFeature('share links')) return;
         copyShareLink();
+      });
+      const embedBtn = document.getElementById('copyEmbedLinkBtn');
+      if (embedBtn) embedBtn.addEventListener('click', () => {
+        if (!gateProFeature('embed links')) return;
+        copyEmbedLink();
       });
       document.getElementById('saveConfigBtn').addEventListener('click', () => {
         if (!gateProFeature('save config')) return;

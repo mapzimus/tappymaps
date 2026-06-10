@@ -111,6 +111,15 @@ First device test drove a gameplay overhaul of Find the State plus a second game
 - **AI**: true ranking + per-round gaussian noise scaled by `cat.noise` (low on area/statehood, high on obscure census stats). Deterministic per seed.
 - `?seed=` reproduces the category draw + AI behavior; final screen shares a rematch URL.
 
+## Embed (Phase 3 — Distribution, started 2026-06-10)
+
+`/embed#<base64-state>` is a real mode now (was a ComingSoon stub) — a chrome-less view of a shared map for iframes / Reddit / link unfurls. Grep anchors: `id="modeEmbed"` (markup), `#modeEmbed {` (CSS), `Modes.Embed` / `setupEmbed` (mode), `copyEmbedLink` (editor button).
+
+- **Reuses the live `#mapContainer`** rather than building its own SVG (the opposite of Arcade/GeoDraft) — `setupEmbed()` `appendChild`-moves the editor's `#mapContainer` into `#embedMapHost` ONCE, so the embed is pixel-identical to an export (same legend anchoring, logo, source line). Because embeds are standalone iframe loads, this never races the Create cutover.
+- State rides the **URL fragment** (`#<base64>`), not the path — base64 contains `/+=` which breaks path routing, and `loadStateFromURL()` already reads `window.location.hash`. `init()` decodes it before the router dispatches.
+- Footer "Made with tappymaps.com" shows by default; hidden for `?source=devvit` or `?chrome=0`. The on-map logo is always present (brand rule). Editor `#statsBar` + title editing are suppressed via `body[data-mode="embed"]`.
+- **Still TODO for Phase 3**: `/api/render?...` OG-image rasterization (SVG→PNG, needs a serverless rasterizer + deploy verification) and the Devvit Reddit app (needs the pending Reddit dev account). The embed view is the foundation both build on.
+
 ## Git Workflow
 
 - Default branch: **`master`** — auto-deploys to tappymaps.com via Vercel

@@ -2717,6 +2717,15 @@
       /* Painted states keep an inline fill set by arcadeResolve; the transient
          --correct/--wrong/--reveal classes above still win via !important. */
       .arcade-state--painted { stroke: var(--bg, #0F172A); }
+      /* Stat Duel: only the two candidate states are live; the rest dim out */
+      #arcadeStatesGroup.is-duel .arcade-state:not(.arcade-state--duel) {
+        opacity: 0.22; pointer-events: none;
+      }
+      .arcade-state--duel {
+        fill: #38516e;
+        stroke: var(--arcade); stroke-width: 2;
+        animation: arcadePulse .5s ease;
+      }
 
       /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it */
       .arcade-zoom-controls {
@@ -4370,6 +4379,17 @@
           shuffle: { label: 'Shuffle', generator: (rng) => arcadePickShuffle(10, rng) },
         },
       },
+      'stat-duel': {
+        id: 'stat-duel',
+        name: 'Stat Duel',
+        tagline: 'Two states, one real Census stat. Tap the one that ranks higher.',
+        playable: true,
+        kind: 'duel',            // duel runs load live data before round 1
+        runLength: 10,
+        perPrompt: 10,
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+      },
       'speed-run': {
         id: 'speed-run', name: 'Speed Run',
         tagline: 'Name all 50 states as fast as you can.', playable: false,
@@ -4438,6 +4458,37 @@
     // color as you play, like a mini Create session.
     const ARCADE_PAINT_COLORS = ['#0EA5E9','#F97316','#22c55e','#a855f7','#eab308','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#06b6d4','#84cc16','#fb923c'];
 
+    // --- Stat Duel: reuses the Create editor's Census data layer -----------
+    // Lazy for the same reason as arcadeStateNames(): DATA_MAP_DATASETS is
+    // declared later in this script block — a top-level read here would TDZ-
+    // crash the whole block. By first call (a duel run start) it exists.
+    function arcadeDuelSets() {
+      return DATA_MAP_DATASETS.filter(d => d.duel);
+    }
+    // n state pairs from pool — distinct within a pair, no unordered repeats.
+    function arcadePickPairs(n, rng, pool) {
+      const pairs = [];
+      const seen = new Set();
+      while (pairs.length < n) {
+        const a = pool[Math.floor(rng() * pool.length)];
+        let b = pool[Math.floor(rng() * pool.length)];
+        while (b === a) b = pool[Math.floor(rng() * pool.length)];
+        const key = a < b ? a + '|' + b : b + '|' + a;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        pairs.push({ a: a, b: b });
+      }
+      return pairs;
+    }
+    function arcadeFormatVal(v, format) {
+      if (format === 'currency') return '$' + Math.round(v).toLocaleString();
+      if (format === 'percent') return v.toFixed(1) + '%';
+      if (format === 'decimal') return v.toFixed(3);
+      if (format === 'decimal1') return v.toFixed(2);
+      if (format === 'year') return String(Math.round(v));
+      return Math.round(v).toLocaleString();
+    }
+
     // --- Live run state ---
     const AG = {
       game: null, mode: 'classic', prompts: [], idx: 0, seed: '',
@@ -4487,7 +4538,7 @@
     }
     function arcadeClearMarks() {
       document.querySelectorAll('#arcadeStatesGroup .arcade-state')
-        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal'));
+        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal', 'arcade-state--duel'));
     }
     // Strip the persistent paint fills — run start only, NOT between prompts.
     function arcadeClearPaint() {
@@ -4582,13 +4633,13 @@
       if (AG.advanceId) { clearTimeout(AG.advanceId); AG.advanceId = null; }
     }
 
-    function arcadeShowToast(text, kind) {
+    function arcadeShowToast(text, kind, ms) {
       const t = document.getElementById('arcadeToast');
       if (!t) return;
       t.textContent = text;
       t.className = 'arcade-toast is-show' + (kind ? ' is-' + kind : '');
       clearTimeout(AG._toastId);
-      AG._toastId = setTimeout(() => { t.className = 'arcade-toast'; }, 1100);
+      AG._toastId = setTimeout(() => { t.className = 'arcade-toast'; }, ms || 1100);
     }
 
     function arcadeUpdateHud() {
@@ -4600,21 +4651,51 @@
 
     // Begin a run. seed optional — generated if absent. mode optional —
     // falls back to the game's defaultMode (or its single generator).
-    function arcadeStartRun(gameId, seed, mode) {
+    // Duel runs are async: live Census data loads before round 1 (the seed
+    // also picks the dataset, so a shared seed = same stat + same pairs).
+    async function arcadeStartRun(gameId, seed, mode) {
       const game = ARCADE_GAMES[gameId];
       if (!game || !game.playable) { arcadeShowHub(); return; }
       if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'wrong'); return; }
+      if (AG.loading) return;
 
       AG.game = game;
       AG.mode = (game.modes && mode && game.modes[mode]) ? mode : (game.defaultMode || 'classic');
-      const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
       AG.seed = seed || Math.random().toString(36).slice(2, 8);
-      AG.prompts = gen(arcadeMakeRng(AG.seed));
+      const rng = arcadeMakeRng(AG.seed);
+
+      if (game.kind === 'duel') {
+        const sets = arcadeDuelSets();
+        const dataset = sets[Math.floor(rng() * sets.length)];
+        AG.loading = true;
+        arcadeShowToast('Loading live Census data…', 'correct');
+        try {
+          const data = await fetchCensusData(dataset);
+          const pool = arcadeStateNames().filter(s => isFinite(data[s]));
+          if (pool.length < 10) throw new Error('not enough states with data');
+          AG.duelDataset = dataset;
+          AG.duelData = data;
+          AG.prompts = arcadePickPairs(game.runLength, rng, pool);
+        } catch (err) {
+          AG.loading = false;
+          console.error('Stat Duel data load failed:', err);
+          arcadeShowToast('Live data unavailable right now — try another game', 'wrong');
+          arcadeShowHub();
+          return;
+        }
+        AG.loading = false;
+      } else {
+        const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
+        AG.prompts = gen(rng);
+      }
+
       AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
 
       document.getElementById('arcadeHub').style.display = 'none';
       document.getElementById('arcadeGame').style.display = 'flex';
       document.getElementById('arcadeComplete').style.display = 'none';
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.toggle('is-duel', game.kind === 'duel');
       arcadeClearMarks();
       arcadeClearPaint();
       arcadeResetZoom();
@@ -4631,13 +4712,24 @@
 
       if (AG.idx >= AG.game.runLength) { arcadeComplete(); return; }
 
-      const target = AG.prompts[AG.idx];
       const prompt = document.getElementById('arcadePrompt');
-      if (prompt) prompt.textContent = 'Find: ' + target;
-      // Big center-screen pop of the state name (taps pass through it)
       const pop = document.getElementById('arcadePromptPop');
+      let popText;
+      if (AG.game.kind === 'duel') {
+        const pair = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Higher ' + AG.duelDataset.title + ' — tap your pick';
+        popText = pair.a + ' or ' + pair.b + '?';
+        const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
+        if (pa) pa.classList.add('arcade-state--duel');
+        if (pb) pb.classList.add('arcade-state--duel');
+      } else {
+        const target = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Find: ' + target;
+        popText = target;
+      }
+      // Big center-screen pop of the prompt (taps pass through it)
       if (pop) {
-        pop.textContent = target;
+        pop.textContent = popText;
         pop.classList.remove('is-pop');
         void pop.offsetWidth; // restart the CSS animation
         pop.classList.add('is-pop');
@@ -4665,6 +4757,10 @@
     // Tap handler registered on every state path.
     function arcadeOnTap(name) {
       if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
+      if (AG.game.kind === 'duel') {
+        const pair = AG.prompts[AG.idx];
+        if (name !== pair.a && name !== pair.b) return; // belt + CSS pointer-events braces
+      }
       arcadeResolve(name);
     }
 
@@ -4676,8 +4772,19 @@
       const group = document.getElementById('arcadeStatesGroup');
       if (group) group.classList.add('is-locked');
 
-      const target = AG.prompts[AG.idx];
-      const correct = tapped === target;
+      const isDuel = AG.game.kind === 'duel';
+      let target, correct, valueLine = '';
+      if (isDuel) {
+        const pair = AG.prompts[AG.idx];
+        const va = AG.duelData[pair.a], vb = AG.duelData[pair.b];
+        target = (va >= vb) ? pair.a : pair.b; // the state to paint / reveal
+        correct = tapped === target || (tapped && AG.duelData[tapped] !== undefined && va === vb);
+        const fmt = AG.duelDataset.format;
+        valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
+      } else {
+        target = AG.prompts[AG.idx];
+        correct = tapped === target;
+      }
       const s = AG.game.scoring;
 
       if (correct) {
@@ -4699,20 +4806,25 @@
           tp.classList.add('arcade-state--painted');
           AG.paintIdx += 1;
         }
-        arcadeShowToast('+' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''), 'correct');
+        arcadeShowToast('+' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '') + (valueLine ? ' · ' + valueLine : ''), 'correct', valueLine ? 1500 : 1100);
       } else {
         AG.streak = 0;
         const tp = arcadeStatePath(target);
         if (tp) tp.classList.add('arcade-state--reveal');
-        if (tapped) {
+        if (tapped && tapped !== target) {
           const wp = arcadeStatePath(tapped);
           if (wp) wp.classList.add('arcade-state--wrong');
         }
-        arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
+        if (isDuel) {
+          arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
+        } else {
+          arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
+        }
       }
       arcadeUpdateHud();
       AG.idx += 1;
-      AG.advanceId = setTimeout(arcadeNextPrompt, correct ? 650 : 1150);
+      // Duel reveals show real values — give them a beat longer to read.
+      AG.advanceId = setTimeout(arcadeNextPrompt, isDuel ? (correct ? 1100 : 1600) : (correct ? 650 : 1150));
     }
 
     // --- localStorage best score (anon; signed-in sync is a later phase) ---
@@ -4836,6 +4948,8 @@
     }
     function arcadeShowHub() {
       arcadeStopTimers();
+      const g = document.getElementById('arcadeStatesGroup');
+      if (g) g.classList.remove('is-duel');
       document.getElementById('arcadeGame').style.display = 'none';
       document.getElementById('arcadeComplete').style.display = 'none';
       arcadeRenderHub();

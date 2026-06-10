@@ -961,8 +961,9 @@
       border-radius: var(--radius-md);
       padding: 16px 20px;
       max-width: 320px;
-      max-height: 70%;
-      overflow-y: auto;
+      /* No height clip: the legend sizes to its content so every category
+         shows. The brand caps legends at 8 entries, which bounds the height.
+         (overflow-y:auto here was unscrollable anyway — pointer-events:none.) */
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       box-shadow: var(--shadow-md);
@@ -1323,8 +1324,7 @@
         font-size: var(--text-xxs);
       }
       .legend-group {
-        max-width: 150px;
-        max-height: 45%;
+        max-width: 180px;
         padding: 6px 8px;
       }
       .legend-title {
@@ -4787,8 +4787,9 @@
     (function wireCreatePanelChrome() {
       const body = document.getElementById('createBody');
       const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
-      on('createPanelCollapse', () => { if (body) body.classList.add('panel-collapsed'); });
-      on('createPanelReopen',  () => { if (body) body.classList.remove('panel-collapsed'); });
+      const reflowLegend = () => { if (typeof updateLegendPosition === 'function') requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} }); };
+      on('createPanelCollapse', () => { if (body) body.classList.add('panel-collapsed'); reflowLegend(); });
+      on('createPanelReopen',  () => { if (body) body.classList.remove('panel-collapsed'); reflowLegend(); });
       // Zoom buttons drive the editor map's existing pinch-zoom (exposed by the
       // Mobile-UX IIFE as window.createMapZoom*). Guarded — no-op until ready.
       on('createZoomIn',    () => { if (window.createMapZoomIn)    window.createMapZoomIn(); });

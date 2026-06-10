@@ -36,22 +36,27 @@ export default async function handler(req, res) {
 
   const year = String(req.query?.year || '');
   const vars = String(req.query?.vars || '');
+  const survey = String(req.query?.survey || 'acs1');
 
   // SSRF guard: only allow values that can be safely interpolated into the fixed
   // Census URL template. year = 4 digits in a sane range; vars = uppercase Census
-  // variable codes separated by commas. Anything else is rejected before fetch.
+  // variable codes separated by commas; survey = explicit allowlist. Anything
+  // else is rejected before fetch.
   if (!/^\d{4}$/.test(year) || Number(year) < 2005 || Number(year) > 2030) {
     return res.status(400).json({ error: 'Invalid year' });
   }
   if (!/^[A-Z0-9_,]+$/.test(vars) || vars.length > 500) {
     return res.status(400).json({ error: 'Invalid vars' });
   }
+  if (survey !== 'acs1' && survey !== 'acs5') {
+    return res.status(400).json({ error: 'Invalid survey' });
+  }
 
   // Census now requires an API key on every request (the keyless grace period
   // ended). The key lives in the deployment environment — never in the client —
   // and is injected here server-side, which is exactly what this proxy is for.
   const key = process.env.CENSUS_API_KEY;
-  let url = 'https://api.census.gov/data/' + year + '/acs/acs1?get=NAME,' + vars + '&for=state:*';
+  let url = 'https://api.census.gov/data/' + year + '/acs/' + survey + '?get=NAME,' + vars + '&for=state:*';
   if (key) url += '&key=' + encodeURIComponent(key);
 
   try {

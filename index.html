@@ -8022,7 +8022,27 @@
       { id: 'pop_under18', title: 'Population Under 18', desc: 'Percent of population under age 18', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B09001_001E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081'], pro: true },
       { id: 'broadband', title: 'Broadband Internet', desc: 'Percent of households with broadband internet', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B28002_004E','B28002_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7f7f7','#d9d9d9','#bdbdbd','#737373','#252525'], pro: true },
       { id: 'snap', title: 'SNAP/Food Stamps', desc: 'Percent of households receiving SNAP benefits', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B22010_002E','B22010_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff5f0','#fcbba1','#fb6a4a','#cb181d','#67000d'], pro: true },
-      { id: 'disability', title: 'Disability Rate', desc: 'Percent of civilian population with a disability', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B18101_004E','B18101_007E','B18101_010E','B18101_013E','B18101_016E','B18101_019E','B18101_023E','B18101_026E','B18101_029E','B18101_032E','B18101_035E','B18101_038E','B01003_001E'], compute: function(v) { var d=0; for(var i=0;i<v.length-1;i++) d+=v[i]; return ((d/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#fff7f3','#fde0dd','#fcc5c0','#f768a1','#ae017e'], pro: true }
+      { id: 'disability', title: 'Disability Rate', desc: 'Percent of civilian population with a disability', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B18101_004E','B18101_007E','B18101_010E','B18101_013E','B18101_016E','B18101_019E','B18101_023E','B18101_026E','B18101_029E','B18101_032E','B18101_035E','B18101_038E','B01003_001E'], compute: function(v) { var d=0; for(var i=0;i<v.length-1;i++) d+=v[i]; return ((d/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#fff7f3','#fde0dd','#fcc5c0','#f768a1','#ae017e'], pro: true },
+      // --- Expansion wave (2026-06) — every variable verified against the live
+      // ACS 1-year 2023 registry before shipping. duel:true marks stats that
+      // read well in Arcade games ("Which has more X?").
+      { id: 'work_from_home', title: 'Work From Home', desc: 'Percent of workers who work from home', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08301_021E','B08301_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcfd','#bfd3e6','#8c96c6','#88419d','#4d004b'], pro: true, duel: true },
+      { id: 'public_transit', title: 'Public Transit Commuters', desc: 'Percent of workers commuting by public transportation', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08301_010E','B08301_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fbff','#c8ddf0','#73b3d8','#2879b9','#08306b'], pro: true, duel: true },
+      { id: 'super_commuters', title: 'Super Commuters', desc: 'Percent of workers with a 60+ minute commute', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08303_012E','B08303_013E','B08303_001E'], compute: function(v) { return (((v[0]+v[1]) / v[2]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff5eb','#fdd0a2','#fd8d3c','#d94801','#7f2704'], pro: true, duel: true },
+      { id: 'no_vehicle', title: 'No-Vehicle Households', desc: 'Percent of households without a vehicle', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08201_002E','B08201_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7f4f9','#d4b9da','#df65b0','#ce1256','#67001f'], pro: true, duel: true },
+      { id: 'vacation_homes', title: 'Vacation Homes', desc: 'Percent of housing for seasonal or recreational use', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25004_006E','B25001_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081'], pro: true, duel: true },
+      { id: 'mobile_homes', title: 'Mobile Homes', desc: 'Percent of housing units that are mobile homes', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25024_010E','B25024_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffe5','#fee391','#fe9929','#cc4c02','#662506'], pro: true, duel: true },
+      { id: 'median_year_built', title: 'Median Home Age (Year Built)', desc: 'Median year housing structures were built', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25035_001E'], format: 'year', colorScale: ['#8c510a','#d8b365','#f6e8c3','#5ab4ac','#01665e'], pro: true },
+      { id: 'mortgage_free', title: 'Homes Owned Free & Clear', desc: 'Percent of owned homes with no mortgage', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25081_002E','B25081_001E'], compute: function(v) { return (((v[1]-v[0]) / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true, duel: true },
+      { id: 'household_size', title: 'Average Household Size', desc: 'Average number of people per household', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25010_001E'], format: 'decimal1', colorScale: ['#edf8fb','#b2e2e2','#66c2a4','#2ca25f','#006d2c'], pro: true, duel: true },
+      { id: 'living_alone', title: 'Living Alone', desc: 'Percent of households that are one person living alone', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B11001_008E','B11001_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff7fb','#d0d1e6','#74a9cf','#0570b0','#023858'], pro: true, duel: true },
+      { id: 'hh_with_kids', title: 'Households with Children', desc: 'Percent of households with people under 18', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B11005_002E','B11005_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff7ec','#fdd49e','#fc8d59','#d7301f','#7f0000'], pro: true, duel: true },
+      { id: 'never_married', title: 'Never Married', desc: 'Percent of adults 15+ who have never married', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B12001_003E','B12001_012E','B12001_001E'], compute: function(v) { return (((v[0]+v[1]) / v[2]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f2f0f7','#cbc9e2','#9e9ac8','#6a51a3','#3f007d'], pro: true, duel: true },
+      { id: 'divorced', title: 'Divorced', desc: 'Percent of adults 15+ who are divorced', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B12001_010E','B12001_019E','B12001_001E'], compute: function(v) { return (((v[0]+v[1]) / v[2]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fee5d9','#fcae91','#fb6a4a','#cb181d','#67000d'], pro: true, duel: true },
+      { id: 'non_english', title: 'Language Other Than English', desc: 'Percent speaking a language other than English at home', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['C16001_001E','C16001_002E'], compute: function(v) { return (((v[0]-v[1]) / v[0]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcfd','#ccece6','#66c2a4','#238b45','#00441b'], pro: true, duel: true },
+      { id: 'homegrown', title: 'Born in Their State', desc: 'Percent of residents born in the state they live in', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B05002_003E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff7fb','#d0aecd','#df65b0','#980043','#67001f'], pro: true, duel: true },
+      { id: 'movers', title: 'Moved in the Past Year', desc: 'Percent of residents who changed homes in the last year', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B07003_001E','B07003_004E'], compute: function(v) { return (((v[0]-v[1]) / v[0]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffcc','#a1dab4','#41b6c4','#2c7fb8','#253494'], pro: true, duel: true },
+      { id: 'self_employment', title: 'Self-Employment Income', desc: 'Percent of households with self-employment income', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19053_002E','B19053_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffd4','#fed98e','#fe9929','#d95f0e','#993404'], pro: true, duel: true }
     ];
 
     const FIPS_TO_STATE = {
@@ -8043,12 +8063,27 @@
     async function fetchCensusData(dataset) {
       async function fetchYear(year) {
         var vars = dataset.variables.join(',');
+        var survey = dataset.survey || 'acs1';
         // Routed through our same-origin proxy (/api/census) because api.census.gov
         // sends no CORS header and the browser blocks a direct cross-origin fetch.
-        var url = '/api/census?year=' + encodeURIComponent(year) + '&vars=' + encodeURIComponent(vars);
-        var resp = await fetch(url);
-        if (!resp.ok) throw new Error('Census API returned ' + resp.status + ' for year ' + year);
-        var rows = await resp.json();
+        var url = '/api/census?year=' + encodeURIComponent(year) + '&vars=' + encodeURIComponent(vars) + '&survey=' + survey;
+        // Per-session cache: ACS data is static per year, and games re-request
+        // the same datasets the editor loads.
+        var cacheKey = 'tappymaps_census_' + survey + '_' + year + '_' + vars;
+        var rows = null;
+        try { rows = JSON.parse(sessionStorage.getItem(cacheKey)); } catch (_) {}
+        if (!rows) {
+          var resp = await fetch(url);
+          if (!resp.ok) {
+            // The proxy returns { error } JSON with an actionable message
+            // (e.g. a missing CENSUS_API_KEY) — surface it instead of a bare status.
+            var msg = 'Census API returned ' + resp.status + ' for year ' + year;
+            try { var body = await resp.json(); if (body && body.error) msg = body.error; } catch (_) {}
+            throw new Error(msg);
+          }
+          rows = await resp.json();
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(rows)); } catch (_) {}
+        }
         var header = rows[0];
         var result = {};
         for (var i = 1; i < rows.length; i++) {
@@ -8100,6 +8135,8 @@
         if (dataset.format === 'currency') label = '$' + Math.round(lo).toLocaleString() + ' – $' + Math.round(hi).toLocaleString();
         else if (dataset.format === 'percent') label = lo.toFixed(1) + '% – ' + hi.toFixed(1) + '%';
         else if (dataset.format === 'decimal') label = lo.toFixed(3) + ' – ' + hi.toFixed(3);
+        else if (dataset.format === 'decimal1') label = lo.toFixed(2) + ' – ' + hi.toFixed(2);
+        else if (dataset.format === 'year') label = Math.round(lo) + ' – ' + Math.round(hi);
         else label = Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString();
         appState.legendEntries.push({ label: label, color: midColor });
       }

@@ -4221,6 +4221,15 @@
       setLink('canonical', canonical || window.location.href);
     }
 
+    // Per-map OG image: the /api/render endpoint rasterizes the encoded state
+    // (carried in the URL fragment) into a PNG link-preview. Returns undefined
+    // when there's no map state, so updateMetaTags falls back to the brand OG.
+    function mapOgImageUrl() {
+      const h = window.location.hash.slice(1);
+      if (!h) return undefined;
+      return window.location.origin + '/api/render?m=' + encodeURIComponent(h) + '&format=png';
+    }
+
     function setMeta(name, content) {
       const sel = name.startsWith('og:')
         ? `meta[property="${name}"]`
@@ -4674,6 +4683,7 @@
           title: titleField + ' — Tappymaps',
           description: 'Color a US states map. Tap. Color. Share.',
           canonical: 'https://tappymaps.com/design/make',
+          ogImage: mapOgImageUrl(),
         };
       },
     };
@@ -4728,6 +4738,7 @@
           title: t + ' — Tappymaps',
           description: 'A US map made with Tappymaps. Tap. Color. Share.',
           canonical: 'https://tappymaps.com/embed',
+          ogImage: mapOgImageUrl(),
         };
       },
     };

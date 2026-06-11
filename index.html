@@ -2504,47 +2504,7 @@
       }
       .tap-in-skip:hover { opacity: 1; text-decoration: underline; }
 
-      /* Landscape rotate-overlay (Phase 1) */
-      .rotate-overlay {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.96);
-        color: white;
-        z-index: 9999;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        padding: 24px;
-      }
-      .rotate-overlay-inner { max-width: 360px; }
-      .rotate-overlay-icon {
-        margin: 0 auto 16px;
-        color: var(--accent, #0EA5E9);
-      }
-      .rotate-overlay-title {
-        font-size: 22px;
-        font-weight: 700;
-        margin: 0 0 8px;
-      }
-      .rotate-overlay-body {
-        font-size: 14px;
-        margin: 0 0 24px;
-        opacity: 0.85;
-      }
-      .rotate-overlay-dismiss {
-        font-size: 13px;
-        color: white;
-        opacity: 0.6;
-        text-decoration: none;
-      }
-      .rotate-overlay-dismiss:hover { opacity: 1; text-decoration: underline; }
-      .rotate-overlay.dismissed { display: none !important; }
-      /* Only fires when Create mode is active on a portrait phone */
-      @media (max-width: 600px) and (orientation: portrait) {
-        body[data-mode="design/make"] .rotate-overlay:not(.dismissed) { display: flex; }
-      }
+      /* Forced-landscape rotate overlay removed — the editor works in portrait. */
 
       /* ===================================================================
          Arcade (Phase 2) — game shell + Find the State. Games surface uses
@@ -3446,21 +3406,6 @@
     </style>
 </head>
 <body>
-  <!-- Landscape rotate-overlay (Phase 1) — only fires on portrait phones in /design/make -->
-  <div class="rotate-overlay" id="rotateOverlay">
-    <div class="rotate-overlay-inner">
-      <div class="rotate-overlay-icon" aria-hidden="true">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
-          <rect x="20" y="8" width="24" height="40" rx="4" stroke="currentColor" stroke-width="2.5"/>
-          <circle cx="32" cy="42" r="1.5" fill="currentColor"/>
-          <path d="M50 24 L58 32 L50 40" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        </svg>
-      </div>
-      <p class="rotate-overlay-title">Rotate your phone</p>
-      <p class="rotate-overlay-body">Tappymaps Create is built for landscape. Turn your phone sideways to continue.</p>
-      <a href="#" class="rotate-overlay-dismiss" id="rotateOverlayDismiss">Continue in portrait anyway →</a>
-    </div>
-  </div>
   <!-- Phase 1: Mode containers (Hub, ComingSoon, Create) -->
   <!-- Hub at / — two-card layout per spec §4 -->
   <div class="mode" id="modeHub" style="display:none">
@@ -4723,23 +4668,6 @@
       const href = a.getAttribute('href');
       if (!href) return;
       Router.navigate(href);
-    });
-
-    // --- Rotate overlay handlers (Phase 1) --------------------------------
-    // Dismiss link adds .dismissed class. NOT persisted — every Create
-    // mode entry resets dismissal. Orientation change clears dismiss so
-    // the overlay re-evaluates if the user rotates back to portrait.
-
-    document.addEventListener('click', function(e) {
-      if (e.target && e.target.id === 'rotateOverlayDismiss') {
-        e.preventDefault();
-        const ov = document.getElementById('rotateOverlay');
-        if (ov) ov.classList.add('dismissed');
-      }
-    });
-    window.addEventListener('orientationchange', function() {
-      const ov = document.getElementById('rotateOverlay');
-      if (ov) ov.classList.remove('dismissed');
     });
 
     // --- Create rail: panel switching (Phase 1) ---------------------------
@@ -7996,9 +7924,14 @@
       }
     }
 
+    // Base64url (path-safe) for the server-rendered /s/<state> share route,
+    // which emits real og:image/og:title meta so links unfurl on crawlers
+    // (Facebook/Twitter) that don't run our client-side meta.
+    function stateToBase64Url() {
+      return encodeStateToURL().replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
     function copyShareLink() {
-      const encoded = encodeStateToURL();
-      const shareURL = `${window.location.origin}${window.location.pathname}#${encoded}`;
+      const shareURL = `${window.location.origin}/s/${stateToBase64Url()}`;
       navigator.clipboard.writeText(shareURL).then(() => {
         showMessage('Link copied to clipboard!', 'success');
         trackEvent('copy_share_link', { title: appState.mapTitle });

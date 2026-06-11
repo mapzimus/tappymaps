@@ -3317,14 +3317,12 @@
       .create-share-popover .section { margin: 0; }
       .create-share-popover .section-title { margin-top: 0; }
 
-      /* Portrait phones: the design page scrolls as ONE page so every control
-         (Clear All, Export, …) is reachable. The old layout pinned the panel at
-         a fixed 52vh whose lower half hid behind the iOS Safari toolbar with no
-         way to scroll to it. The document itself can't scroll (html,body are
-         locked overflow:hidden), so the fix is NOT page-scroll — it's sizing the
-         fixed editor to 100dvh (the truly-visible height, vs 100vh which on iOS
-         is the toolbar-hidden height) so the panel sits fully on-screen and its
-         OWN inner scroll (.create-panel-scroll) can reach Export / Clear All. */
+      /* Portrait phones: the editor stays a fixed viewport (html,body are
+         globally locked overflow:hidden, so the document itself can't scroll).
+         Sizing it to 100dvh — the truly-visible height, vs 100vh which on iOS is
+         the toolbar-hidden height that pushed the panel bottom under the Safari
+         toolbar — puts the control panel fully on-screen so its OWN inner scroll
+         (.create-panel-scroll) can reach Export / Clear All. */
       @media (max-width: 600px) and (orientation: portrait) {
         #modeCreate { height: 100dvh; }
         #createBody { flex-direction: column; }

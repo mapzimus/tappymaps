@@ -3,6 +3,7 @@
   "outputDirectory": ".",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/s/:hash", "destination": "/api/share?h=:hash" },
     {
       "source": "/((?!api|assets|favicon|.*\\.(?:png|svg|ico|webmanifest|json)).*)",
       "destination": "/index.html"

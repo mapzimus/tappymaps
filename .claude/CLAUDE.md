@@ -73,7 +73,7 @@ The legacy single-page layout is **still in the file** — it is HIDDEN, not rem
 - **`#sourceInput`** (desktop Source field, autofill-defeat intact — see "Source field autofill defeat" below) is the node that lands in the Create Map panel after re-parenting; `#mobileSourceInput` stays dormant in the hidden mobile markup.
 - Net cutover diff was **+155 / −8** (the 8 "deletions" are lines that gained `id=` attributes). Rollback = a single `git revert 619e309`.
 
-Validate editor edits with `_validate.py`. Block 1 (Mobile-UX IIFE) was a stable 33,371 chars through Phase 4; the Phase-5 editor rework (floating panel) intentionally added a `window.createMapZoom*` API to it, so the new baseline is **34,104 chars**. The point of the check stands: an UNINTENDED change to Block 1's size means you disturbed it by accident.
+Validate editor edits with `_validate.py`. Block 1 (Mobile-UX IIFE) was a stable 33,371 chars through Phase 4; the Phase-5 editor rework (collapsible panel + map zoom) intentionally added a `window.createMapZoom*` API to it, so the new baseline is **34,104 chars**. The point of the check stands: an UNINTENDED change to Block 1's size means you disturbed it by accident.
 
 ## Arcade (Phase 2 — SHIPPED to branch, 2026-06-10)
 

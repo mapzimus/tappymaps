@@ -11909,6 +11909,13 @@
           if (now - lastTap < 300 && currentScale > 1.05) { e.preventDefault(); resetZoom(); }
           lastTap = now;
         });
+        // Desktop: scroll wheel zooms the editor map (gentle per-tick factor).
+        mapContainer.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+          currentScale = Math.max(1, Math.min(4, currentScale * factor));
+          clampPan(); applyTransform();
+        }, { passive: false });
       }
 
       // Expose the editor map zoom to the Create-mode nav buttons (Block 0).

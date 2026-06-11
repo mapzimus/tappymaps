@@ -3317,13 +3317,15 @@
       .create-share-popover .section { margin: 0; }
       .create-share-popover .section-title { margin-top: 0; }
 
-      /* Portrait phones: the design page scrolls as ONE page so every control
-         (Clear All, Export, …) is reachable. The old layout pinned the panel at
-         a fixed 52vh whose lower half hid behind the iOS Safari toolbar with no
-         way to scroll to it. dvh sizes the map to the truly-visible viewport. */
+      /* Portrait phones: the editor stays a fixed viewport (html,body are
+         globally locked overflow:hidden, so the document itself can't scroll).
+         Sizing it to 100dvh — the truly-visible height, vs 100vh which on iOS is
+         the toolbar-hidden height that pushed the panel bottom under the Safari
+         toolbar — puts the control panel fully on-screen so its OWN inner scroll
+         (.create-panel-scroll) can reach Export / Clear All. */
       @media (max-width: 600px) and (orientation: portrait) {
-        #modeCreate { height: auto; min-height: 100dvh; overflow: visible; }
-        #createBody { flex-direction: column; overflow: visible; min-height: 0; }
+        #modeCreate { height: 100dvh; }
+        #createBody { flex-direction: column; }
         #createRail {
           flex-direction: row;
           width: 100%;
@@ -3332,16 +3334,14 @@
           border-right: none;
           border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
           justify-content: center;
-          position: sticky; top: 0; z-index: 39;
         }
-        #createMap { flex: none; height: 48dvh; }
+        #createMap { flex: 1 1 auto; min-height: 22dvh; }
         #createPanel {
-          flex: none; height: auto; overflow: visible;
+          flex: 0 0 50dvh;
           border-left: none;
           border-top: 1px solid var(--border, rgba(255,255,255,0.08));
         }
-        .create-panel-scroll { overflow: visible; }
-        #createBody.panel-collapsed #createPanel { display: none; }
+        #createBody.panel-collapsed #createPanel { flex-basis: 0; }
       }
 
       /* Rail buttons */

@@ -73,7 +73,7 @@ The legacy single-page layout is **still in the file** — it is HIDDEN, not rem
 - **`#sourceInput`** (desktop Source field, autofill-defeat intact — see "Source field autofill defeat" below) is the node that lands in the Create Map panel after re-parenting; `#mobileSourceInput` stays dormant in the hidden mobile markup.
 - Net cutover diff was **+155 / −8** (the 8 "deletions" are lines that gained `id=` attributes). Rollback = a single `git revert 619e309`.
 
-Validate editor edits with `_validate.py` — the cutover never touched the Mobile-UX IIFE (Block 1), so its char count must stay constant (33,371 chars) as proof you didn't disturb it.
+Validate editor edits with `_validate.py`. Block 1 (Mobile-UX IIFE) was a stable 33,371 chars through Phase 4; the Phase-5 editor rework (collapsible panel + map zoom) intentionally added a `window.createMapZoom*` API to it, so the new baseline is **34,471 chars**. The point of the check stands: an UNINTENDED change to Block 1's size means you disturbed it by accident.
 
 ## Arcade (Phase 2 — SHIPPED to branch, 2026-06-10)
 
@@ -88,7 +88,7 @@ Validate editor edits with `_validate.py` — the cutover never touched the Mobi
 - **Seeded share:** `?seed=<seed>` reproduces the same run (mulberry32 + string hash). Rides in `window.location.search` (parseRoute only reads pathname), so it survives the Vercel SPA rewrite.
 - **Scores:** anonymous localStorage only (`tappymaps_arcade_<id>_best`). Sign-in cross-device sync is DEFERRED (needs a Supabase `game_scores` table + the analytics rewire — pairs with Phase 4).
 - Games surface uses the **orange** accent (`#F97316`) per brand §8, not the turquoise Design accent.
-- Block 1 (Mobile IIFE) must still be 33,371 chars after any Arcade edit — Arcade never touches it.
+- Block 1 (Mobile IIFE) baseline is **34,471 chars** (was 33,371 before the Phase-5 floating-panel zoom API). Arcade/games never touch it; an unexpected size change means an accidental edit.
 
 ### Arcade v2 (2026-06-10, same branch)
 

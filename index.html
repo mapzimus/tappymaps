@@ -961,8 +961,9 @@
       border-radius: var(--radius-md);
       padding: 16px 20px;
       max-width: 320px;
-      max-height: 70%;
-      overflow-y: auto;
+      /* No height clip: the legend sizes to its content so every category
+         shows. The brand caps legends at 8 entries, which bounds the height.
+         (overflow-y:auto here was unscrollable anyway — pointer-events:none.) */
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
       box-shadow: var(--shadow-md);
@@ -1051,6 +1052,9 @@
       padding: 30px;
       max-width: 500px;
       width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       box-shadow: var(--shadow-lg);
       border: 1px solid var(--border);
       transition: background-color var(--duration-slow) ease, border-color var(--duration-slow) ease;
@@ -1320,8 +1324,7 @@
         font-size: var(--text-xxs);
       }
       .legend-group {
-        max-width: 150px;
-        max-height: 45%;
+        max-width: 180px;
         padding: 6px 8px;
       }
       .legend-title {
@@ -3206,8 +3209,9 @@
       #createBody {
         flex: 1;
         display: flex;
-        min-height: 0;             /* allow children to scroll */
+        min-height: 0;
         overflow: hidden;
+        position: relative;        /* floating panel + map FABs anchor here */
       }
       #createRail {
         width: 56px;
@@ -3219,9 +3223,10 @@
         align-items: center;
         padding: 8px 0;
         gap: 6px;
+        z-index: 30;
       }
       #createMap {
-        flex: 1 1 55%;
+        flex: 1 1 auto;
         min-width: 0;
         position: relative;
         display: flex;
@@ -3230,35 +3235,87 @@
         background: var(--bg);
         overflow: hidden;
       }
-      /* Canvas fit: the SVG otherwise sizes to stage WIDTH (~936px tall on a wide
-         stage) and overflows the centered overflow:hidden stage, clipping the title
-         (top) and logo watermark (bottom). Stretch the container to stage height and
-         let the SVG flex into the leftover height so preserveAspectRatio letterboxes
-         it horizontally instead of overflowing vertically. */
-      #createMap > #mapContainer {
-        min-height: 0;
-        max-height: 100%;
-      }
-      #createMap > #mapContainer > #mapSVG {
-        flex: 1 1 0;
-        min-height: 0;
-      }
+      #createMap > #mapContainer { min-height: 0; max-height: 100%; }
+      #createMap > #mapContainer > #mapSVG { flex: 1 1 0; min-height: 0; }
+
+      /* Docked, collapsible control panel — sits in its own column beside the
+         map (the map keeps its old size / position, never covered). Collapsing
+         shrinks the column to 0 so the map expands to full width. A bar holds
+         the collapse button; the sections scroll below it. */
       #createPanel {
-        flex: 0 0 320px;
+        flex: 0 0 300px;
+        min-width: 0;
+        display: flex; flex-direction: column;
         background: var(--surface, rgba(255,255,255,0.02));
         border-left: 1px solid var(--border, rgba(255,255,255,0.08));
-        overflow-y: auto;
-        padding: 16px;
+        overflow: hidden;
+        transition: flex-basis 0.22s ease, opacity 0.18s ease;
       }
-      /* Relocated legacy sidebar sections fill the panel width and drop their
-         sidebar chrome (they ride in via runtime appendChild during cutover). */
-      #createPanel .section {
-        margin: 0 0 16px 0;
-        padding: 0;
-        border: none;
-        background: none;
+      .create-panel-bar {
+        flex: 0 0 auto;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 9px 8px 9px 14px;
+        border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
       }
-      #createPanel .section:last-child { margin-bottom: 0; }
+      .create-panel-bar-title { font-size: 14px; font-weight: 700; }
+      .create-panel-iconbtn {
+        width: 30px; height: 30px; border-radius: 8px;
+        background: transparent; border: 1px solid var(--border, rgba(255,255,255,0.12));
+        color: var(--text); font-size: 16px; cursor: pointer; line-height: 1;
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .create-panel-iconbtn:hover { background: var(--surface-raised, rgba(255,255,255,0.06)); }
+      .create-panel-scroll {
+        flex: 1 1 auto; min-height: 0;
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+        padding: 14px;
+      }
+      #createBody.panel-collapsed #createPanel {
+        flex-basis: 0; opacity: 0; pointer-events: none; border-left: none;
+      }
+      /* Reopen FAB (shown only when collapsed) + map zoom nav — float on the map */
+      .create-map-fab {
+        position: absolute; top: 12px; right: 12px; z-index: 38;
+        width: 42px; height: 42px; border-radius: 11px;
+        background: color-mix(in srgb, var(--surface, #1e293b) 90%, transparent);
+        -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+        border: 1px solid var(--border, rgba(255,255,255,0.14));
+        color: var(--text); font-size: 17px; cursor: pointer;
+        display: none; align-items: center; justify-content: center;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+      }
+      #createBody.panel-collapsed .create-map-fab { display: inline-flex; }
+      .create-map-nav {
+        position: absolute; left: 12px; bottom: 12px; z-index: 38;
+        display: flex; flex-direction: column; gap: 7px;
+      }
+      .create-map-nav button {
+        width: 40px; height: 40px; border-radius: 10px;
+        background: color-mix(in srgb, var(--surface, #1e293b) 90%, transparent);
+        -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+        border: 1px solid var(--border, rgba(255,255,255,0.14));
+        color: var(--text); font-size: 19px; font-weight: 700; cursor: pointer; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .create-map-nav button:hover { border-color: var(--accent, #0EA5E9); }
+
+      /* Relocated legacy sidebar sections + accordion behaviour. Sections start
+         EXPANDED; tapping a section title collapses it (nothing hidden by
+         default). The chevron rotates to show state. */
+      #createPanelScroll .section {
+        margin: 0 0 10px 0; padding: 0; border: none; background: none;
+      }
+      #createPanelScroll .section:last-child { margin-bottom: 0; }
+      #createPanelScroll .section > .section-title {
+        cursor: pointer; user-select: none;
+        display: flex; align-items: center; justify-content: space-between;
+      }
+      #createPanelScroll .section > .section-title::after {
+        content: '\25BE'; font-size: 11px; opacity: 0.55; transition: transform 0.15s ease; margin-left: 8px;
+      }
+      #createPanelScroll .section.is-collapsed > .section-title::after { transform: rotate(-90deg); }
+      #createPanelScroll .section.is-collapsed > .section-content { display: none !important; }
 
       /* THE CUTOVER (Phase 1): once the Router dispatches any mode, body gets a
          data-mode attribute. That hides the entire legacy single-page layout
@@ -3299,25 +3356,25 @@
       .create-share-popover .section { margin: 0; }
       .create-share-popover .section-title { margin-top: 0; }
 
-      /* Portrait stack (when user dismisses rotate overlay) */
+      /* Portrait: rail becomes a top row; the floating panel becomes a near
+         full-width sheet still floating over the map (collapsible as ever). */
       @media (max-width: 600px) and (orientation: portrait) {
-        #createBody {
-          flex-direction: column;
-        }
+        #createBody { flex-direction: column; }
         #createRail {
           flex-direction: row;
           width: 100%;
-          height: 56px;
-          flex: 0 0 56px;
+          height: 52px;
+          flex: 0 0 52px;
           border-right: none;
           border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
           justify-content: center;
         }
         #createPanel {
-          flex: 0 0 60vh;
+          flex: 0 0 52vh;
           border-left: none;
           border-top: 1px solid var(--border, rgba(255,255,255,0.08));
         }
+        #createBody.panel-collapsed #createPanel { flex-basis: 0; }
       }
 
       /* Rail buttons */
@@ -3509,8 +3566,19 @@
       </nav>
       <div id="createMap">
         <!-- SVG mapSVG moves here in cutover (Task 15) -->
+        <button type="button" class="create-map-fab" id="createPanelReopen" aria-label="Show controls" title="Show controls">&#9776;</button>
+        <div class="create-map-nav" aria-label="Map zoom">
+          <button type="button" id="createZoomIn" aria-label="Zoom in" title="Zoom in">+</button>
+          <button type="button" id="createZoomOut" aria-label="Zoom out" title="Zoom out">&#8722;</button>
+          <button type="button" id="createZoomReset" aria-label="Reset zoom" title="Reset zoom">&#10558;</button>
+        </div>
       </div>
       <aside id="createPanel" aria-label="Active panel content">
+        <div class="create-panel-bar">
+          <span class="create-panel-bar-title" id="createPanelBarTitle">Map</span>
+          <button type="button" class="create-panel-iconbtn" id="createPanelCollapse" aria-label="Hide controls" title="Hide controls">&#10005;</button>
+        </div>
+        <div class="create-panel-scroll" id="createPanelScroll">
         <!-- Map panel: title/subtitle/source + Browse Templates inline grid -->
         <section class="create-panel-content" id="createPanelMap" style="display:none">
           <h3 class="create-panel-heading">Map</h3>
@@ -3548,6 +3616,7 @@
             <button type="submit" class="tap-in-submit" style="width:100%;margin-top:8px">Unlock</button>
           </form>
         </section>
+        </div><!-- /.create-panel-scroll -->
       </aside>
     </div>
   </div>
@@ -4677,6 +4746,7 @@
     // switchPanel(name) hides all #createPanelXxx sections, shows the named
     // one, toggles .is-active on the matching rail button.
 
+    const CREATE_PANEL_LABELS = { map: 'Map', color: 'Colors', elements: 'Map Elements', data: 'Data Maps', upgrade: 'Tappymaps Pro' };
     function switchPanel(name) {
       const ids = ['createPanelMap', 'createPanelColor', 'createPanelElements', 'createPanelData', 'createPanelUpgrade'];
       const targetId = 'createPanel' + name.charAt(0).toUpperCase() + name.slice(1);
@@ -4690,6 +4760,13 @@
           btn.classList.toggle('is-active', btn.dataset.panel === name);
         });
       }
+      const barTitle = document.getElementById('createPanelBarTitle');
+      if (barTitle) barTitle.textContent = CREATE_PANEL_LABELS[name] || 'Controls';
+      // Picking a tool always reveals the floating panel.
+      const body = document.getElementById('createBody');
+      if (body) body.classList.remove('panel-collapsed');
+      const scroll = document.getElementById('createPanelScroll');
+      if (scroll) scroll.scrollTop = 0;
     }
 
     // Rail click delegate — single listener on #createRail, dispatches
@@ -4700,6 +4777,29 @@
       const name = btn.dataset.panel;
       if (name) switchPanel(name);
     });
+
+    // --- Floating panel collapse / reopen + map zoom nav + accordion -------
+    (function wireCreatePanelChrome() {
+      const body = document.getElementById('createBody');
+      const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+      const reflowLegend = () => { if (typeof updateLegendPosition === 'function') requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} }); };
+      on('createPanelCollapse', () => { if (body) body.classList.add('panel-collapsed'); reflowLegend(); });
+      on('createPanelReopen',  () => { if (body) body.classList.remove('panel-collapsed'); reflowLegend(); });
+      // Zoom buttons drive the editor map's existing pinch-zoom (exposed by the
+      // Mobile-UX IIFE as window.createMapZoom*). Guarded — no-op until ready.
+      on('createZoomIn',    () => { if (window.createMapZoomIn)    window.createMapZoomIn(); });
+      on('createZoomOut',   () => { if (window.createMapZoomOut)   window.createMapZoomOut(); });
+      on('createZoomReset', () => { if (window.createMapZoomReset) window.createMapZoomReset(); });
+      // Accordion: a section title in the floating panel collapses its content.
+      const scroll = document.getElementById('createPanelScroll');
+      if (scroll) scroll.addEventListener('click', (e) => {
+        const title = e.target.closest('.section > .section-title');
+        if (!title || !scroll.contains(title)) return;
+        const section = title.parentElement;
+        if (!section.querySelector('.section-content')) return;  // nothing to collapse
+        section.classList.toggle('is-collapsed');
+      });
+    })();
 
     // --- Upgrade panel handlers (Phase 1) ---------------------------------
     // CTA: shows the full upgrade modal (when not in TESTER_MODE) or the
@@ -11804,7 +11904,27 @@
           if (now - lastTap < 300 && currentScale > 1.05) { e.preventDefault(); resetZoom(); }
           lastTap = now;
         });
+        // Desktop: scroll wheel zooms the editor map (gentle per-tick factor).
+        mapContainer.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+          currentScale = Math.max(1, Math.min(4, currentScale * factor));
+          clampPan(); applyTransform();
+        }, { passive: false });
       }
+
+      // Expose the editor map zoom to the Create-mode nav buttons (Block 0).
+      window.createMapZoomIn = function() {
+        currentScale = Math.min(4, currentScale * 1.3);
+        if (mapSvg) { mapSvg.style.transition = 'transform 0.18s ease'; setTimeout(function(){ if (mapSvg) mapSvg.style.transition = ''; }, 180); }
+        clampPan(); applyTransform();
+      };
+      window.createMapZoomOut = function() {
+        currentScale = Math.max(1, currentScale / 1.3);
+        if (mapSvg) { mapSvg.style.transition = 'transform 0.18s ease'; setTimeout(function(){ if (mapSvg) mapSvg.style.transition = ''; }, 180); }
+        clampPan(); applyTransform();
+      };
+      window.createMapZoomReset = function() { resetZoom(); };
 
     })();
 </script>

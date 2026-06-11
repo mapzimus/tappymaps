@@ -2871,6 +2871,7 @@
       .draft-state:hover { fill: #38516e; }
       .draft-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
       .draft-state--taken { pointer-events: none; }
+      .draft-state--out { opacity: 0.35; cursor: default; pointer-events: none; }
       #draftStatesGroup.is-locked { pointer-events: none; }
       .draft-turn {
         position: absolute; left: 50%; top: 10px; transform: translateX(-50%);
@@ -5915,6 +5916,19 @@
     // bordering states, counting the Four Corners point touches.
     const DRAFT_AREA = { 'Alabama':52420,'Alaska':665384,'Arizona':113990,'Arkansas':53179,'California':163695,'Colorado':104094,'Connecticut':5543,'Delaware':2489,'Florida':65758,'Georgia':59425,'Hawaii':10932,'Idaho':83569,'Illinois':57914,'Indiana':36420,'Iowa':56273,'Kansas':82278,'Kentucky':40408,'Louisiana':52378,'Maine':35380,'Maryland':12406,'Massachusetts':10554,'Michigan':96714,'Minnesota':86936,'Mississippi':48432,'Missouri':69707,'Montana':147040,'Nebraska':77348,'Nevada':110572,'New Hampshire':9349,'New Jersey':8723,'New Mexico':121590,'New York':54555,'North Carolina':53819,'North Dakota':70698,'Ohio':44826,'Oklahoma':69899,'Oregon':98379,'Pennsylvania':46054,'Rhode Island':1545,'South Carolina':32020,'South Dakota':77116,'Tennessee':42144,'Texas':268596,'Utah':84897,'Vermont':9616,'Virginia':42775,'Washington':71298,'West Virginia':24230,'Wisconsin':65496,'Wyoming':97813 };
     const DRAFT_STATEHOOD = { 'Delaware':1787,'Pennsylvania':1787,'New Jersey':1787,'Georgia':1788,'Connecticut':1788,'Massachusetts':1788,'Maryland':1788,'South Carolina':1788,'New Hampshire':1788,'Virginia':1788,'New York':1788,'North Carolina':1789,'Rhode Island':1790,'Vermont':1791,'Kentucky':1792,'Tennessee':1796,'Ohio':1803,'Louisiana':1812,'Indiana':1816,'Mississippi':1817,'Illinois':1818,'Alabama':1819,'Maine':1820,'Missouri':1821,'Arkansas':1836,'Michigan':1837,'Florida':1845,'Texas':1845,'Iowa':1846,'Wisconsin':1848,'California':1850,'Minnesota':1858,'Oregon':1859,'Kansas':1861,'West Virginia':1863,'Nevada':1864,'Nebraska':1867,'Colorado':1876,'North Dakota':1889,'South Dakota':1889,'Montana':1889,'Washington':1889,'Idaho':1890,'Wyoming':1890,'Utah':1896,'Oklahoma':1907,'New Mexico':1912,'Arizona':1912,'Alaska':1959,'Hawaii':1959 };
+    // Static category banks (Bucket B of the launch-100 triage — encyclopedic
+    // facts that work with the census API fully down). Sources: USGS (high
+    // point + mean elevation), Census county-equivalents, NOAA general
+    // coastline, 2024 Electoral College, presidential birthplaces, NPS units.
+    // Pool categories (coastline / presidents / parks) deliberately omit
+    // zero-value states — the engine's isFinite filter shrinks the pick pool.
+    const DRAFT_HIGHPOINT = { 'Alabama':2407,'Alaska':20310,'Arizona':12633,'Arkansas':2753,'California':14505,'Colorado':14440,'Connecticut':2380,'Delaware':448,'Florida':345,'Georgia':4784,'Hawaii':13796,'Idaho':12662,'Illinois':1235,'Indiana':1257,'Iowa':1670,'Kansas':4039,'Kentucky':4145,'Louisiana':535,'Maine':5268,'Maryland':3360,'Massachusetts':3489,'Michigan':1979,'Minnesota':2301,'Mississippi':806,'Missouri':1772,'Montana':12807,'Nebraska':5424,'Nevada':13147,'New Hampshire':6288,'New Jersey':1803,'New Mexico':13167,'New York':5344,'North Carolina':6684,'North Dakota':3506,'Ohio':1550,'Oklahoma':4973,'Oregon':11249,'Pennsylvania':3213,'Rhode Island':812,'South Carolina':3553,'South Dakota':7242,'Tennessee':6643,'Texas':8749,'Utah':13528,'Vermont':4393,'Virginia':5729,'Washington':14411,'West Virginia':4863,'Wisconsin':1951,'Wyoming':13809 };
+    const DRAFT_MEAN_ELEV = { 'Alabama':500,'Alaska':1900,'Arizona':4100,'Arkansas':650,'California':2900,'Colorado':6800,'Connecticut':500,'Delaware':60,'Florida':100,'Georgia':600,'Hawaii':3030,'Idaho':5000,'Illinois':600,'Indiana':700,'Iowa':1100,'Kansas':2000,'Kentucky':750,'Louisiana':100,'Maine':600,'Maryland':350,'Massachusetts':500,'Michigan':900,'Minnesota':1200,'Mississippi':300,'Missouri':800,'Montana':3400,'Nebraska':2600,'Nevada':5500,'New Hampshire':1000,'New Jersey':250,'New Mexico':5700,'New York':1000,'North Carolina':700,'North Dakota':1900,'Ohio':850,'Oklahoma':1300,'Oregon':3300,'Pennsylvania':1100,'Rhode Island':200,'South Carolina':350,'South Dakota':2200,'Tennessee':900,'Texas':1700,'Utah':6100,'Vermont':1000,'Virginia':950,'Washington':1700,'West Virginia':1500,'Wisconsin':1050,'Wyoming':6700 };
+    const DRAFT_COUNTIES = { 'Alabama':67,'Alaska':30,'Arizona':15,'Arkansas':75,'California':58,'Colorado':64,'Connecticut':8,'Delaware':3,'Florida':67,'Georgia':159,'Hawaii':5,'Idaho':44,'Illinois':102,'Indiana':92,'Iowa':99,'Kansas':105,'Kentucky':120,'Louisiana':64,'Maine':16,'Maryland':24,'Massachusetts':14,'Michigan':83,'Minnesota':87,'Mississippi':82,'Missouri':115,'Montana':56,'Nebraska':93,'Nevada':17,'New Hampshire':10,'New Jersey':21,'New Mexico':33,'New York':62,'North Carolina':100,'North Dakota':53,'Ohio':88,'Oklahoma':77,'Oregon':36,'Pennsylvania':67,'Rhode Island':5,'South Carolina':46,'South Dakota':66,'Tennessee':95,'Texas':254,'Utah':29,'Vermont':14,'Virginia':133,'Washington':39,'West Virginia':55,'Wisconsin':72,'Wyoming':23 };
+    const DRAFT_COASTLINE = { 'Alaska':6640,'Florida':1350,'California':840,'Hawaii':750,'Louisiana':397,'Texas':367,'North Carolina':301,'Oregon':296,'Maine':228,'Massachusetts':192,'South Carolina':187,'Washington':157,'New Jersey':130,'New York':127,'Virginia':112,'Georgia':100,'Alabama':53,'Mississippi':44,'Rhode Island':40,'Maryland':31,'Delaware':28,'New Hampshire':13 };
+    const DRAFT_EV = { 'Alabama':9,'Alaska':3,'Arizona':11,'Arkansas':6,'California':54,'Colorado':10,'Connecticut':7,'Delaware':3,'Florida':30,'Georgia':16,'Hawaii':4,'Idaho':4,'Illinois':19,'Indiana':11,'Iowa':6,'Kansas':6,'Kentucky':8,'Louisiana':8,'Maine':4,'Maryland':10,'Massachusetts':11,'Michigan':15,'Minnesota':10,'Mississippi':6,'Missouri':10,'Montana':4,'Nebraska':5,'Nevada':6,'New Hampshire':4,'New Jersey':14,'New Mexico':5,'New York':28,'North Carolina':16,'North Dakota':3,'Ohio':17,'Oklahoma':7,'Oregon':8,'Pennsylvania':19,'Rhode Island':4,'South Carolina':9,'South Dakota':3,'Tennessee':11,'Texas':40,'Utah':6,'Vermont':3,'Virginia':13,'Washington':12,'West Virginia':4,'Wisconsin':10,'Wyoming':3 };
+    const DRAFT_PRESIDENTS = { 'Virginia':8,'Ohio':7,'New York':5,'Massachusetts':4,'North Carolina':2,'Pennsylvania':2,'Texas':2,'Vermont':2,'Arkansas':1,'California':1,'Connecticut':1,'Georgia':1,'Hawaii':1,'Illinois':1,'Iowa':1,'Kentucky':1,'Missouri':1,'Nebraska':1,'New Hampshire':1,'New Jersey':1,'South Carolina':1 };
+    const DRAFT_PARKS = { 'California':9,'Alaska':8,'Utah':5,'Colorado':4,'Arizona':3,'Florida':3,'Washington':3,'Hawaii':2,'Montana':2,'Nevada':2,'New Mexico':2,'South Dakota':2,'Texas':2,'Wyoming':2,'Arkansas':1,'Idaho':1,'Indiana':1,'Kentucky':1,'Maine':1,'Michigan':1,'Minnesota':1,'Missouri':1,'North Carolina':1,'North Dakota':1,'Ohio':1,'Oregon':1,'South Carolina':1,'Tennessee':1,'Virginia':1,'West Virginia':1 };
     const DRAFT_BORDERS = { 'Alabama':4,'Alaska':0,'Arizona':5,'Arkansas':6,'California':3,'Colorado':7,'Connecticut':3,'Delaware':3,'Florida':2,'Georgia':5,'Hawaii':0,'Idaho':6,'Illinois':5,'Indiana':4,'Iowa':6,'Kansas':4,'Kentucky':7,'Louisiana':3,'Maine':1,'Maryland':4,'Massachusetts':5,'Michigan':3,'Minnesota':4,'Mississippi':4,'Missouri':8,'Montana':4,'Nebraska':6,'Nevada':5,'New Hampshire':3,'New Jersey':3,'New Mexico':5,'New York':5,'North Carolina':4,'North Dakota':3,'Ohio':5,'Oklahoma':6,'Oregon':4,'Pennsylvania':6,'Rhode Island':2,'South Carolina':2,'South Dakota':6,'Tennessee':8,'Texas':4,'Utah':6,'Vermont':3,'Virginia':5,'Washington':2,'West Virginia':5,'Wisconsin':4,'Wyoming':6 };
 
     // Category registry — lazy + memoized for the same TDZ reason as
@@ -5926,6 +5940,13 @@
         { id: 'area', title: 'Total Area', desc: 'Total area in square miles.', format: 'number', values: DRAFT_AREA, noise: 0.10 },
         { id: 'statehood', title: 'Oldest States', desc: 'Year admitted to the Union — earliest wins.', format: 'year', inverted: true, values: DRAFT_STATEHOOD, noise: 0.10, rule: 'Earliest total wins' },
         { id: 'borders', title: 'Most Neighbors', desc: 'Bordering states (Four Corners counts).', format: 'number', values: DRAFT_BORDERS, noise: 0.08 },
+        { id: 'highpoint', title: 'Highest Point', desc: 'Elevation of the state high point, in feet.', format: 'number', values: DRAFT_HIGHPOINT, noise: 0.10 },
+        { id: 'mean-elevation', title: 'Average Elevation', desc: 'Mean elevation in feet (USGS).', format: 'number', values: DRAFT_MEAN_ELEV, noise: 0.12 },
+        { id: 'counties', title: 'Most Counties', desc: 'Counties and county-equivalents.', format: 'number', values: DRAFT_COUNTIES, noise: 0.15 },
+        { id: 'coastline', title: 'Ocean Coastline', desc: 'NOAA general coastline miles — only coastal states are in the pool.', format: 'number', values: DRAFT_COASTLINE, noise: 0.08 },
+        { id: 'electoral-votes', title: 'Electoral Votes', desc: 'Electoral College votes (2024 map).', format: 'number', values: DRAFT_EV, noise: 0.08 },
+        { id: 'presidents', title: 'Presidents Born', desc: 'U.S. presidents born in the state — only birthplace states are in the pool.', format: 'number', values: DRAFT_PRESIDENTS, noise: 0.12 },
+        { id: 'national-parks', title: 'National Parks', desc: 'National Park units with any part in the state — only park states are in the pool.', format: 'number', values: DRAFT_PARKS, noise: 0.12 },
         { id: 'name-length', title: 'Longest Names', desc: 'Letters in the state name.', format: 'number', computed: true, noise: 0.06 },
         { id: 'name-length-short', title: 'Shortest Names', desc: 'Letters in the state name — shortest wins.', format: 'number', computed: true, inverted: true, noise: 0.06, rule: 'Lowest total wins' },
       ];
@@ -6091,6 +6112,11 @@
         .map(o => o.n);
 
       draftClearMapMarks();
+      // Pool categories (coastline, presidents, parks) only have values for a
+      // subset of states — dim the rest so the eligible pool reads at a glance.
+      document.querySelectorAll('#draftStatesGroup .draft-state:not(.draft-state--dc)').forEach(p => {
+        p.classList.toggle('draft-state--out', !DG.available.has(p.getAttribute('data-state')));
+      });
       draftZoom.reset();
       draftSet('draftRoundLabel', 'Round ' + (DG.round + 1) + ' · Best of 5');
       draftSet('draftCatTitle', cat.title);
@@ -6202,7 +6228,9 @@
         if (i < items.length) {
           items[i].classList.add('is-in');
           i += 1;
-          DG.revealId = setTimeout(step, 480);
+          // Spec §7 reveal pacing: high-impact states land fast, then the
+          // low values trickle in — the gap widens each step to build tension.
+          DG.revealId = setTimeout(step, 240 + i * 90);
         } else if (totals) {
           const f = (v) => arcadeFormatVal(v, cat.format);
           const line = (winner === 'tie') ? 'Dead tie — no pip.'

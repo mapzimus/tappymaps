@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in **one file (`index.html`, ~9,400 lines; grew to ~9,900 during the rebrand era, trimmed by Phase 0, then Phase 1 added a client-side mode router + Hub + Create rail)**. No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
 
-**Status as of 2026-05-29:** Phase 1 of the Reimagining SHIPPED (cutover commit `619e309`) — a client-side **mode router**, a **Hub** landing page at `/`, and the **Create-mode 5-panel rail** rebuild. The editor now lives at `/design/make`; `/` is the Hub. Phase 0 (audit fixes, brand polish, autofill defeat) shipped 2026-05-24. Tester mode is live with access code `tap26` (auth UI hidden). See the **"Mode Router (Phase 1)"** section below and `HANDOVER.md` for the canonical "where we are, what's next" summary.
+**Status as of 2026-05-29:** Phase 1 of the Reimagining SHIPPED (cutover commit `619e309`) — a client-side **mode router**, a **Hub** landing page at `/`, and the **Create-mode 5-panel rail** rebuild. The editor now lives at `/design/make`; `/` is the Hub. Phase 0 (audit fixes, brand polish, autofill defeat) shipped 2026-05-24. **Tester mode was REMOVED pre-launch** — real auth + Stripe + the `ADMIN_EMAILS` gate are the only paths to Pro again. See the **"Mode Router (Phase 1)"** section below and `HANDOVER.md` for the canonical "where we are, what's next" summary.
 
 Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella over three products:
 - **Tappymaps** (tappymaps.com): consumer map-making, casual + playful
@@ -213,20 +213,13 @@ Mobile-specific features:
 
 The mobile Sign In button calls `showUpgradeModal('auth')`, which renders the upgrade modal in auth-only mode (hides feature grid + access code section, retitles to "Sign In or Sign Up"). The default `showUpgradeModal()` (no argument) renders the full upgrade UI — used by all pro-badge / upgrade-banner / export-gate callers.
 
-**With TESTER_MODE enabled (current state), the auth UI is hidden entirely.** `updateUpgradeModalUI()` early-returns when `TESTER_MODE === true` and hides both `#upgradeAuthSection` and `#upgradePricingSection`. The only path to Pro is the access code field (`tap26`). See the Tester Mode section below.
+**Tester mode is removed.** `updateUpgradeModalUI()` shows `#upgradeAuthSection` (signed out) or `#upgradePricingSection` (signed in) normally. Pro comes from a real Stripe subscription or the `ADMIN_EMAILS` gate (on sign-in).
 
-## Tester Mode (current — REMOVE BEFORE PUBLIC LAUNCH)
+## Tester Mode — REMOVED (pre-launch)
 
-Tester mode hides all auth/pricing UI from the Upgrade modal and substitutes a single access-code unlock. Live since commit `a1acb4a` (2026-05-23). Four touch points in `index.html`, all tagged with `TESTER MODE` comments for grep:
+Tester mode (auto-granted Pro to every visitor + hid the auth/pricing UI + the `tap26` access code) was removed before public launch. The `TESTER_MODE` / `TESTER_CODES` / `TESTER_PRO_KEY` constants and the auto-grant block are deleted; `updateUpgradeModalUI()` is back to its plain auth/pricing if/else; the upgrade-modal access-code field is hidden; `handleProCodeSubmit()` is a guarded no-op that rejects input (no client-side unlock). Pro is earned via real auth + Stripe (`verify-subscription`) or the `ADMIN_EMAILS` gate in `checkSubscriptionStatus()` (admins get Pro on sign-in).
 
-| Location (grep `TESTER MODE`) | Purpose |
-|---|---|
-| Near `ADMIN_EMAILS` constant | Defines `TESTER_MODE = true`, `TESTER_CODES = ['tap26']`, `TESTER_PRO_KEY = 'tappymaps_tester_pro'`, and the localStorage restore block (auto-grants Pro on load if the user previously entered the code) |
-| `updateUpgradeModalUI()` | Early-return that hides auth + pricing sections when `TESTER_MODE` |
-| DOMContentLoaded block | `handleProCodeSubmit()` validates input against `TESTER_CODES` (case-insensitive), sets `appState.proUnlocked = true`, persists to localStorage, calls `updateProGates()` |
-| Inline initializer | Auto-grants Pro to every visitor in TESTER_MODE so testers get the full editor without needing the code (see `aa0fa64`) |
-
-To remove tester mode at launch: flip `TESTER_MODE = false`, delete the four tagged blocks, restore the original `updateUpgradeModalUI()` if/else. Total revert is ~50 lines, all annotated.
+**Inert vestiges left to retire when convenient** (low-traffic, harmless): the `/tap-in` access-code page and the Create Upgrade panel's "access code" form — both now just show "Access codes are not active." Remove their markup + routes in a future cleanup.
 
 ## Source field autofill defeat
 
@@ -265,7 +258,7 @@ Save location for agent exports: `C:\Users\mhowe\Downloads\tappymaps-agent-expor
 - **Supabase**: Original project `qbhqdicppoahhvnuvcwd.supabase.co` is **DEAD** (paused or deleted — Phase 0 Task 7 commit `77e8b99` no-op'd the `appendAnalyticsEvent` network call because every page load was firing `ERR_NAME_NOT_RESOLVED`). The auth-related code paths that still reference Supabase work because the JWT verification happens server-side in `/api/stripe/*` against a different (still-live) project. Phase 1 will rewire analytics to the new project once gallery schemas land. Tables (in the working project): `user_subscriptions`, `export_counts` — both with RLS.
 - **Stripe**: Monthly + annual prices, webhook at `/api/stripe/webhook` (signature-verified). PriceId allowlist + origin-pinned success/cancel URLs landed in `1ed6036`.
 - **DNS**: tappymaps.com — A 76.76.21.21, CNAME www → cname.vercel-dns.com.
-- **Admin Pro**: client-side gate for `max@mapparatus.org` and `mhowe.gis@gmail.com` via `ADMIN_EMAILS` constant. NOT a security boundary — server-side `verify-subscription` is the authoritative pro check. **In TESTER_MODE** (current), admin emails are bypassed because the auth UI is hidden entirely; everyone uses the `tap26` code instead.
+- **Admin Pro**: client-side gate for `max@mapparatus.org` and `mhowe.gis@gmail.com` via `ADMIN_EMAILS` — `checkSubscriptionStatus()` grants Pro on sign-in for those emails. NOT a security boundary; server-side `verify-subscription` is the authoritative pro check.
 
 ## User Preferences
 
@@ -291,7 +284,7 @@ Save location for agent exports: `C:\Users\mhowe\Downloads\tappymaps-agent-expor
 
 **Resolved post-Phase-0:**
 - Source field email autofill (`c5f8461`, `9afa442`, `decaf8c`, `187cad1` — three-layer HTML+CSS+JS defeat)
-- Tester mode hides auth UI + `tap26` access code (`a1acb4a`, `aa0fa64`)
+- Tester mode hid auth UI + `tap26` access code (`a1acb4a`, `aa0fa64`) — **since REMOVED pre-launch**
 
 **Resolved in Phase 1 (2026-05-29):**
 - **Mobile architectural rot** — closed in the live UI: the Create editor uses one 5-panel rail at all sizes, and the legacy mobile chrome is hidden by `body[data-mode] .mobile-* { display:none !important }`. The dead handlers are **dormant, not deleted** — they still exist in the hidden mobile markup + IIFE (the cutover re-parented, it didn't remove), so a future cleanup pass could delete them.

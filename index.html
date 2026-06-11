@@ -2636,6 +2636,21 @@
         box-shadow: 0 8px 40px rgba(0,0,0,0.35);
       }
       .arcade-prompt-pop.is-pop { animation: arcadePromptPop 1.3s ease forwards; }
+      /* State Shape ID — the silhouette card the player must locate. Stays
+         visible the whole round (it IS the clue). pointer-events:none so taps
+         reach the map underneath. */
+      .arcade-shape-card {
+        position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+        display: none; flex-direction: column; align-items: center; gap: 4px;
+        background: color-mix(in srgb, var(--surface, #1e293b) 88%, transparent);
+        border: 2px solid var(--arcade); border-radius: 14px;
+        padding: 10px 16px 8px; z-index: 4; pointer-events: none;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+      }
+      .arcade-shape-card.is-show { display: flex; }
+      #arcadeShapeSvg { width: 110px; height: 88px; }
+      #arcadeShapePath { fill: var(--arcade); stroke: #fff; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+      .arcade-shape-label { font-size: 12px; font-weight: 700; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; }
       @keyframes arcadePromptPop {
         0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
         10%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
@@ -3585,7 +3600,7 @@
       <header class="arcade-hub-header">
         <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
         <h2 class="arcade-hub-title">Arcade</h2>
-        <p class="arcade-hub-sub">Five fast geography games. All free.</p>
+        <p class="arcade-hub-sub">Six fast geography games. All free.</p>
       </header>
       <div class="arcade-tile-grid" id="arcadeTileGrid"><!-- tiles injected by arcadeRenderHub() --></div>
       <footer class="arcade-hub-footer"><a href="/games/draft" data-route>GeoDraft →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
@@ -3608,6 +3623,10 @@
           <g id="arcadeStatesGroup" transform="translate(5, -20) scale(0.95)"></g>
         </svg>
         <div class="arcade-prompt-pop" id="arcadePromptPop" aria-hidden="true"></div>
+        <div class="arcade-shape-card" id="arcadeShapeCard" aria-hidden="true">
+          <svg id="arcadeShapeSvg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet"><path id="arcadeShapePath" d=""></path></svg>
+          <span class="arcade-shape-label">Which state?</span>
+        </div>
         <div class="arcade-zoom-controls">
           <button type="button" class="arcade-zoom-btn" id="arcadeZoomIn" aria-label="Zoom in">+</button>
           <button type="button" class="arcade-zoom-btn" id="arcadeZoomOut" aria-label="Zoom out">−</button>
@@ -5097,6 +5116,18 @@
         medals: { bronze: 500, silver: 850, gold: 1150 },
         generator: (rng) => arcadePickStates(50, rng),
       },
+      'state-shape': {
+        id: 'state-shape',
+        name: 'State Shape ID',
+        tagline: 'We show a state’s silhouette. Find it on the map.',
+        playable: true,
+        kind: 'shape',           // single-tap; the prompt is the outline, not the name
+        runLength: 10,
+        perPrompt: 9,
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+        generator: (rng) => arcadePickStates(10, rng),
+      },
     };
 
     // Colorable states (DC excluded) — derived from the FIPS table on first
@@ -5497,6 +5528,7 @@
       if (group) group.classList.toggle('is-duel', game.kind === 'duel');
       arcadeClearMarks();
       arcadeClearPaint();
+      arcadeHideShape();
       arcadeResetZoom();
       arcadeUpdateHud();
       arcadeNextPrompt();
@@ -5536,13 +5568,18 @@
         const entry = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Capital: ' + entry.capital + ' — tap the state';
         popText = entry.capital + '?';
+      } else if (kind === 'shape') {
+        const target = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Find this state by its shape';
+        arcadeShowShape(target);   // silhouette card stays up; no text pop (no name spoiler)
       } else {
         const target = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Find: ' + target;
         popText = target;
       }
+      if (kind !== 'shape') arcadeHideShape();
       // Big center-screen pop of the prompt (taps pass through it)
-      if (pop) {
+      if (pop && popText) {
         pop.textContent = popText;
         pop.classList.remove('is-pop');
         void pop.offsetWidth; // restart the CSS animation
@@ -5550,6 +5587,28 @@
       }
       arcadeUpdateHud();
       arcadeStartTimer();
+    }
+
+    // State Shape ID: render the target state's silhouette into the clue card,
+    // framed by its own bounding box. The card stays up the whole round.
+    function arcadeShowShape(name) {
+      const card = document.getElementById('arcadeShapeCard');
+      const svg = document.getElementById('arcadeShapeSvg');
+      const path = document.getElementById('arcadeShapePath');
+      const src = arcadeStatePath(name);
+      if (!card || !svg || !path || !src) return;
+      path.setAttribute('d', src.getAttribute('d') || '');
+      let bb = null;
+      try { bb = src.getBBox(); } catch (_) {}
+      if (bb && bb.width && bb.height) {
+        const pad = Math.max(bb.width, bb.height) * 0.08;
+        svg.setAttribute('viewBox', (bb.x - pad) + ' ' + (bb.y - pad) + ' ' + (bb.width + pad * 2) + ' ' + (bb.height + pad * 2));
+      }
+      card.classList.add('is-show');
+    }
+    function arcadeHideShape() {
+      const card = document.getElementById('arcadeShapeCard');
+      if (card) card.classList.remove('is-show');
     }
 
     function arcadeStartTimer() {
@@ -5652,6 +5711,7 @@
       if (AG.answered) return;
       AG.answered = true;
       arcadeStopTimers();
+      arcadeHideShape();   // clear the silhouette so the correct/wrong reveal is unobscured
       const group = document.getElementById('arcadeStatesGroup');
       if (group) group.classList.add('is-locked');
 

@@ -4632,22 +4632,8 @@
           if (status) status.textContent = 'Enter a code first.';
           return;
         }
-        // Delegate to the existing tester-mode submitter if it exists.
-        if (typeof handleProCodeSubmit === 'function') {
-          // handleProCodeSubmit normally reads from its own input element.
-          // Stash the value on the canonical input before calling.
-          const canonical = document.getElementById('proCodeInput');
-          if (canonical) canonical.value = code;
-          try {
-            handleProCodeSubmit();
-            if (status) status.textContent = 'Unlocked. Redirecting…';
-            setTimeout(function() { Router.navigate('/design/make'); }, 400);
-          } catch (err) {
-            if (status) status.textContent = 'Invalid code.';
-          }
-        } else {
-          if (status) status.textContent = 'Code system not loaded yet — try the editor instead.';
-        }
+        // Access codes are retired with tester mode — don't claim an unlock.
+        if (status) status.textContent = 'Access codes are not active. Skip below to make a map free.';
       }
     });
 
@@ -4730,8 +4716,7 @@
     })();
 
     // --- Upgrade panel handlers (Phase 1) ---------------------------------
-    // CTA: shows the full upgrade modal (when not in TESTER_MODE) or the
-    //      access-code field (when in TESTER_MODE).
+    // CTA: shows the full upgrade modal (auth + pricing).
     // Form: delegates to handleProCodeSubmit() — same plumbing as /tap-in
     //      and the existing modal field.
 
@@ -7765,26 +7750,14 @@
         toggleMultiSelectMode(e.target.checked);
       });
 
-      // TESTER MODE: access-code unlock for the Upgrade modal.
-      // Validates against TESTER_CODES (case-insensitive), grants Pro locally,
-      // persists in localStorage so reloads stay unlocked. Remove with TESTER_MODE.
+      // Access-code unlock is retired with tester mode. Promo codes will be
+      // server-verified when they ship; for now this rejects all input rather
+      // than granting Pro client-side.
       function handleProCodeSubmit() {
-        if (typeof TESTER_MODE === 'undefined' || !TESTER_MODE) return;
         const input = document.getElementById('proCodeInput');
-        const code = (input && input.value || '').trim().toLowerCase();
-        const valid = TESTER_CODES.some(function(c) { return c.toLowerCase() === code; });
-        if (valid) {
-          appState.proUnlocked = true;
-          appState.subscription = { status: 'tester' };
-          try { localStorage.setItem(TESTER_PRO_KEY, '1'); } catch (_) {}
-          if (typeof updateProGates === 'function') updateProGates();
-          if (typeof closeUpgradeModal === 'function') closeUpgradeModal();
-          if (typeof showMessage === 'function') showMessage('Pro unlocked', 'success');
-          if (input) input.value = '';
-        } else {
-          if (typeof showMessage === 'function') showMessage('Invalid code', 'error');
-          if (input) input.focus();
-        }
+        if (typeof showMessage === 'function') showMessage('Access codes are not active. Sign in to upgrade.', 'error');
+        if (input) input.focus();
+        return false;
       }
       // Expose to global scope so the top-level /tap-in (line ~3718) and Create
       // Upgrade-panel (line ~3820) submit delegates can reach it — both guard with
@@ -7990,7 +7963,7 @@
         if (titleEl) titleEl.textContent = 'Upgrade to Pro';
         if (subtitleEl) subtitleEl.textContent = 'Make maps that look professional';
         if (featureGrid) featureGrid.style.display = '';
-        if (accessCode) accessCode.style.display = '';
+        if (accessCode) accessCode.style.display = 'none';
         if (cancelBtn) cancelBtn.textContent = 'Maybe Later';
       }
       updateUpgradeModalUI();
@@ -8004,12 +7977,6 @@
     function updateUpgradeModalUI() {
       const authSection = document.getElementById('upgradeAuthSection');
       const pricingSection = document.getElementById('upgradePricingSection');
-      // TESTER MODE: never show auth or pricing — testers unlock via the access code field.
-      if (typeof TESTER_MODE !== 'undefined' && TESTER_MODE) {
-        if (authSection) authSection.style.display = 'none';
-        if (pricingSection) pricingSection.style.display = 'none';
-        return;
-      }
       if (appState.currentUser) {
         authSection.style.display = 'none';
         pricingSection.style.display = '';
@@ -8050,26 +8017,8 @@
     // Admin emails that get automatic Pro access
     const ADMIN_EMAILS = ['max@mapparatus.org', 'mhowe.gis@gmail.com'];
 
-    // TESTER MODE: temporary while we test on real devices.
-    // - Hides the auth UI (no sign-in / sign-up / sign-out shown)
-    // - Auto-grants Pro to EVERY visitor (zero friction for testers — they
-    //   see the full app without entering anything or signing in)
-    // - The access code field still works for demo / sanity but is redundant
-    // REMOVE BEFORE LAUNCH: flip TESTER_MODE to false, drop the TESTER_CODES list,
-    // remove the proCodeSubmit handler in the DOMContentLoaded block below, and
-    // delete this auto-grant block.
-    const TESTER_MODE = true;
-    const TESTER_CODES = ['tap26'];
-    const TESTER_PRO_KEY = 'tappymaps_tester_pro';
-    // Auto-grant Pro for every visitor in TESTER_MODE. Without this, data maps
-    // and other Pro features would be gated and look "broken" to testers.
-    if (TESTER_MODE) {
-      appState.proUnlocked = true;
-      appState.subscription = { status: 'tester' };
-      // Persist so any later subscription check (initializeAuth → checkSubscriptionStatus
-      // for the unlikely case someone signs in via dev console) doesn't fight us.
-      try { localStorage.setItem(TESTER_PRO_KEY, '1'); } catch (_) {}
-    }
+    // Tester mode removed (pre-launch): no auto-granted Pro. Pro is earned
+    // via real auth + Stripe (verify-subscription) and the ADMIN_EMAILS gate.
 
     async function checkSubscriptionStatus(token) {
       if (!token) {

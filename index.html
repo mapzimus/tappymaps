@@ -2517,17 +2517,21 @@
         color: var(--text, #f0f9ff);
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        height: 100vh;
+        overflow: hidden;
         box-sizing: border-box;
       }
 
       /* --- Arcade hub (tile grid) --- */
       #arcadeHub {
         flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 32px 24px 24px;
+        padding: 32px 24px 40px;
         box-sizing: border-box;
       }
       .arcade-hub-header { text-align: center; margin-bottom: 28px; }
@@ -2552,6 +2556,7 @@
         max-width: 760px;
         margin: 8px 0 24px;
       }
+      .arcade-tile--featured { border-color: var(--arcade); box-shadow: 0 0 0 1px var(--arcade) inset; }
       .arcade-tile {
         display: flex; flex-direction: column;
         text-align: left;
@@ -5846,6 +5851,16 @@
       if (!grid) return;
       grid.innerHTML = '';
       const medalFor = (best) => best ? ({ gold: '🥇', silver: '🥈', bronze: '🥉', none: '🗺️' }[best.medal] || '') : '';
+      // GeoDraft leads the lineup — its own mode (/games/draft), surfaced first.
+      const draft = document.createElement('a');
+      draft.className = 'arcade-tile arcade-tile--featured';
+      draft.href = '/games/draft';
+      draft.setAttribute('data-route', '');
+      draft.innerHTML =
+        '<div class="arcade-tile-name">GeoDraft</div>' +
+        '<p class="arcade-tile-tag">Draft states head-to-head vs the AI. Real numbers decide. Best of 5.</p>' +
+        '<div class="arcade-tile-meta"><span class="arcade-tile-best">Play →</span></div>';
+      grid.appendChild(draft);
       Object.values(ARCADE_GAMES).forEach(game => {
         if (game.playable && game.modes) {
           // Variant tile: one button per mode, per-mode best shown on the button.
@@ -5888,17 +5903,6 @@
           grid.appendChild(div);
         }
       });
-      // GeoDraft is its own mode (/games/draft) but belongs in the games
-      // lineup — surface it as a tile right here in the Arcade hub.
-      const draft = document.createElement('a');
-      draft.className = 'arcade-tile';
-      draft.href = '/games/draft';
-      draft.setAttribute('data-route', '');
-      draft.innerHTML =
-        '<div class="arcade-tile-name">GeoDraft</div>' +
-        '<p class="arcade-tile-tag">Draft states head-to-head vs the AI. Real numbers decide. Best of 5.</p>' +
-        '<div class="arcade-tile-meta"><span class="arcade-tile-best">Play →</span></div>';
-      grid.appendChild(draft);
     }
     function arcadeShowHub() {
       arcadeStopTimers();

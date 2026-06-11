@@ -3317,10 +3317,13 @@
       .create-share-popover .section { margin: 0; }
       .create-share-popover .section-title { margin-top: 0; }
 
-      /* Portrait: rail becomes a top row; the floating panel becomes a near
-         full-width sheet still floating over the map (collapsible as ever). */
+      /* Portrait phones: the design page scrolls as ONE page so every control
+         (Clear All, Export, …) is reachable. The old layout pinned the panel at
+         a fixed 52vh whose lower half hid behind the iOS Safari toolbar with no
+         way to scroll to it. dvh sizes the map to the truly-visible viewport. */
       @media (max-width: 600px) and (orientation: portrait) {
-        #createBody { flex-direction: column; }
+        #modeCreate { height: auto; min-height: 100dvh; overflow: visible; }
+        #createBody { flex-direction: column; overflow: visible; min-height: 0; }
         #createRail {
           flex-direction: row;
           width: 100%;
@@ -3329,13 +3332,16 @@
           border-right: none;
           border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
           justify-content: center;
+          position: sticky; top: 0; z-index: 39;
         }
+        #createMap { flex: none; height: 48dvh; }
         #createPanel {
-          flex: 0 0 52vh;
+          flex: none; height: auto; overflow: visible;
           border-left: none;
           border-top: 1px solid var(--border, rgba(255,255,255,0.08));
         }
-        #createBody.panel-collapsed #createPanel { flex-basis: 0; }
+        .create-panel-scroll { overflow: visible; }
+        #createBody.panel-collapsed #createPanel { display: none; }
       }
 
       /* Rail buttons */

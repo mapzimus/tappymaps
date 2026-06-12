@@ -3290,6 +3290,14 @@
       }
       .wm-tappy { color: #0EA5E9; }
       .wm-maps { color: #F97316; }
+      /* Embedded build: the brand mark opens the full site in a new tab, so
+         hint that with a small ↗ and keep the editor chrome otherwise intact. */
+      body.is-embedded #createTopBar .create-wordmark::after {
+        content: "↗";
+        font-size: 0.7em;
+        margin-left: 0.3em;
+        opacity: 0.55;
+      }
       .create-map-title {
         flex: 1;
         max-width: 360px;
@@ -4962,6 +4970,47 @@
       if (!href) return;
       Router.navigate(href);
     });
+
+    // --- Embed mode (clean iframe build) ----------------------------------
+    // The SAME page/deploy, just lighter chrome, so a site that iframes
+    // Tappymaps always rides the live app and every future update. Enabled
+    // automatically whenever the app is framed inside another origin, or
+    // explicitly via "?embed=1" (handy for same-origin testing).
+    //
+    // The one behavioral change: any link that would route the iframe AWAY
+    // from the editor (the brand wordmark, "View Gallery", etc.) instead
+    // opens the full tappymaps.com site in a NEW TAB — so the frame stays
+    // locked to the map maker and never strands the visitor on an inner page.
+    (function setupEmbedMode() {
+      let framed = false;
+      try { framed = window.self !== window.top; }
+      catch (_) { framed = true; } // cross-origin top access throws → we're framed
+      let explicit = false;
+      try {
+        const p = new URLSearchParams(window.location.search);
+        explicit = p.get('embed') === '1' || p.get('embed') === 'true';
+      } catch (_) {}
+      if (!framed && !explicit) return;
+
+      document.body.classList.add('is-embedded');
+
+      const wm = document.querySelector('#createTopBar .create-wordmark');
+      if (wm) wm.setAttribute('title', 'Open the full Tappymaps site in a new tab');
+
+      // Capture phase + stopPropagation so this beats the router's bubbling
+      // click handler above. Editor-internal routes (/design/make…) still
+      // navigate in-frame as normal.
+      document.addEventListener('click', function(e) {
+        if (e.button !== 0) return;
+        const a = e.target.closest && e.target.closest('a[data-route]');
+        if (!a) return;
+        const href = a.getAttribute('href') || '/';
+        if (href.indexOf('/design/make') === 0) return; // staying in the editor
+        e.preventDefault();
+        e.stopPropagation();
+        window.open('https://tappymaps.com' + href, '_blank', 'noopener');
+      }, true);
+    })();
 
     // --- Create rail: panel switching (Phase 1) ---------------------------
     // switchPanel(name) hides all #createPanelXxx sections, shows the named

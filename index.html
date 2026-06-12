@@ -3039,6 +3039,96 @@
       #draftPracticeList li .bar { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #F97316, #fb923c); }
       #draftPracticeList li .val { font-variant-numeric: tabular-nums; opacity: 0.85; min-width: 70px; text-align: right; }
 
+      /* Difficulty selector */
+      .draft-diff-row { display: flex; align-items: center; gap: 8px; margin: 0 0 22px; }
+      .draft-diff-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.6; }
+      .draft-diff-chip {
+        padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 700;
+        border: 1.5px solid var(--border, #334155); background: none; color: var(--text, #f0f9ff);
+        cursor: pointer; transition: background .12s ease, border-color .12s ease;
+      }
+      .draft-diff-chip:hover { border-color: var(--arcade, #F97316); }
+      .draft-diff-chip.is-active { background: var(--arcade, #F97316); border-color: var(--arcade, #F97316); color: #fff; }
+
+      /* Territory Draft */
+      #draftTerritory {
+        flex: 1; flex-direction: column; min-height: 0; position: relative;
+      }
+      .draft-terr-bar {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 14px; border-bottom: 1px solid var(--border, #334155);
+        flex: none;
+      }
+      .draft-terr-round { font-size: 14px; font-weight: 800; flex: 1; min-width: 0; }
+      .draft-terr-count { font-size: 13px; font-weight: 700; display: flex; gap: 12px; white-space: nowrap; }
+      .draft-terr-count .you { color: #F97316; }
+      .draft-terr-count .ai { color: #8b5cf6; }
+      .draft-terr-main { flex: 1; display: flex; min-height: 0; }
+      .draft-terr-map-wrap {
+        flex: 1; position: relative; min-width: 0; min-height: 0;
+        display: flex; flex-direction: column;
+      }
+      .draft-terr-sidebar {
+        width: 180px; flex: none; overflow-y: auto; padding: 14px 12px;
+        border-left: 1px solid var(--border, #334155);
+        display: flex; flex-direction: column; gap: 16px;
+      }
+      .draft-terr-sidebar h4 { margin: 0 0 6px; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+      .draft-terr-sidebar.you h4 { color: #F97316; }
+      .draft-terr-sidebar.ai h4 { color: #8b5cf6; }
+      .draft-terr-sidebar ul { list-style: none; margin: 0; padding: 0; }
+      .draft-terr-sidebar li { font-size: 12px; padding: 2px 0; border-bottom: 1px solid color-mix(in srgb, var(--border, #334155) 40%, transparent); }
+      .draft-terr-turn {
+        position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%);
+        background: color-mix(in srgb, var(--bg, #0F172A) 88%, transparent);
+        backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        padding: 7px 18px; border-radius: 24px; font-size: 14px; font-weight: 800;
+        border: 1px solid var(--border, #334155); white-space: nowrap; pointer-events: none;
+      }
+      /* Territory reveal & complete overlays reuse .draft-reveal / .draft-complete styles */
+      .draft-terr-reveal { background: none; }
+      .draft-terr-cat-row {
+        display: flex; align-items: center; gap: 10px; padding: 12px 0;
+        border-bottom: 1px solid var(--border, #334155);
+      }
+      .draft-terr-cat-row:last-child { border-bottom: none; }
+      .draft-terr-cat-name { flex: 1; font-size: 15px; font-weight: 700; }
+      .draft-terr-cat-score { display: flex; gap: 12px; font-size: 14px; font-weight: 800; }
+      .draft-terr-cat-score .you { color: #F97316; }
+      .draft-terr-cat-score .ai { color: #8b5cf6; }
+      .draft-terr-cat-winner { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 10px; }
+      .draft-terr-cat-winner.you { background: color-mix(in srgb, #F97316 25%, transparent); color: #F97316; }
+      .draft-terr-cat-winner.ai { background: color-mix(in srgb, #8b5cf6 25%, transparent); color: #8b5cf6; }
+      .draft-terr-cat-winner.tie { background: color-mix(in srgb, var(--border) 35%, transparent); opacity: 0.7; }
+      #draftTerrRevealList { opacity: 0; transition: opacity .3s ease; }
+      #draftTerrRevealList.is-in { opacity: 1; }
+
+      /* GeoDraft how-to overlay */
+      .draft-howto {
+        position: absolute; inset: 0; z-index: 80;
+        background: color-mix(in srgb, var(--bg, #0F172A) 94%, transparent);
+        display: flex; align-items: center; justify-content: center;
+        padding: 20px;
+      }
+      .draft-howto-card {
+        background: var(--surface, #1e293b); border: 1px solid var(--border, #334155);
+        border-radius: 16px; padding: 24px; max-width: 500px; width: 100%;
+        max-height: 90vh; overflow-y: auto;
+      }
+      .draft-howto-card h3 { margin: 0 0 16px; font-size: 20px; font-weight: 800; }
+      .draft-howto-sec { margin-bottom: 14px; }
+      .draft-howto-sec h4 { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--arcade, #F97316); margin: 0 0 5px; }
+      .draft-howto-sec p { font-size: 13.5px; line-height: 1.55; opacity: 0.85; margin: 0; }
+      .draft-help-btn {
+        position: absolute; top: 10px; right: 10px; z-index: 10;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: color-mix(in srgb, var(--surface, #1e293b) 90%, transparent);
+        border: 1px solid var(--border, #334155); color: var(--text, #f0f9ff);
+        font-size: 14px; font-weight: 700; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .draft-help-btn:hover { border-color: var(--arcade, #F97316); }
+
       @media (max-width: 720px) {
         .draft-main { flex-direction: column; }
         .draft-rosters {
@@ -3048,6 +3138,14 @@
         }
         .draft-roster { flex: 1; }
         #draftPracticeList li .name { width: 105px; }
+        .draft-terr-main { flex-direction: column; }
+        .draft-terr-sidebar {
+          width: auto; flex-direction: row; border-left: none;
+          border-top: 1px solid var(--border, #334155);
+          max-height: 110px; padding: 8px 12px; gap: 10px;
+        }
+        .draft-terr-sidebar h4 { margin-bottom: 3px; }
+        .draft-terr-sidebar li { font-size: 11px; }
       }
 
       /* ===================================================================
@@ -3745,22 +3843,28 @@
       <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
       <h2 class="draft-hub-title">GeoDraft</h2>
       <p class="draft-hub-sub">Draft states head-to-head. Real numbers decide.</p>
+      <div class="draft-diff-row">
+        <span class="draft-diff-label">Difficulty</span>
+        <button type="button" class="draft-diff-chip" data-diff="easy">Easy</button>
+        <button type="button" class="draft-diff-chip is-active" data-diff="normal">Normal</button>
+        <button type="button" class="draft-diff-chip" data-diff="hard">Hard</button>
+      </div>
       <div class="draft-hub-cards">
         <a class="draft-card" href="/games/draft/category" data-route>
           <div class="draft-card-name">Category Draft</div>
           <p class="draft-card-tag">Best of 5 vs the AI. Each round names a category — draft 3 states, highest total wins. Values stay hidden until the reveal.</p>
           <span class="draft-card-cta">Play vs the AI →</span>
         </a>
+        <a class="draft-card" href="/games/draft/territory" data-route>
+          <div class="draft-card-name">Territory Draft</div>
+          <p class="draft-card-tag">25 picks each — claim the whole map blind. Then 3 hidden categories score your territory. No timer. Pure strategy.</p>
+          <span class="draft-card-cta">Claim the map →</span>
+        </a>
         <a class="draft-card" href="/games/draft/practice" data-route>
           <div class="draft-card-name">Practice</div>
           <p class="draft-card-tag">Browse every category with all 50 values revealed. Learn what wins before you draft.</p>
           <span class="draft-card-cta">Study up →</span>
         </a>
-        <div class="draft-card draft-card--soon">
-          <div class="draft-card-name">Territory Draft</div>
-          <p class="draft-card-tag">25 picks each — claim the whole map blind, then random categories score it.</p>
-          <span class="draft-card-soon-chip">Coming soon</span>
-        </div>
       </div>
       <footer class="draft-hub-footer"><a href="/games/arcade" data-route>Arcade →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
     </div>
@@ -3829,6 +3933,94 @@
       <select id="draftPracticeSelect" aria-label="Pick a category"></select>
       <p class="draft-practice-desc" id="draftPracticeDesc"></p>
       <ol id="draftPracticeList"></ol>
+    </div>
+
+    <!-- Territory Draft view -->
+    <div id="draftTerritory" style="display:none">
+      <header class="draft-terr-bar">
+        <button type="button" class="arcade-back-btn" id="draftTerrBackBtn" aria-label="Back to GeoDraft">←</button>
+        <div class="draft-terr-round" id="draftTerrRoundLabel">Territory Draft</div>
+        <div class="draft-terr-count">
+          <span class="you">You <span id="draftTerrCountYou">0</span></span>
+          <span class="ai">AI <span id="draftTerrCountAi">0</span></span>
+        </div>
+      </header>
+      <div class="draft-terr-main">
+        <div class="draft-terr-map-wrap" id="draftTerrMapWrap">
+          <svg id="draftTerrMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap a state to claim it"><g id="draftTerrStatesGroup" transform="translate(5, -20) scale(0.95)"></g></svg>
+          <div class="draft-turn" id="draftTerrTurnLabel">Your pick</div>
+          <button type="button" class="draft-help-btn" id="draftTerrHelpBtn" aria-label="How to play">?</button>
+          <div class="arcade-zoom-controls">
+            <button type="button" class="arcade-zoom-btn" id="draftTerrZoomIn" aria-label="Zoom in">+</button>
+            <button type="button" class="arcade-zoom-btn" id="draftTerrZoomOut" aria-label="Zoom out">−</button>
+            <button type="button" class="arcade-zoom-btn arcade-zoom-btn--reset" id="draftTerrZoomReset" aria-label="Reset zoom">⤾</button>
+          </div>
+        </div>
+        <aside class="draft-terr-sidebar you">
+          <div>
+            <h4>You (25)</h4>
+            <ul id="draftTerrRosterYou"></ul>
+          </div>
+        </aside>
+        <aside class="draft-terr-sidebar ai" style="border-left:none;border-right:1px solid var(--border,#334155);order:-1">
+          <div>
+            <h4>AI (25)</h4>
+            <ul id="draftTerrRosterAi"></ul>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Reveal overlay: shown after all 50 claimed -->
+      <div class="draft-reveal" id="draftTerrReveal" style="display:none">
+        <div class="draft-reveal-card">
+          <h3>The Score</h3>
+          <p style="font-size:13px;opacity:0.7;margin:0 0 16px">3 hidden categories decide who wins</p>
+          <ol id="draftTerrRevealList" style="list-style:none;padding:0;margin:0 0 14px"></ol>
+          <div class="draft-scoreline" id="draftTerrFinalScore" style="opacity:0;transition:opacity .4s ease;margin-bottom:14px">
+            <span class="dsl dsl-you"><span class="you" style="font-size:13px">You</span> <b id="dslTerrYou">0</b></span>
+            <span class="dsl-vs">vs</span>
+            <span class="dsl dsl-ai"><span class="ai" style="font-size:13px">AI</span> <b id="dslTerrAi">0</b></span>
+          </div>
+          <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrRevealNext" style="width:100%;display:none">Next →</button>
+          <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrSeeResult" style="width:100%;display:none">See result</button>
+        </div>
+      </div>
+
+      <!-- Complete overlay -->
+      <div class="draft-complete" id="draftTerrComplete" style="display:none">
+        <div class="draft-complete-card">
+          <h2 class="draft-complete-title" id="draftTerrCompleteTitle">You control the map!</h2>
+          <p class="draft-complete-detail" id="draftTerrCompleteDetail"></p>
+          <div class="draft-complete-actions">
+            <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrPlayAgain">Play again</button>
+            <button type="button" class="arcade-btn" id="draftTerrToHub">GeoDraft home</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to play overlay -->
+      <div class="draft-howto" id="draftTerrHowto" style="display:none">
+        <div class="draft-howto-card">
+          <h3>Territory Draft</h3>
+          <div class="draft-howto-sec">
+            <h4>The Setup</h4>
+            <p>You and the AI alternate picks until all 50 states are claimed — 25 each. You pick first. No timer.</p>
+          </div>
+          <div class="draft-howto-sec">
+            <h4>The Categories</h4>
+            <p>3 scoring categories are chosen at random before you start — but kept secret until the reveal. You don't know what's being measured while you pick.</p>
+          </div>
+          <div class="draft-howto-sec">
+            <h4>The Reveal</h4>
+            <p>Once all 50 states are claimed, the 3 categories are revealed one by one. For each, your 25 states are totaled against the AI's. Highest total wins the category.</p>
+          </div>
+          <div class="draft-howto-sec">
+            <h4>Winning</h4>
+            <p>Win 2 of 3 categories to control the map. Ties on individual categories go to whoever has the higher total.</p>
+          </div>
+          <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrHowtoClose" style="width:100%;margin-top:8px">Got it — let's draft</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -6148,12 +6340,26 @@
     const DRAFT_YOU_COLOR = '#F97316', DRAFT_AI_COLOR = '#8b5cf6';
     const DG = {
       phase: 'idle', seed: '', rng: null,
-      cats: [], vals: [], round: 0, youWins: 0, aiWins: 0, ties: 0,
+      cats: [], vals: [], tiers: [], round: 0, youWins: 0, aiWins: 0, ties: 0,
       available: null, youPicks: [], aiPicks: [], aiOrder: [],
       picksPerSide: 3, turn: 'you',
       timerId: null, deadline: 0, aiId: null, revealId: null,
       loading: false, decided: false,
+      difficulty: 'normal', noiseMul: 1.0, biasMag: 2.6,
     };
+    // §7 AI "reputation" blind spots: regardless of the actual category, the AI
+    // overrates big/famous states and underrates small dense ones — a beatable
+    // bias. Strength scales with difficulty (DG.biasMag).
+    const DRAFT_AI_OVERRATED = new Set(['Alaska', 'Texas', 'California', 'Montana', 'Wyoming']);
+    const DRAFT_AI_UNDERRATED = new Set(['New Jersey', 'Rhode Island', 'Connecticut', 'Massachusetts', 'Delaware']);
+    function draftApplyDifficulty() {
+      let d = 'normal';
+      try { d = new URLSearchParams(location.search).get('diff') || localStorage.getItem('tappymaps_draft_diff') || 'normal'; } catch (_) {}
+      if (d !== 'easy' && d !== 'hard') d = 'normal';
+      DG.difficulty = d;
+      DG.noiseMul = d === 'easy' ? 1.9 : d === 'hard' ? 0.45 : 1.0;   // hard = sharper AI
+      DG.biasMag = d === 'easy' ? 4.5 : d === 'hard' ? 1.0 : 2.6;      // hard = smaller blind spots
+    }
 
     let _draftMapBuilt = false;
     function draftBuildMap() {
@@ -6199,7 +6405,7 @@
       if (DG.revealId) { clearTimeout(DG.revealId); DG.revealId = null; }
     }
     function draftShowView(which) {
-      ['draftHub', 'draftMatch', 'draftPractice'].forEach(id => {
+      ['draftHub', 'draftMatch', 'draftPractice', 'draftTerritory'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = (id === which) ? 'flex' : 'none';
       });
@@ -6220,26 +6426,38 @@
 
       DG.seed = seed || Math.random().toString(36).slice(2, 8);
       DG.rng = arcadeMakeRng('draft:' + DG.seed);
+      draftApplyDifficulty();           // sets DG.noiseMul / DG.biasMag from the chosen level
       const shuffled = draftCategories().slice();
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(DG.rng() * (i + 1));
         const t = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = t;
       }
-      const cats = [], vals = [];
+      // Tiered rounds (§7): rounds 1–2 draw BIG common categories (most states
+      // eligible), rounds 3–5 draw SCARCE/obscure pools — so the late picks need
+      // real strategy. Classify each loaded candidate by eligible-pool size + noise.
+      const tier1 = [], tier2 = [];
       for (const cat of shuffled) {
-        if (cats.length === 5) break;
-        try {
-          const v = await draftLoadValues(cat);
-          cats.push(cat); vals.push(v);
-        } catch (_) { /* census down for this one — next candidate */ }
+        if (tier1.length >= 2 && tier2.length >= 3) break;
+        let v; try { v = await draftLoadValues(cat); } catch (_) { continue; }
+        const pool = arcadeStateNames().filter(n => isFinite(v[n])).length;
+        const scarce = pool < 40 || (cat.noise || 0) >= 0.25;
+        (scarce ? tier2 : tier1).push({ cat: cat, v: v });
       }
       DG.loading = false;
-      if (cats.length < 5) {
+      const take = (primary, secondary, n) => {
+        const out = [];
+        while (out.length < n && (primary.length || secondary.length)) out.push((primary.length ? primary : secondary).shift());
+        return out;
+      };
+      const chosen = take(tier1, tier2, 2).concat(take(tier2, tier1, 3));
+      if (chosen.length < 5) {
         draftSet('draftCatTitle', 'Category data unavailable — try again shortly.');
         setTimeout(() => draftShowView('draftHub'), 1600);
         return;
       }
-      DG.cats = cats; DG.vals = vals;
+      DG.cats = chosen.map(e => e.cat);
+      DG.vals = chosen.map(e => e.v);
+      DG.tiers = chosen.map((e, i) => i < 2 ? 1 : 2);
       DG.round = 0; DG.youWins = 0; DG.aiWins = 0; DG.ties = 0; DG.decided = false;
       draftStartRound();
     }
@@ -6281,8 +6499,11 @@
       // (more on obscure Census stats, less on area/statehood).
       const ranked = Array.from(DG.available).sort((a, b) => cat.inverted ? vals[a] - vals[b] : vals[b] - vals[a]);
       const gauss = () => (DG.rng() + DG.rng() + DG.rng() + DG.rng() - 2) / 2; // ~N(0, 0.29)
+      const bias = (n) => (DRAFT_AI_OVERRATED.has(n) ? -1 : 0) + (DRAFT_AI_UNDERRATED.has(n) ? 1 : 0);
       DG.aiOrder = ranked
-        .map((n, i) => ({ n: n, s: i + gauss() * cat.noise * 150 }))
+        // difficulty scales the random misjudgement (noiseMul) and the blind-spot
+        // bias (biasMag): Easy = sloppier + more biased, Hard = sharp + nearly unbiased.
+        .map((n, i) => ({ n: n, s: i + gauss() * cat.noise * 150 * DG.noiseMul + bias(n) * DG.biasMag }))
         .sort((x, y) => x.s - y.s)
         .map(o => o.n);
 
@@ -6549,6 +6770,284 @@
       }
     }
 
+    // --- Territory Draft ----------------------------------------------------
+    const DT = {
+      phase: 'idle', seed: '', rng: null,
+      cats: [], vals: [], youPicks: [], aiPicks: [],
+      turn: 'you', available: null,
+      revealIdx: 0, youCatWins: 0, aiCatWins: 0,
+      aiTimerId: null,
+    };
+
+    let _draftTerrMapBuilt = false;
+    function draftTerrBuildMap() {
+      if (_draftTerrMapBuilt) return true;
+      const group = document.getElementById('draftTerrStatesGroup');
+      const topology = (typeof appState !== 'undefined') ? appState.topologyData : null;
+      if (!group || !topology || typeof topojson === 'undefined') return false;
+      const features = topojson.feature(topology, topology.objects.states).features;
+      const pathGen = (geo) => {
+        let d = '';
+        const rings = (geo.type === 'Polygon') ? [geo.coordinates]
+          : (geo.type === 'MultiPolygon') ? geo.coordinates : [];
+        rings.forEach(poly => poly.forEach(ring => {
+          d += 'M' + ring.map(p => p.join(',')).join('L') + 'Z';
+        }));
+        return d;
+      };
+      features.forEach(feature => {
+        const fips = String(feature.id).padStart(2, '0');
+        const name = fipsToState[fips] || feature.properties?.name || ('Unknown ' + feature.id);
+        const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        el.setAttribute('d', pathGen(feature.geometry));
+        el.setAttribute('data-state', name);
+        if (nonColorable.has(name)) {
+          el.setAttribute('class', 'draft-state draft-state--dc');
+        } else {
+          el.setAttribute('class', 'draft-state');
+          el.addEventListener('click', () => draftTerrOnTap(name));
+        }
+        group.appendChild(el);
+      });
+      _draftTerrMapBuilt = true;
+      return true;
+    }
+    const draftTerrZoom = makeMapZoom('draftTerrMapWrap', 'draftTerrMapSvg');
+
+    function draftTerrStatePath(name) {
+      return document.querySelector('#draftTerrStatesGroup .draft-state[data-state="' + name + '"]');
+    }
+    function draftTerrRenderRosters() {
+      const fill = (ulId, picks) => {
+        const ul = document.getElementById(ulId);
+        if (!ul) return;
+        ul.innerHTML = '';
+        picks.forEach(n => { const li = document.createElement('li'); li.textContent = n; ul.appendChild(li); });
+      };
+      fill('draftTerrRosterYou', DT.youPicks);
+      fill('draftTerrRosterAi', DT.aiPicks);
+      const yset = document.getElementById('draftTerrCountYou');
+      const aset = document.getElementById('draftTerrCountAi');
+      if (yset) yset.textContent = DT.youPicks.length;
+      if (aset) aset.textContent = DT.aiPicks.length;
+    }
+
+    async function draftTerrStart(seed) {
+      if (!draftTerrBuildMap()) { draftShowView('draftHub'); return; }
+      draftShowView('draftTerritory');
+      document.getElementById('draftTerrReveal').style.display = 'none';
+      document.getElementById('draftTerrComplete').style.display = 'none';
+      draftTerrZoom.reset();
+
+      DT.seed = seed || Math.random().toString(36).slice(2, 8);
+      DT.rng = arcadeMakeRng('terr:' + DT.seed);
+      DT.youPicks = []; DT.aiPicks = []; DT.phase = 'pick'; DT.turn = 'you';
+      DT.revealIdx = 0; DT.youCatWins = 0; DT.aiCatWins = 0;
+
+      // Pick 3 hidden scoring categories (weighted toward Tier 1 — avoids tiny
+      // pool categories that make territory strategy incoherent)
+      const allCats = draftCategories().slice();
+      for (let i = allCats.length - 1; i > 0; i--) {
+        const j = Math.floor(DT.rng() * (i + 1));
+        const t = allCats[i]; allCats[i] = allCats[j]; allCats[j] = t;
+      }
+      DT.cats = []; DT.vals = [];
+      draftSet('draftTerrRoundLabel', 'Loading categories…');
+      draftSet('draftTerrTurnLabel', 'Setting up…');
+      for (const cat of allCats) {
+        if (DT.cats.length >= 3) break;
+        try {
+          const v = await draftLoadValues(cat);
+          const pool = arcadeStateNames().filter(n => isFinite(v[n])).length;
+          if (pool < 48) continue; // territory needs near-full pool to be fair
+          DT.cats.push(cat); DT.vals.push(v);
+        } catch (_) { continue; }
+      }
+      if (DT.cats.length < 3) {
+        draftSet('draftTerrRoundLabel', 'Data unavailable — try again.');
+        setTimeout(() => draftShowView('draftHub'), 1600);
+        return;
+      }
+
+      DT.available = new Set(arcadeStateNames());
+      // AI's draft order for territory: weighted by average rank across hidden categories
+      const statenames = arcadeStateNames();
+      const avgRank = {};
+      statenames.forEach(n => { avgRank[n] = 0; });
+      draftApplyDifficulty();
+      const gauss = () => (DT.rng() + DT.rng() + DT.rng() + DT.rng() - 2) / 2;
+      DT.cats.forEach((cat, ci) => {
+        const vals = DT.vals[ci];
+        const ranked = statenames.filter(n => isFinite(vals[n]))
+          .sort((a, b) => cat.inverted ? vals[a] - vals[b] : vals[b] - vals[a]);
+        ranked.forEach((n, i) => { avgRank[n] += i; });
+      });
+      const bias = (n) => (DRAFT_AI_OVERRATED.has(n) ? -1 : 0) + (DRAFT_AI_UNDERRATED.has(n) ? 1 : 0);
+      DT.aiOrder = statenames.slice()
+        .map(n => ({ n, s: (avgRank[n] || 0) + gauss() * 25 * DG.noiseMul + bias(n) * DG.biasMag }))
+        .sort((x, y) => x.s - y.s).map(o => o.n);
+
+      // Show how-to on first play, then proceed
+      const KEY = 'tappymaps_terr_seen';
+      const seen = (() => { try { return localStorage.getItem(KEY); } catch (_) { return null; } })();
+      if (!seen) {
+        document.getElementById('draftTerrHowto').style.display = 'flex';
+        return; // draftTerrHowtoClose resumes via draftTerrBeginPick
+      }
+      draftTerrBeginPick();
+    }
+
+    function draftTerrBeginPick() {
+      // Clear map fills from any previous game
+      document.querySelectorAll('#draftTerrStatesGroup .draft-state:not(.draft-state--dc)').forEach(p => {
+        p.style.fill = ''; p.classList.remove('draft-state--taken');
+      });
+      draftTerrRenderRosters();
+      draftTerrSetTurn('you');
+    }
+
+    function draftTerrSetTurn(turn) {
+      DT.turn = turn;
+      const total = DT.youPicks.length + DT.aiPicks.length;
+      const grp = document.getElementById('draftTerrStatesGroup');
+      if (turn === 'you') {
+        const left = 25 - DT.youPicks.length;
+        draftSet('draftTerrTurnLabel', 'Your pick — ' + left + ' left');
+        draftSet('draftTerrRoundLabel', 'Territory Draft · Pick ' + (total + 1) + ' of 50');
+        if (grp) grp.classList.remove('is-locked');
+      } else {
+        draftSet('draftTerrTurnLabel', 'AI is picking…');
+        if (grp) grp.classList.add('is-locked');
+        DT.aiTimerId = setTimeout(draftTerrAiPick, 400 + Math.floor(DT.rng() * 400));
+      }
+    }
+
+    function draftTerrOnTap(name) {
+      if (DT.phase !== 'pick' || DT.turn !== 'you') return;
+      if (!DT.available || !DT.available.has(name)) return;
+      draftTerrCommit('you', name);
+    }
+
+    function draftTerrAiPick() {
+      const pick = DT.aiOrder.find(n => DT.available && DT.available.has(n));
+      if (pick) draftTerrCommit('ai', pick);
+    }
+
+    function draftTerrCommit(who, name) {
+      if (!name || DT.phase !== 'pick') return;
+      DT.available.delete(name);
+      (who === 'you' ? DT.youPicks : DT.aiPicks).push(name);
+      const p = draftTerrStatePath(name);
+      if (p) { p.style.fill = (who === 'you') ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR; p.classList.add('draft-state--taken'); }
+      draftTerrRenderRosters();
+      if (DT.youPicks.length === 25 && DT.aiPicks.length === 25) {
+        DT.phase = 'reveal';
+        setTimeout(draftTerrShowReveal, 500);
+        return;
+      }
+      draftTerrSetTurn(who === 'you' ? 'ai' : 'you');
+    }
+
+    function draftTerrShowReveal() {
+      DT.revealIdx = 0; DT.youCatWins = 0; DT.aiCatWins = 0;
+      const grp = document.getElementById('draftTerrStatesGroup');
+      if (grp) grp.classList.add('is-locked');
+      const list = document.getElementById('draftTerrRevealList');
+      if (list) list.innerHTML = '';
+      const fs = document.getElementById('draftTerrFinalScore');
+      if (fs) fs.style.opacity = '0';
+      const nextBtn = document.getElementById('draftTerrRevealNext');
+      const resultBtn = document.getElementById('draftTerrSeeResult');
+      if (nextBtn) nextBtn.style.display = 'none';
+      if (resultBtn) resultBtn.style.display = 'none';
+      document.getElementById('draftTerrReveal').style.display = 'flex';
+      setTimeout(draftTerrRevealNext, 600);
+    }
+
+    function draftTerrRevealNext() {
+      if (DT.revealIdx >= DT.cats.length) {
+        // All cats revealed — show final score
+        const youWins = DT.youCatWins, aiWins = DT.aiCatWins;
+        const fs = document.getElementById('draftTerrFinalScore');
+        const yb = document.getElementById('dslTerrYou');
+        const ab = document.getElementById('dslTerrAi');
+        if (yb) yb.textContent = youWins;
+        if (ab) ab.textContent = aiWins;
+        if (fs) fs.style.opacity = '1';
+        const resultBtn = document.getElementById('draftTerrSeeResult');
+        if (resultBtn) resultBtn.style.display = 'block';
+        return;
+      }
+      const ci = DT.revealIdx++;
+      const cat = DT.cats[ci];
+      const vals = DT.vals[ci];
+      const youTotal = DT.youPicks.reduce((s, n) => s + (isFinite(vals[n]) ? vals[n] : 0), 0);
+      const aiTotal = DT.aiPicks.reduce((s, n) => s + (isFinite(vals[n]) ? vals[n] : 0), 0);
+      const youWinsCat = cat.inverted ? youTotal < aiTotal : youTotal > aiTotal;
+      const aiWinsCat = cat.inverted ? aiTotal < youTotal : aiTotal > youTotal;
+      if (youWinsCat) DT.youCatWins++; else if (aiWinsCat) DT.aiCatWins++;
+
+      // Light up the map by territory owner's value
+      // Show whose states were stronger by briefly tinting dominant side
+      const list = document.getElementById('draftTerrRevealList');
+      if (list) {
+        const row = document.createElement('li');
+        const winClass = youWinsCat ? 'you' : (aiWinsCat ? 'ai' : 'tie');
+        const winLabel = youWinsCat ? 'You' : (aiWinsCat ? 'AI' : 'Tie');
+        row.className = 'draft-terr-cat-row';
+        row.innerHTML = '<span class="draft-terr-cat-name">' + escapeHTML(cat.title) + '</span>'
+          + '<span class="draft-terr-cat-score"><span class="you">' + arcadeFormatVal(youTotal, cat.format) + '</span><span style="opacity:0.4">vs</span><span class="ai">' + arcadeFormatVal(aiTotal, cat.format) + '</span></span>'
+          + '<span class="draft-terr-cat-winner ' + winClass + '">' + winLabel + '</span>';
+        row.style.opacity = '0';
+        list.appendChild(row);
+        setTimeout(() => { row.style.transition = 'opacity .35s ease'; row.style.opacity = '1'; }, 30);
+        const rl = document.getElementById('draftTerrRevealList');
+        if (rl) rl.classList.add('is-in');
+      }
+
+      const nextBtn = document.getElementById('draftTerrRevealNext');
+      const resultBtn = document.getElementById('draftTerrSeeResult');
+      const isLast = DT.revealIdx >= DT.cats.length;
+      if (nextBtn) nextBtn.style.display = isLast ? 'none' : 'block';
+      if (resultBtn) resultBtn.style.display = 'none';
+      if (isLast) {
+        // Delay final score display
+        setTimeout(draftTerrRevealNext, 800);
+      }
+    }
+
+    function draftTerrShowComplete() {
+      document.getElementById('draftTerrReveal').style.display = 'none';
+      document.getElementById('draftTerrComplete').style.display = 'flex';
+      const you = DT.youCatWins, ai = DT.aiCatWins;
+      const win = you > ai, tie = you === ai;
+      draftSet('draftTerrCompleteTitle', win ? 'You control the map!' : (tie ? 'Split territory — a draw.' : 'The AI claimed the map.'));
+      draftSet('draftTerrCompleteDetail', 'Categories: ' + you + (win ? ' — ' + ai + ' AI' : ' — ' + ai + ' AI') + '. 3-category territory draft.');
+      // Clinch burst — color all states by winner
+      const burstColor = win ? DRAFT_YOU_COLOR : (tie ? '#64748b' : DRAFT_AI_COLOR);
+      const paths = Array.from(document.querySelectorAll('#draftTerrStatesGroup .draft-state:not(.draft-state--dc)'));
+      paths.forEach((p, idx) => {
+        setTimeout(() => { p.style.fill = burstColor; }, idx * 9);
+      });
+    }
+
+    // --- Hub: difficulty chips -----------------------------------------------
+    (function draftHubDiffChips() {
+      const hub = document.getElementById('draftHub');
+      if (!hub) return;
+      let saved = 'normal';
+      try { saved = localStorage.getItem('tappymaps_draft_diff') || 'normal'; } catch (_) {}
+      if (saved !== 'easy' && saved !== 'hard') saved = 'normal';
+      hub.querySelectorAll('.draft-diff-chip').forEach(chip => {
+        chip.classList.toggle('is-active', chip.dataset.diff === saved);
+        chip.addEventListener('click', () => {
+          const d = chip.dataset.diff;
+          try { localStorage.setItem('tappymaps_draft_diff', d); } catch (_) {}
+          hub.querySelectorAll('.draft-diff-chip').forEach(c => c.classList.toggle('is-active', c.dataset.diff === d));
+        });
+      });
+    })();
+
     // --- Wire buttons (nodes are static in the markup) ----------------------
     (function draftWireButtons() {
       const onClick = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
@@ -6561,6 +7060,25 @@
       onClick('draftZoomIn', () => draftZoom.zoomBy(1.4));
       onClick('draftZoomOut', () => draftZoom.zoomBy(1 / 1.4));
       onClick('draftZoomReset', () => draftZoom.reset(true));
+      // Territory Draft buttons
+      onClick('draftTerrBackBtn', () => {
+        DT.phase = 'idle';
+        if (DT.aiTimerId) { clearTimeout(DT.aiTimerId); DT.aiTimerId = null; }
+        Router.navigate('/games/draft');
+      });
+      onClick('draftTerrToHub', () => Router.navigate('/games/draft'));
+      onClick('draftTerrPlayAgain', () => { document.getElementById('draftTerrComplete').style.display = 'none'; draftTerrStart(); });
+      onClick('draftTerrRevealNext', draftTerrRevealNext);
+      onClick('draftTerrSeeResult', draftTerrShowComplete);
+      onClick('draftTerrZoomIn', () => draftTerrZoom.zoomBy(1.4));
+      onClick('draftTerrZoomOut', () => draftTerrZoom.zoomBy(1 / 1.4));
+      onClick('draftTerrZoomReset', () => draftTerrZoom.reset(true));
+      onClick('draftTerrHelpBtn', () => { document.getElementById('draftTerrHowto').style.display = 'flex'; });
+      onClick('draftTerrHowtoClose', () => {
+        document.getElementById('draftTerrHowto').style.display = 'none';
+        try { localStorage.setItem('tappymaps_terr_seen', '1'); } catch (_) {}
+        if (DT.phase === 'pick' && DT.youPicks.length === 0 && DT.aiPicks.length === 0) draftTerrBeginPick();
+      });
     })();
 
     // --- Mode registration ---------------------------------------------------
@@ -6572,6 +7090,8 @@
         if (sub === 'category') {
           const params = new URLSearchParams(window.location.search);
           draftStartMatch(params.get('seed') || null);
+        } else if (sub === 'territory') {
+          draftTerrStart(new URLSearchParams(window.location.search).get('seed') || null);
         } else if (sub === 'practice') {
           draftShowPractice();
         } else {
@@ -6580,7 +7100,10 @@
       },
       exit() {
         draftStopTimers();
+        DT.phase = 'idle';
+        if (DT.aiTimerId) { clearTimeout(DT.aiTimerId); DT.aiTimerId = null; }
         draftZoom.reset();
+        draftTerrZoom.reset();
         const el = document.getElementById('modeDraft');
         if (el) el.style.display = 'none';
       },
@@ -6591,6 +7114,13 @@
             title: 'Category Draft — Tappymaps GeoDraft',
             description: 'Draft states head-to-head against the AI. Real numbers decide who wins. Free on Tappymaps.',
             canonical: 'https://tappymaps.com/games/draft/category',
+          };
+        }
+        if (sub === 'territory') {
+          return {
+            title: 'Territory Draft — Tappymaps GeoDraft',
+            description: 'Claim all 50 states. 3 hidden categories score your territory. Can you outmaneuver the AI? Free on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/draft/territory',
           };
         }
         if (sub === 'practice') {

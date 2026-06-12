@@ -2363,6 +2363,9 @@
         margin: 0;
         letter-spacing: -0.02em;
         color: var(--text);
+        /* flex-center the pin + text as one unit (same as the Create/Arcade
+           wordmarks) so the pin can't detach to the corner */
+        display: inline-flex; align-items: center; justify-content: center;
       }
       .hub-slogan {
         font-size: 18px;
@@ -3112,7 +3115,7 @@
          block Hub context; flex align-items:center centers it in the Create bar. */
       .wm-pin {
         height: 0.92em;
-        width: auto;
+        width: 0.86em;            /* explicit (viewBox 60:64) so it never mis-sizes to full width */
         vertical-align: -0.14em;
         margin-right: 0.16em;
         flex: 0 0 auto;

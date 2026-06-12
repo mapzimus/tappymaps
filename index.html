@@ -2346,7 +2346,10 @@
         color: var(--text);
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        height: 100vh;
+        height: 100dvh;          /* fixed viewport: body is overflow:hidden, so
+                                    the hero must shrink to keep CTAs on-screen */
+        overflow: hidden;
         padding: 24px;
         box-sizing: border-box;
       }
@@ -2376,17 +2379,25 @@
       /* Hub hero: a US map that paints itself in a gentle loop (hubStartAnim).
          The map IS the product, so it's the centerpiece — not two flat cards. */
       .hub-main {
-        flex: 1;
+        flex: 1 1 auto; min-height: 0;       /* take leftover height, allow shrink */
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         gap: 18px; width: 100%; max-width: 820px; margin: 0 auto;
         padding: 4px 0 16px;
       }
-      .hub-hero { width: 100%; max-width: 600px; }
+      /* The hero map absorbs whatever vertical space is left after the header +
+         CTAs + quick links, and shrinks (never pushing the buttons off-screen).
+         The SVG's preserveAspectRatio letterboxes the map inside that box. */
+      .hub-hero {
+        flex: 1 1 auto; min-height: 0;
+        width: 100%; max-width: 600px;
+        display: flex; align-items: center; justify-content: center;
+      }
       #hubMapSvg {
-        width: 100%; height: auto; display: block;
+        width: 100%; height: 100%; min-height: 0; display: block;
         filter: drop-shadow(0 10px 34px rgba(0,0,0,0.28));
       }
+      .hub-actions, .hub-quick { flex: 0 0 auto; }
       .hub-state {
         fill: var(--surface-raised, #243044);
         stroke: var(--bg, #0F172A); stroke-width: 1;
@@ -4551,10 +4562,11 @@
         const el = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         el.setAttribute('d', pathGen(f.geometry));
         el.setAttribute('class', 'hub-state');
-        group.appendChild(el);
         // DC is not a state (nonColorable convention, same as the editor count
         // and the Arcade/GeoDraft maps): render its outline, never paint it.
         const name = fipsToState[String(f.id).padStart(2, '0')];
+        el.setAttribute('data-state', name || '');
+        group.appendChild(el);
         if (!nonColorable.has(name)) _hubStates.push(el);
       });
       _hubBuilt = true;
@@ -4573,15 +4585,18 @@
       hubStopAnim();
       const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const paint = (el) => { el.style.fill = HUB_COLORS[Math.floor(Math.random() * HUB_COLORS.length)]; };
-      // Reduced-motion: no animation, but paint EVERY state once so the map
-      // reads as a finished, intentional poster — not a half-filled "frozen" map.
-      if (reduce) { _hubStates.forEach(paint); return; }
+      // States light up a few at a time and periodically "breathe" (clear + re-
+      // bloom), so the map is always alive and never sits fully painted. Under
+      // reduced-motion we keep the SAME gentle light-up, just slower/calmer
+      // (the fades are slow color cross-fades, not vestibular motion).
+      const interval = reduce ? 520 : 260;
+      const perTick = reduce ? 2 : 3;
       let tick = 0;
       _hubTimer = setInterval(() => {
         tick++;
         if (tick % 44 === 0) { _hubStates.forEach(s => { s.style.fill = ''; }); return; } // breathe: clear + re-bloom
-        for (let i = 0; i < 3; i++) paint(_hubStates[Math.floor(Math.random() * _hubStates.length)]);
-      }, 260);
+        for (let i = 0; i < perTick; i++) paint(_hubStates[Math.floor(Math.random() * _hubStates.length)]);
+      }, interval);
     }
 
     Modes.Hub = {

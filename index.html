@@ -3793,8 +3793,9 @@
 
       <!-- Color Palette -->
       <div class="section" id="secColorPalette">
-        <div style="margin-bottom: 10px;" id="secTemplatesBtn">
-          <button class="btn primary" onclick="showTemplatePicker()" style="width: 100%; padding: 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">&#x1F5FA; Browse Templates</button>
+        <div style="margin-bottom: 10px; display: flex; gap: 8px;" id="secTemplatesBtn">
+          <button class="btn primary" onclick="showTemplatePicker()" style="flex: 1; padding: 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">&#x1F5FA; Browse</button>
+          <button class="btn" onclick="suggestMap()" style="flex: 1; padding: 10px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;" title="Load a random ready-made map">&#x1F3B2; Suggest a map</button>
         </div>
         <div class="section-title">Color Palette</div>
         <div class="section-content">
@@ -10704,6 +10705,28 @@
 
     // ── Template System ──────────────────────────────────────────
 
+    // The Browse picker shows only this curated short list (the 10 with the
+    // broadest appeal, kept varied across categories). The full TEMPLATES array
+    // still backs "Suggest a map" — nothing is wasted, the list is just cleaner.
+    const FEATURED_TEMPLATE_IDS = new Set([
+      'states-ive-visited', 'states-ive-lived-in', 'states-id-move-to', 'family-roots',
+      'states-by-vibes', 'states-by-weather', 'states-overrated-underrated',
+      'states-by-drivers', 'election-prediction', 'states-own-country'
+    ]);
+
+    // "Suggest a map": load a random fully-formed starter map from the whole
+    // pool (not just featured), never repeating the last one back-to-back.
+    let _lastSuggestedTemplate = null;
+    function suggestMap() {
+      const pool = TEMPLATES.filter(t => t.id !== _lastSuggestedTemplate && !t.pro);
+      if (!pool.length) return;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      _lastSuggestedTemplate = pick.id;
+      loadTemplate(pick.id);
+      showMessage('🎲 Suggested: ' + pick.title, 'success');
+      trackEvent('suggest_map', { id: pick.id });
+    }
+
     function loadTemplate(templateId) {
       const tpl = TEMPLATES.find(t => t.id === templateId);
       if (!tpl) return;
@@ -10789,7 +10812,7 @@
       if (!container) return;
       container.innerHTML = '';
 
-      const categories = ['all', ...new Set(TEMPLATES.map(t => t.category))];
+      const categories = ['all', ...new Set(TEMPLATES.filter(t => FEATURED_TEMPLATE_IDS.has(t.id)).map(t => t.category))];
       categories.forEach(cat => {
         const pill = document.createElement('button');
         pill.className = 'template-cat-pill' + (cat === 'all' ? ' active' : '');
@@ -10825,8 +10848,9 @@
       });
       grid.appendChild(blankCard);
 
-      // Template cards
-      const filtered = category === 'all' ? TEMPLATES : TEMPLATES.filter(t => t.category === category);
+      // Template cards — curated featured list only (full set lives behind "Suggest a map")
+      const featured = TEMPLATES.filter(t => FEATURED_TEMPLATE_IDS.has(t.id));
+      const filtered = category === 'all' ? featured : featured.filter(t => t.category === category);
       filtered.forEach(tpl => {
         const card = document.createElement('div');
         card.className = 'template-card' + (tpl.pro ? ' template-pro' : '');

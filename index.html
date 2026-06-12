@@ -2637,6 +2637,36 @@
         color: var(--text, #f0f9ff); font-size: 18px; cursor: pointer;
       }
       .arcade-back-btn:hover { border-color: var(--arcade); }
+      .arcade-help-btn {
+        flex: none; width: 34px; height: 34px; border-radius: 50%;
+        background: transparent; border: 1px solid var(--border, #334155);
+        color: var(--text, #f0f9ff); font-size: 16px; font-weight: 800; cursor: pointer;
+        line-height: 1; display: flex; align-items: center; justify-content: center;
+      }
+      .arcade-help-btn:hover { border-color: var(--arcade); color: var(--arcade); }
+      /* How-to-play overlay */
+      .arcade-howto {
+        position: absolute; inset: 0; z-index: 6;
+        display: flex; align-items: center; justify-content: center;
+        background: color-mix(in srgb, var(--bg, #0F172A) 84%, transparent);
+        -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+        padding: 24px;
+      }
+      .arcade-howto-card {
+        width: 100%; max-width: 420px; max-height: 88%; overflow-y: auto;
+        background: var(--surface, #1e293b); border: 1px solid var(--border, #334155);
+        border-radius: 18px; padding: 24px;
+      }
+      .arcade-howto-title { font-size: 22px; font-weight: 800; margin: 0 0 14px; }
+      .arcade-howto-body { text-align: left; margin-bottom: 18px; }
+      .arcade-howto .howto-sec { margin-bottom: 14px; }
+      .arcade-howto .howto-k {
+        display: block; font-size: 11px; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 0.6px; color: var(--arcade); margin-bottom: 5px;
+      }
+      .arcade-howto .howto-sec p { margin: 0; font-size: 14px; line-height: 1.45; opacity: 0.92; }
+      .arcade-howto .howto-sec ul { margin: 0; padding-left: 18px; }
+      .arcade-howto .howto-sec li { font-size: 14px; line-height: 1.5; opacity: 0.92; margin-bottom: 4px; }
       .arcade-prompt {
         flex: 1; min-width: 0;
         font-size: clamp(16px, 2.4vw, 24px); font-weight: 800;
@@ -3656,6 +3686,7 @@
     <div id="arcadeGame" style="display:none">
       <header class="arcade-game-bar">
         <button type="button" class="arcade-back-btn" id="arcadeBackBtn" aria-label="Back to Arcade">←</button>
+        <button type="button" class="arcade-help-btn" id="arcadeHelpBtn" aria-label="How to play" title="How to play">?</button>
         <div class="arcade-prompt" id="arcadePrompt">Find the state</div>
         <div class="arcade-stats">
           <div class="arcade-stat"><span class="arcade-stat-label">Score</span><span class="arcade-stat-val" id="arcadeScore">0</span></div>
@@ -3677,6 +3708,15 @@
         <div class="arcade-rotate-hint" aria-hidden="true">Best played in landscape — rotate your phone.</div>
       </div>
       <div class="arcade-toast" id="arcadeToast" aria-live="polite"></div>
+
+      <!-- How-to-play overlay (shown on first play of each game + via the ? button) -->
+      <div class="arcade-howto" id="arcadeHowto" style="display:none">
+        <div class="arcade-howto-card">
+          <h2 class="arcade-howto-title" id="arcadeHowtoTitle">How to play</h2>
+          <div class="arcade-howto-body" id="arcadeHowtoBody"></div>
+          <button type="button" class="arcade-btn arcade-btn--primary" id="arcadeHowtoStart" style="width:100%">Start game</button>
+        </div>
+      </div>
 
       <!-- Completion overlay -->
       <div class="arcade-complete" id="arcadeComplete" style="display:none">
@@ -5174,6 +5214,62 @@
       },
     };
 
+    // Per-game directions. Shown automatically the first time you play each
+    // game (localStorage-remembered) and any time via the ? button.
+    const ARCADE_HOWTO = {
+      'find-state': {
+        goal: 'Tap the state we name, on the map.',
+        steps: ['A state name flashes big in the center — tap that state.', 'Beat the per-state timer; you get 10 states in a run.', 'Pinch or use the +/− buttons to zoom in on small states.'],
+        scoring: 'Faster taps and answer streaks earn bonus points. Hit the score thresholds for bronze / silver / gold.',
+      },
+      'stat-duel': {
+        goal: 'Tap the state that ranks HIGHER on a real Census stat.',
+        steps: ['Two states glow and a stat is named (population, income, …).', 'Tap whichever one you think is higher.', 'The real values are revealed after each pick — 10 rounds.'],
+        scoring: 'Speed and streaks boost your score. Needs live Census data to play.',
+      },
+      'state-capitals': {
+        goal: 'Tap the state a capital city belongs to.',
+        steps: ['A capital city flashes — tap the state it’s the capital of.', 'Beat the timer; 10 capitals per run.', 'Zoom with +/− or pinch for the small states.'],
+        scoring: 'Faster answers and streaks score more — chase bronze / silver / gold.',
+      },
+      'neighbor-challenge': {
+        goal: 'Tap EVERY state that borders the named state.',
+        steps: ['The center state is highlighted — find all of its neighbors.', 'Tap each bordering state. Wrong taps don’t end the round.', 'Get them all before the timer for a completion bonus — 8 rounds.'],
+        scoring: 'Points per correct neighbor, plus a bonus for finding them all and for speed.',
+      },
+      'speed-run': {
+        goal: 'Find all 50 states, as fast as you can.',
+        steps: ['States are named one after another — tap each before its short timer.', 'One long 50-state run; misses just move you on.', 'Zoom for the tiny northeastern states.'],
+        scoring: 'Keep your streak alive for big bonuses; chase your personal best.',
+      },
+    };
+    function arcadeHowtoHTML(id) {
+      const h = ARCADE_HOWTO[id];
+      if (!h) return '';
+      return '<div class="howto-sec"><span class="howto-k">Goal</span><p>' + h.goal + '</p></div>'
+        + '<div class="howto-sec"><span class="howto-k">How to play</span><ul>' + h.steps.map(function (s) { return '<li>' + s + '</li>'; }).join('') + '</ul></div>'
+        + '<div class="howto-sec"><span class="howto-k">Scoring</span><p>' + h.scoring + '</p></div>';
+    }
+    function arcadeShowHowto(game, isHelp) {
+      const ov = document.getElementById('arcadeHowto');
+      if (!ov || !ARCADE_HOWTO[game.id]) { if (!isHelp) arcadeNextPrompt(); return; }
+      if (isHelp) arcadeStopTimers();
+      const t = document.getElementById('arcadeHowtoTitle');
+      const body = document.getElementById('arcadeHowtoBody');
+      const btn = document.getElementById('arcadeHowtoStart');
+      if (t) t.textContent = 'How to play — ' + game.name;
+      if (body) body.innerHTML = arcadeHowtoHTML(game.id);
+      if (btn) {
+        btn.textContent = isHelp ? 'Resume' : 'Start game';
+        btn.onclick = function () {
+          ov.style.display = 'none';
+          if (isHelp) { if (!AG.answered && AG.idx < AG.game.runLength) arcadeStartTimer(); }
+          else { try { localStorage.setItem('tappymaps_howto_seen_' + game.id, '1'); } catch (_) {} arcadeNextPrompt(); }
+        };
+      }
+      ov.style.display = 'flex';
+    }
+
     // Colorable states (DC excluded) — derived from the FIPS table on first
     // use. MUST be lazy: this Arcade block evaluates BEFORE `fipsToState` /
     // `nonColorable` are declared later in the script, so reading them at the
@@ -5574,7 +5670,11 @@
       arcadeClearPaint();
       arcadeResetZoom();
       arcadeUpdateHud();
-      arcadeNextPrompt();
+      // First time on this game, show the directions; otherwise dive straight in.
+      let seen = false;
+      try { seen = !!localStorage.getItem('tappymaps_howto_seen_' + game.id); } catch (_) {}
+      if (seen) arcadeNextPrompt();
+      else arcadeShowHowto(game, false);
     }
 
     function arcadeNextPrompt() {
@@ -5930,6 +6030,7 @@
       const onClick = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
       onClick('arcadeBackBtn', () => Router.navigate('/games/arcade'));
       onClick('arcadeToHub', () => Router.navigate('/games/arcade'));
+      onClick('arcadeHelpBtn', () => { if (AG.game) arcadeShowHowto(AG.game, true); });
       onClick('arcadePlayAgain', () => { if (AG.game) arcadeStartRun(AG.game.id, null, AG.mode); });
       onClick('arcadeZoomIn', () => arcadeZoomBy(1.4));
       onClick('arcadeZoomOut', () => arcadeZoomBy(1 / 1.4));

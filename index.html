@@ -2657,6 +2657,29 @@
         box-shadow: 0 8px 40px rgba(0,0,0,0.35);
       }
       .arcade-prompt-pop.is-pop { animation: arcadePromptPop 1.3s ease forwards; }
+      /* GeoDraft round-start category flash — big center-screen, not corner text */
+      .draft-cat-pop {
+        position: absolute; left: 50%; top: 40%;
+        transform: translate(-50%, -50%) scale(0.8);
+        text-align: center; max-width: 92%;
+        background: color-mix(in srgb, var(--surface, #1e293b) 88%, transparent);
+        -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+        border: 2px solid var(--arcade, #F97316);
+        border-radius: 18px; padding: 16px 30px;
+        opacity: 0; pointer-events: none; z-index: 6;
+        box-shadow: 0 12px 48px rgba(0,0,0,0.45);
+      }
+      .draft-cat-pop .dcp-round { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; color: var(--arcade, #F97316); opacity: 0.9; }
+      .draft-cat-pop .dcp-title { font-size: clamp(28px, 5.6vw, 54px); font-weight: 800; line-height: 1.05; margin: 5px 0; }
+      .draft-cat-pop .dcp-rule { font-size: 14px; opacity: 0.82; }
+      .draft-cat-pop.is-pop { animation: draftCatPop 2.1s ease forwards; }
+      @keyframes draftCatPop {
+        0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+        8%   { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+        14%  { transform: translate(-50%, -50%) scale(1); }
+        78%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -58%) scale(0.92); }
+      }
       @keyframes arcadePromptPop {
         0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
         10%  { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
@@ -2946,6 +2969,16 @@
       #draftRevealList li.who-ai .who { background: rgba(139,92,246,0.2); color: #a78bfa; }
       .draft-reveal-totals { margin: 14px 0 12px; font-weight: 800; font-size: 15px; min-height: 38px; opacity: 0; transition: opacity .3s ease; }
       .draft-reveal-totals.is-in { opacity: 1; }
+      .draft-scoreline { display: flex; align-items: center; justify-content: center; gap: 12px; }
+      .draft-scoreline .dsl { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 10px; border-radius: 10px; font-size: 13px; letter-spacing: 0.5px; transition: background .2s ease, transform .2s ease; }
+      .draft-scoreline .dsl b { font-size: 22px; font-variant-numeric: tabular-nums; }
+      .draft-scoreline .dsl-you b { color: #F97316; }
+      .draft-scoreline .dsl-ai b { color: #8b5cf6; }
+      .draft-scoreline .dsl-vs { font-size: 11px; opacity: 0.5; text-transform: uppercase; }
+      .draft-scoreline .dsl-bump b { animation: dslBump .28s ease; }
+      @keyframes dslBump { 0% { transform: scale(1); } 40% { transform: scale(1.28); } 100% { transform: scale(1); } }
+      .draft-scoreline .dsl-win { background: color-mix(in srgb, var(--arcade, #F97316) 22%, transparent); transform: scale(1.06); }
+      .draft-verdict { margin-top: 10px; font-size: 15px; font-weight: 800; min-height: 20px; }
       .draft-complete-card { text-align: center; }
       .draft-complete-title { font-size: 24px; font-weight: 800; margin: 0 0 8px; }
       .draft-complete-detail { font-size: 14px; opacity: 0.8; margin: 0 0 18px; }
@@ -3709,6 +3742,7 @@
         <div class="draft-map-wrap" id="draftMapWrap">
           <svg id="draftMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap a state to draft it"><g id="draftStatesGroup" transform="translate(5, -20) scale(0.95)"></g></svg>
           <div class="draft-turn" id="draftTurnLabel">Your pick</div>
+          <div class="draft-cat-pop" id="draftCategoryPop" aria-hidden="true"></div>
           <div class="arcade-zoom-controls">
             <button type="button" class="arcade-zoom-btn" id="draftZoomIn" aria-label="Zoom in">+</button>
             <button type="button" class="arcade-zoom-btn" id="draftZoomOut" aria-label="Zoom out">−</button>
@@ -6165,7 +6199,25 @@
       draftRenderPips();
       draftRenderRosters();
       document.getElementById('draftReveal').style.display = 'none';
-      draftSetTurn('you');
+      // Flash the category big in the center, then start the first pick once it
+      // has registered (map stays locked during the beat so no accidental tap).
+      draftCatPop(cat, DG.round);
+      const grp = document.getElementById('draftStatesGroup');
+      if (grp) grp.classList.add('is-locked');
+      draftSet('draftTurnLabel', 'Get ready…');
+      DG.aiId = setTimeout(function () { draftSetTurn('you'); }, 1150);
+    }
+
+    function draftCatPop(cat, round) {
+      const pop = document.getElementById('draftCategoryPop');
+      if (!pop) return;
+      const rule = cat.rule || (cat.inverted ? 'Lowest total wins' : 'Highest total wins');
+      pop.innerHTML = '<div class="dcp-round">Round ' + (round + 1) + ' · Best of 5</div>'
+        + '<div class="dcp-title">' + escapeHTML(cat.title) + '</div>'
+        + '<div class="dcp-rule">' + escapeHTML(rule) + '</div>';
+      pop.classList.remove('is-pop');
+      void pop.offsetWidth; // restart the animation
+      pop.classList.add('is-pop');
     }
 
     function draftSetTurn(turn) {
@@ -6183,7 +6235,7 @@
     }
     function draftStartPickTimer() {
       const fill = document.getElementById('draftTimerFill');
-      const dur = 7000;
+      const dur = 10000;  // a touch longer than the old 7s — less intimidating
       DG.deadline = Date.now() + dur;
       if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
       DG.timerId = setInterval(() => {
@@ -6263,20 +6315,39 @@
         items.push(li);
       });
       document.getElementById('draftReveal').style.display = 'flex';
-      let i = 0;
+      // Live scoreline that ticks UP as states reveal highest-to-lowest, then a
+      // verdict + winner emphasis — the dramatic build §7 asks for.
+      const f = (v) => arcadeFormatVal(v, cat.format);
+      if (totals) {
+        totals.innerHTML = '<div class="draft-scoreline">'
+          + '<span class="dsl dsl-you">YOU <b id="dslYou">' + f(0) + '</b></span>'
+          + '<span class="dsl-vs">vs</span>'
+          + '<span class="dsl dsl-ai">AI <b id="dslAi">' + f(0) + '</b></span>'
+          + '</div><div class="draft-verdict" id="dslVerdict"></div>';
+        totals.classList.add('is-in');
+      }
+      const bump = (id, v) => {
+        const e = document.getElementById(id); if (!e) return;
+        e.textContent = f(v);
+        const w = e.parentElement; w.classList.remove('dsl-bump'); void w.offsetWidth; w.classList.add('dsl-bump');
+      };
+      let i = 0, youRun = 0, aiRun = 0;
       (function step() {
         if (i < items.length) {
           items[i].classList.add('is-in');
+          const pk = picks[i];
+          if (pk.who === 'you') { youRun += vals[pk.n]; bump('dslYou', youRun); }
+          else { aiRun += vals[pk.n]; bump('dslAi', aiRun); }
           i += 1;
-          // Spec §7 reveal pacing: high-impact states land fast, then the
-          // low values trickle in — the gap widens each step to build tension.
+          // §7 pacing: high-impact states land fast, low values trickle in.
           DG.revealId = setTimeout(step, 240 + i * 90);
-        } else if (totals) {
-          const f = (v) => arcadeFormatVal(v, cat.format);
-          const line = (winner === 'tie') ? 'Dead tie — no pip.'
-            : (winner === 'you' ? 'You take the round!' : 'AI takes the round.');
-          totals.innerHTML = 'You ' + f(youTotal) + ' · AI ' + f(aiTotal) + '<br>' + line;
-          totals.classList.add('is-in');
+        } else {
+          bump('dslYou', youTotal); bump('dslAi', aiTotal);
+          const winWrap = document.querySelector(winner === 'you' ? '.dsl-you' : winner === 'ai' ? '.dsl-ai' : '.dsl-none');
+          if (winWrap) winWrap.classList.add('dsl-win');
+          const verdict = document.getElementById('dslVerdict');
+          if (verdict) verdict.textContent = (winner === 'tie') ? 'Dead tie — no pip.'
+            : (winner === 'you' ? 'You take the round! 🎉' : 'AI takes the round.');
           draftRenderPips();
         }
       })();
@@ -6300,7 +6371,20 @@
         + ' · match seed ' + DG.seed);
       const status = document.getElementById('draftShareStatus');
       if (status) status.textContent = '';
-      document.getElementById('draftComplete').style.display = 'flex';
+      // Clinch burst: wash the whole map in the winner's team colour, then bring
+      // up the result card (§7's "big team-colour burst across the map").
+      const burstColor = drew ? null : (won ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR);
+      const completeEl = document.getElementById('draftComplete');
+      if (burstColor) {
+        document.getElementById('draftReveal').style.display = 'none';
+        const states = Array.prototype.slice.call(document.querySelectorAll('#draftStatesGroup .draft-state:not(.draft-state--dc)'));
+        states.forEach(function (s, idx) {
+          setTimeout(function () { s.style.transition = 'fill .25s ease'; s.style.fill = burstColor; }, idx * 11);
+        });
+        setTimeout(function () { if (completeEl) completeEl.style.display = 'flex'; }, 720);
+      } else if (completeEl) {
+        completeEl.style.display = 'flex';
+      }
       if (typeof trackEvent === 'function') {
         trackEvent('draft_match_complete', { youWins: DG.youWins, aiWins: DG.aiWins, seed: DG.seed });
       }

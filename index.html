@@ -1517,6 +1517,13 @@
 
     /* ── Data Maps Panel ─────────────────────────────── */
     .data-maps-grid { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 8px 0; }
+    #dataMapRecolor { padding: 6px 0 10px; }
+    .data-recolor-label { font-size: 11px; font-weight: 600; color: var(--text-dim, #94a3b8); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 7px; }
+    .data-recolor-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 6px; }
+    .data-recolor-chip { display: flex; height: 22px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; cursor: pointer; padding: 0; background: none; }
+    .data-recolor-chip span { flex: 1; }
+    .data-recolor-chip:hover { border-color: var(--border, #334155); }
+    .data-recolor-chip.is-active { border-color: var(--accent, #0EA5E9); }
     .data-map-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; cursor: pointer; transition: border-color 0.2s, transform 0.1s; }
     .data-map-card:hover { border-color: var(--accent); transform: translateY(-1px); }
     .data-map-card.loading { opacity: 0.6; pointer-events: none; }
@@ -3838,6 +3845,9 @@
         <div class="section-title">Data Maps <span class="pro-badge-inline" onclick="event.stopPropagation();showUpgradeModal()">PRO</span></div>
         <div id="dataMapSection">
           <div id="dataMapCards" class="data-maps-grid"></div>
+          <!-- Live palette switcher — appears once a data map is loaded so you
+               can swap ramps (e.g. greens -> plasma) without rebuilding. -->
+          <div id="dataMapRecolor" style="display:none"></div>
         </div>
 
         <div class="section-title">Legend <span class="pro-badge-inline" onclick="showUpgradeModal()">PRO</span></div>
@@ -9140,6 +9150,8 @@
     function confirmClearAll() {
       saveHistory();
       appState.stateColors = {};
+      activeDataMap = null;
+      if (typeof renderDataMapRecolor === 'function') renderDataMapRecolor();
       renderMap();
       updateLegendDisplay();
       updateStatsBar();
@@ -9765,6 +9777,9 @@
         var data = await fetchCensusData(dataset);
         var modifiedDataset = Object.assign({}, dataset, { colorScale: rampColors });
         applyDataMap(modifiedDataset, data);
+        // Remember what's loaded + which ramp, and surface the live recolor strip
+        activeDataMap = { id: datasetId, ramp: rampColors };
+        renderDataMapRecolor();
       } catch (err) {
         console.error('Data map error:', err);
         showMessage('Failed to load data: ' + err.message, 'error');
@@ -9775,6 +9790,38 @@
 
     function loadDataMap(datasetId) {
       showDataMapRampPicker(datasetId);
+    }
+
+    // Live palette re-ramp: once a data map is loaded, show a strip of palettes.
+    // Tapping one re-applies it instantly (census data is cached, so no refetch
+    // and no rebuilding the map from scratch).
+    let activeDataMap = null;
+    function renderDataMapRecolor() {
+      var host = document.getElementById('dataMapRecolor');
+      if (!host) return;
+      if (!activeDataMap) { host.style.display = 'none'; host.innerHTML = ''; return; }
+      var dataset = DATA_MAP_DATASETS.find(function(d) { return d.id === activeDataMap.id; });
+      if (!dataset) { host.style.display = 'none'; return; }
+      var ramps = [{ name: 'Default', colors: dataset.colorScale }]
+        .concat(DATA_MAP_RAMPS.recommended, DATA_MAP_RAMPS.more);
+      var key = function(c) { return (c || []).join(','); };
+      var activeKey = key(activeDataMap.ramp);
+      host.innerHTML = '<div class="data-recolor-label">Palette — tap to recolor live</div>';
+      var strip = document.createElement('div');
+      strip.className = 'data-recolor-strip';
+      ramps.forEach(function(r) {
+        if (!r.colors || r.colors.length < 2) return;
+        var sw = document.createElement('button');
+        sw.type = 'button';
+        sw.className = 'data-recolor-chip' + (key(r.colors) === activeKey ? ' is-active' : '');
+        sw.title = r.name;
+        sw.setAttribute('aria-label', 'Recolor: ' + r.name);
+        sw.innerHTML = r.colors.map(function(c) { return '<span style="background:' + c + '"></span>'; }).join('');
+        sw.addEventListener('click', function() { executeDataMapLoad(activeDataMap.id, r.colors); });
+        strip.appendChild(sw);
+      });
+      host.appendChild(strip);
+      host.style.display = 'block';
     }
 
     function renderDataMapCards(containerId) {
@@ -10736,6 +10783,10 @@
         showMessage('Pro templates require a Pro subscription', 'warning');
         return;
       }
+
+      // A template replaces the map — drop the data-map recolor strip
+      activeDataMap = null;
+      if (typeof renderDataMapRecolor === 'function') renderDataMapRecolor();
 
       // Confirm if user has work
       if (Object.keys(appState.stateColors).length > 0) {

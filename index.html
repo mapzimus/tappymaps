@@ -4552,7 +4552,10 @@
         el.setAttribute('d', pathGen(f.geometry));
         el.setAttribute('class', 'hub-state');
         group.appendChild(el);
-        _hubStates.push(el);
+        // DC is not a state (nonColorable convention, same as the editor count
+        // and the Arcade/GeoDraft maps): render its outline, never paint it.
+        const name = fipsToState[String(f.id).padStart(2, '0')];
+        if (!nonColorable.has(name)) _hubStates.push(el);
       });
       _hubBuilt = true;
       return true;

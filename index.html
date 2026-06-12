@@ -4570,7 +4570,9 @@
       hubStopAnim();
       const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const paint = (el) => { el.style.fill = HUB_COLORS[Math.floor(Math.random() * HUB_COLORS.length)]; };
-      if (reduce) { _hubStates.forEach((s, i) => { if (i % 3 === 0) paint(s); }); return; }
+      // Reduced-motion: no animation, but paint EVERY state once so the map
+      // reads as a finished, intentional poster — not a half-filled "frozen" map.
+      if (reduce) { _hubStates.forEach(paint); return; }
       let tick = 0;
       _hubTimer = setInterval(() => {
         tick++;

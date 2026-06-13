@@ -5478,6 +5478,17 @@
         medals: { bronze: 150, silver: 280, gold: 400 },
         generator: (rng) => arcadePickDistanceRounds(10, rng),
       },
+      'rank-it': {
+        id: 'rank-it',
+        name: 'Rank It',
+        tagline: 'Four states, one stat. Tap them in order — highest to lowest.',
+        playable: true,
+        kind: 'rank',            // ordered multi-tap; loads live Census data like Stat Duel
+        runLength: 6,
+        perPrompt: 16,
+        scoring: { base: 0, timeBonusMax: 12, streakThreshold: 2, streakStep: 8, streakCap: 28, perPosition: 14, perfect: 18 },
+        medals: { bronze: 260, silver: 440, gold: 600 },
+      },
     };
 
     // Per-game directions. Shown automatically the first time you play each
@@ -5517,6 +5528,11 @@
         goal: 'Tap whichever of two states is CLOSER to the anchor state.',
         steps: ['An anchor state is highlighted, plus two contestants.', 'Tap the contestant you think sits closer to the anchor on the map.', 'The closer one is revealed each round — 10 rounds. No data needed.'],
         scoring: 'Speed and streaks boost your score — chase bronze / silver / gold.',
+      },
+      'rank-it': {
+        goal: 'Tap four highlighted states in order, highest to lowest on a stat.',
+        steps: ['Four states glow and a Census stat is named.', 'Tap them in order: highest value first, lowest last.', 'The true order is revealed after each round — 6 rounds.'],
+        scoring: 'Points for every state you place in the right spot, with a bonus + streak for a perfect 4/4. Needs live Census data.',
       },
     };
     function arcadeHowtoHTML(id) {
@@ -5875,6 +5891,20 @@
       }
       return pairs;
     }
+    // Rank It: N rounds of 4 states with DISTINCT values, so the true ordering
+    // is always unambiguous. Seeded + deterministic for shared runs.
+    function arcadePickQuads(n, rng, pool, data) {
+      const quads = [];
+      let guard = 0;
+      while (quads.length < n && guard++ < n * 50) {
+        const set = new Set();
+        while (set.size < 4) set.add(pool[Math.floor(rng() * pool.length)]);
+        const arr = Array.from(set);
+        if (new Set(arr.map(s => data[s])).size < 4) continue; // need 4 distinct values
+        quads.push({ states: arr });
+      }
+      return quads;
+    }
     function arcadeFormatVal(v, format) {
       if (format === 'currency') return '$' + Math.round(v).toLocaleString();
       if (format === 'percent') return v.toFixed(1) + '%';
@@ -6066,7 +6096,7 @@
       AG.seed = seed || Math.random().toString(36).slice(2, 8);
       const rng = arcadeMakeRng(AG.seed);
 
-      if (game.kind === 'duel') {
+      if (game.kind === 'duel' || game.kind === 'rank') {
         const sets = arcadeDuelSets();
         const dataset = sets[Math.floor(rng() * sets.length)];
         AG.loading = true;
@@ -6077,10 +6107,12 @@
           if (pool.length < 10) throw new Error('not enough states with data');
           AG.duelDataset = dataset;
           AG.duelData = data;
-          AG.prompts = arcadePickPairs(game.runLength, rng, pool);
+          AG.prompts = (game.kind === 'rank')
+            ? arcadePickQuads(game.runLength, rng, pool, data)
+            : arcadePickPairs(game.runLength, rng, pool);
         } catch (err) {
           AG.loading = false;
-          console.error('Stat Duel data load failed:', err);
+          console.error('Census-data game load failed:', err);
           arcadeShowToast('Live data unavailable right now — try another game', 'wrong');
           arcadeShowHub();
           return;
@@ -6105,7 +6137,7 @@
       document.getElementById('arcadeGame').style.display = 'flex';
       document.getElementById('arcadeComplete').style.display = 'none';
       const group = document.getElementById('arcadeStatesGroup');
-      if (group) group.classList.toggle('is-duel', game.kind === 'duel' || game.kind === 'distance');
+      if (group) group.classList.toggle('is-duel', game.kind === 'duel' || game.kind === 'distance' || game.kind === 'rank');
       arcadeClearMarks();
       arcadeClearPaint();
       arcadeResetZoom();
@@ -6166,6 +6198,13 @@
         if (pb) pb.classList.add('arcade-state--duel');
         const anc = arcadeStatePath(r.anchor);   // anchor glows but isn't tappable (not --duel)
         if (anc) anc.classList.add('arcade-state--center');
+      } else if (kind === 'rank') {
+        arcadeClearPaint();          // wipe last round's order colors
+        AG.rankPicked = [];
+        const q = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Order by ' + AG.duelDataset.title + ' — highest first';
+        popText = AG.duelDataset.title + ' — highest → lowest';
+        q.states.forEach(st => { const p = arcadeStatePath(st); if (p) p.classList.add('arcade-state--duel'); });
       } else {
         const target = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Find: ' + target;
@@ -6202,6 +6241,7 @@
     // Timeout dispatch — neighbors ends the multi-tap round, others resolve.
     function arcadeTimeout() {
       if (AG.game.kind === 'neighbors') arcadeResolveNeighbors(false, null);
+      else if (AG.game.kind === 'rank') arcadeResolveRank(); // score whatever's placed so far
       else arcadeResolve(null);
     }
 
@@ -6217,7 +6257,57 @@
         return;
       }
       if (kind === 'neighbors') { arcadeNeighborTap(name); return; }
+      if (kind === 'rank') { arcadeRankTap(name); return; }
       arcadeResolve(name);
+    }
+
+    // Rank It: accumulate ordered taps (highest→lowest). Each pick paints in a
+    // sequence color; after the 4th, score by how many landed in the right spot.
+    function arcadeRankTap(name) {
+      if (AG.answered) return;
+      const q = AG.prompts[AG.idx];
+      if (!q.states.includes(name) || AG.rankPicked.indexOf(name) !== -1) return; // not a contestant / already placed
+      AG.rankPicked.push(name);
+      const p = arcadeStatePath(name);
+      if (p) {
+        p.classList.add('arcade-state--painted');
+        p.style.fill = ARCADE_PAINT_COLORS[(AG.rankPicked.length - 1) % ARCADE_PAINT_COLORS.length];
+      }
+      SFX.tap(); Haptic.light();
+      arcadeShowToast('#' + AG.rankPicked.length + ' · ' + name, 'correct', 700);
+      if (AG.rankPicked.length === 4) arcadeResolveRank();
+    }
+
+    function arcadeResolveRank() {
+      if (AG.answered) return;
+      AG.answered = true;
+      arcadeStopTimers();
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.add('is-locked');
+      const q = AG.prompts[AG.idx], data = AG.duelData, s = AG.game.scoring;
+      const trueOrder = q.states.slice().sort((a, b) => data[b] - data[a]); // highest first
+      let correctPositions = 0;
+      AG.rankPicked.forEach((nm, i) => { if (trueOrder[i] === nm) correctPositions++; });
+      const perfect = correctPositions === 4;
+      const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
+      const timeBonus = perfect ? Math.round(remainFrac * s.timeBonusMax) : 0;
+      if (perfect) { AG.streak += 1; AG.bestStreak = Math.max(AG.bestStreak, AG.streak); AG.correct += 1; }
+      else { AG.streak = 0; }
+      const streakBonus = perfect && AG.streak >= s.streakThreshold
+        ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+      const gained = correctPositions * s.perPosition + (perfect ? s.perfect + timeBonus + streakBonus : 0);
+      AG.score += gained;
+      // Reveal the TRUE order, highest→lowest, staggered.
+      trueOrder.forEach((nm, i) => {
+        setTimeout(() => { const p = arcadeStatePath(nm); if (p) p.classList.add('arcade-state--reveal'); }, i * 240);
+      });
+      arcadeShowToast(perfect ? 'Perfect order! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '')
+        : correctPositions + '/4 placed · +' + gained, perfect ? 'correct' : 'wrong', 1800);
+      if (perfect) { if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak); Haptic.ok(); }
+      else { SFX.wrong(); Haptic.err(); }
+      arcadeUpdateHud();
+      AG.idx += 1;
+      AG.advanceId = setTimeout(arcadeNextPrompt, 2300);
     }
 
     // Neighbor Challenge: accumulate taps until all borders are found (success)

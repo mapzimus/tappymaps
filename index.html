@@ -2538,13 +2538,21 @@
         color: var(--text, #f0f9ff);
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        /* Definite height (not min-height) so the flex chain distributes it and
+           the map <svg> fills its slot instead of falling back to its intrinsic
+           ~1.42 aspect height — which on wide desktops made #arcadeGame taller
+           than the viewport and pushed the how-to card's Start button off-screen. */
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
         box-sizing: border-box;
       }
 
       /* --- Arcade hub (tile grid) --- */
       #arcadeHub {
         flex: 1;
+        min-height: 0;
+        overflow-y: auto;       /* tiles + daily card can exceed a short viewport now that #modeArcade is height-capped */
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -2581,6 +2589,51 @@
       .arcade-daily-game { font-size: 20px; font-weight: 800; margin: 0 0 2px; }
       .arcade-daily-cta { font-size: 13px; font-weight: 700; opacity: 0.85; }
       .arcade-daily-card.is-done .arcade-daily-cta { color: var(--success, #22c55e); opacity: 1; }
+
+      /* Level chip (hub header) */
+      .prog-chip {
+        display: inline-flex; align-items: center; gap: 8px; margin-top: 12px;
+        padding: 6px 12px; border-radius: 20px;
+        background: var(--surface, #1e293b); border: 1px solid var(--border, #334155);
+        font-size: 13px; font-weight: 700;
+      }
+      .prog-chip-lvl { color: var(--arcade, #F97316); }
+      .prog-chip-title { opacity: 0.85; }
+      .prog-chip-bar { width: 70px; height: 6px; border-radius: 4px; background: color-mix(in srgb, var(--border, #334155) 60%, transparent); overflow: hidden; }
+      .prog-chip-bar > span { display: block; height: 100%; background: var(--arcade, #F97316); border-radius: 4px; }
+
+      /* Leaderboard view */
+      #arcadeLeaderboard {
+        flex: 1; min-height: 0; overflow-y: auto;
+        display: flex; flex-direction: column; align-items: center;
+        padding: 32px 24px 24px; box-sizing: border-box;
+      }
+      .lb-namebar { width: 100%; max-width: 520px; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+      .lb-namebar label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.6; white-space: nowrap; }
+      .lb-namebar input {
+        flex: 1; padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 700;
+        background: var(--surface, #1e293b); border: 1px solid var(--border, #334155); color: var(--text, #f0f9ff);
+      }
+      .lb-body { width: 100%; max-width: 520px; }
+      .lb-summary {
+        background: linear-gradient(135deg, color-mix(in srgb, var(--arcade, #F97316) 20%, var(--surface, #1e293b)), var(--surface, #1e293b));
+        border: 1px solid color-mix(in srgb, var(--arcade, #F97316) 45%, transparent);
+        border-radius: 14px; padding: 16px; margin-bottom: 18px;
+      }
+      .lb-summary .lb-level { font-size: 18px; font-weight: 800; }
+      .lb-summary .lb-xp { font-size: 13px; opacity: 0.75; margin: 2px 0 8px; }
+      .lb-xpbar { height: 8px; border-radius: 5px; background: color-mix(in srgb, var(--border, #334155) 55%, transparent); overflow: hidden; }
+      .lb-xpbar > span { display: block; height: 100%; background: var(--arcade, #F97316); border-radius: 5px; }
+      .lb-game { margin-bottom: 16px; }
+      .lb-game h3 { font-size: 14px; font-weight: 800; margin: 0 0 6px; }
+      .lb-empty { font-size: 13px; opacity: 0.5; margin: 0; }
+      .lb-list { list-style: none; margin: 0; padding: 0; }
+      .lb-list li { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 8px; font-size: 14px; }
+      .lb-list li:nth-child(odd) { background: color-mix(in srgb, var(--surface, #1e293b) 60%, transparent); }
+      .lb-rank { width: 22px; opacity: 0.55; font-variant-numeric: tabular-nums; font-weight: 700; }
+      .lb-name { flex: 1; font-weight: 600; }
+      .lb-medal { width: 20px; text-align: center; }
+      .lb-score { font-variant-numeric: tabular-nums; font-weight: 800; min-width: 56px; text-align: right; }
       .arcade-tile-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -2639,7 +2692,7 @@
       .arcade-hub-footer a:hover { text-decoration: underline; }
 
       /* --- Arcade game shell --- */
-      #arcadeGame { flex: 1; display: flex; flex-direction: column; position: relative; }
+      #arcadeGame { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
       .arcade-game-bar {
         display: flex; align-items: center; gap: 12px;
         padding: 10px 14px;
@@ -2853,7 +2906,8 @@
         font-variant-numeric: tabular-nums; line-height: 1;
       }
       .arcade-complete-detail { font-size: 14px; opacity: 0.8; margin: 10px 0 2px; }
-      .arcade-complete-best { font-size: 13px; opacity: 0.65; margin: 0 0 18px; min-height: 16px; }
+      .arcade-complete-best { font-size: 13px; opacity: 0.65; margin: 0 0 6px; min-height: 16px; }
+      .arcade-complete-xp { font-size: 13px; font-weight: 700; color: var(--arcade, #F97316); margin: 0 0 16px; min-height: 16px; }
       .arcade-complete-actions { display: flex; flex-direction: column; gap: 9px; }
       .arcade-btn {
         padding: 11px 16px; border-radius: 10px;
@@ -2889,11 +2943,16 @@
         color: var(--text, #f0f9ff);
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        /* Definite height (see #modeArcade) so the draft map <svg> fills its
+           flex slot instead of ballooning to intrinsic aspect height and
+           pushing overlays off-screen. */
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
         box-sizing: border-box;
       }
       #draftHub {
-        flex: 1; flex-direction: column; align-items: center;
+        flex: 1; min-height: 0; flex-direction: column; align-items: center;
         padding: 36px 20px 24px; overflow-y: auto;
       }
       .draft-hub-title { font-size: 30px; font-weight: 800; margin: 14px 0 2px; }
@@ -3031,7 +3090,7 @@
       .draft-complete-actions { display: flex; flex-direction: column; gap: 9px; }
 
       #draftPractice {
-        flex: 1; flex-direction: column;
+        flex: 1; min-height: 0; flex-direction: column;
         width: 100%; max-width: 780px; margin: 0 auto;
         padding: 18px 18px 30px; overflow-y: auto;
       }
@@ -3818,10 +3877,26 @@
         <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
         <h2 class="arcade-hub-title">Arcade</h2>
         <p class="arcade-hub-sub">Eight fast geography games. All free.</p>
+        <div class="prog-chip" id="arcadeLevelChip" aria-label="Your level"><!-- progRenderChip() --></div>
       </header>
       <a class="arcade-daily-card" id="arcadeDailyCard" data-route href="/games/arcade/daily"><!-- populated by arcadeRenderDaily() --></a>
       <div class="arcade-tile-grid" id="arcadeTileGrid"><!-- tiles injected by arcadeRenderHub() --></div>
-      <footer class="arcade-hub-footer"><a href="/games/draft" data-route>GeoDraft →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
+      <footer class="arcade-hub-footer"><a href="/games/arcade/leaderboard" data-route>🏆 Leaderboard</a> &nbsp;·&nbsp; <a href="/games/draft" data-route>GeoDraft →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
+    </div>
+
+    <!-- Leaderboard view: per-game top-10 (local) + level/trophy summary -->
+    <div id="arcadeLeaderboard" style="display:none">
+      <header class="arcade-hub-header">
+        <a href="/games/arcade" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
+        <h2 class="arcade-hub-title">Leaderboard</h2>
+        <p class="arcade-hub-sub">Your best runs, on this device.</p>
+      </header>
+      <div class="lb-namebar">
+        <label for="lbNameInput">Name on the board</label>
+        <input id="lbNameInput" type="text" maxlength="12" placeholder="YOU" autocomplete="off" />
+      </div>
+      <div class="lb-body" id="lbBody"><!-- progRenderLeaderboard() --></div>
+      <footer class="arcade-hub-footer"><a href="/games/arcade" data-route>← Back to Arcade</a></footer>
     </div>
 
     <!-- Game view: shared shell (engine-owned chrome around the map) -->
@@ -3869,6 +3944,7 @@
           <div class="arcade-complete-score" id="arcadeCompleteScore">0</div>
           <p class="arcade-complete-detail" id="arcadeCompleteDetail">0 of 10 correct · best streak 0</p>
           <p class="arcade-complete-best" id="arcadeCompleteBest"></p>
+          <p class="arcade-complete-xp" id="arcadeCompleteXp"></p>
           <div class="arcade-complete-actions">
             <button type="button" class="arcade-btn arcade-btn--primary" id="arcadePlayAgain">Play again</button>
             <button type="button" class="arcade-btn" id="arcadeShareBtn">Share my run</button>
@@ -5487,7 +5563,7 @@
         runLength: 50,
         perPrompt: 5,
         scoring: { base: 10, timeBonusMax: 12, streakThreshold: 5, streakStep: 3, streakCap: 40 },
-        medals: { bronze: 500, silver: 850, gold: 1150 },
+        medals: { bronze: 500, silver: 1100, gold: 1600 },
         generator: (rng) => arcadePickStates(50, rng),
       },
       'alphabet-race': {
@@ -5657,10 +5733,13 @@
     }
 
     // --- Distance Duel: per-state centroids from the cached topology --------
-    // Bounding-box centers in projected (Albers) units — exact distances aren't
-    // needed, only which contestant is RELATIVELY closer to the anchor. Computed
-    // once and cached. (Lazy: reads appState/fipsToState only at call time, so
-    // it never trips the Arcade-block TDZ.)
+    // AREA centroid of each state's LARGEST landmass (projected Albers units).
+    // A bounding-box center is visually wrong for irregular/multi-part states —
+    // Michigan's bbox-center lands in the lake between its peninsulas, Florida's
+    // and Maryland's sit off the visible mass — which made "which is closer"
+    // mark the shape-obviously-closer state wrong. The polygon centroid of the
+    // biggest piece tracks where a player actually sees the state. Cached; lazy
+    // (reads appState/fipsToState only at call time, TDZ-safe).
     let _arcCentroids = null;
     function arcadeStateCentroids() {
       if (_arcCentroids) return _arcCentroids;
@@ -5668,18 +5747,30 @@
       if (!topo || typeof topojson === 'undefined') return null;
       const feats = topojson.feature(topo, topo.objects.states).features;
       const out = {};
-      const scan = (ring, box) => ring.forEach(p => {
-        if (p[0] < box.minX) box.minX = p[0]; if (p[0] > box.maxX) box.maxX = p[0];
-        if (p[1] < box.minY) box.minY = p[1]; if (p[1] > box.maxY) box.maxY = p[1];
-      });
+      // Signed area + area-centroid of one ring (shoelace).
+      const ringCentroid = (ring) => {
+        let a = 0, cx = 0, cy = 0;
+        for (let i = 0, len = ring.length; i < len; i++) {
+          const p0 = ring[i], p1 = ring[(i + 1) % len];
+          const cross = p0[0] * p1[1] - p1[0] * p0[1];
+          a += cross; cx += (p0[0] + p1[0]) * cross; cy += (p0[1] + p1[1]) * cross;
+        }
+        a *= 0.5;
+        if (Math.abs(a) < 1e-9) return null;
+        return { x: cx / (6 * a), y: cy / (6 * a), area: Math.abs(a) };
+      };
       feats.forEach(f => {
         const name = fipsToState[String(f.id).padStart(2, '0')];
         if (!name) return;
-        const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
         const g = f.geometry;
-        if (g.type === 'Polygon') g.coordinates.forEach(r => scan(r, box));
-        else if (g.type === 'MultiPolygon') g.coordinates.forEach(poly => poly.forEach(r => scan(r, box)));
-        if (isFinite(box.minX)) out[name] = { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
+        const polys = g.type === 'Polygon' ? [g.coordinates]
+          : g.type === 'MultiPolygon' ? g.coordinates : [];
+        let best = null; // the largest-area outer ring = the visual mass
+        polys.forEach(poly => {
+          const c = poly[0] && ringCentroid(poly[0]);
+          if (c && (!best || c.area > best.area)) best = c;
+        });
+        if (best) out[name] = { x: best.x, y: best.y };
       });
       _arcCentroids = out;
       return out;
@@ -5893,11 +5984,30 @@
     // n distinct center states that actually have neighbors (Neighbor Challenge).
     function arcadePickNeighborCenters(n, rng) {
       const pool = arcadeStateNames().filter(s => (STATE_ADJACENCY[s] || []).length > 0);
-      for (let i = pool.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
-      }
-      return pool.slice(0, n);
+      const shuffle = (arr) => {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(rng() * (i + 1));
+          const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        }
+        return arr;
+      };
+      // Stratify by border count so every run draws a CONSISTENT total number of
+      // borders. With a flat random draw the total swung 18–54, so a flawless
+      // player's gold depended on the seed (easy Maine-heavy draws couldn't even
+      // reach it). A fixed low/mid/high composition removes that lottery while
+      // keeping variety. Falls back to a plain shuffle if a bucket runs short.
+      const bc = (s) => (STATE_ADJACENCY[s] || []).length;
+      const few = shuffle(pool.filter(s => bc(s) <= 3));
+      const mid = shuffle(pool.filter(s => bc(s) === 4 || bc(s) === 5));
+      const many = shuffle(pool.filter(s => bc(s) >= 6));
+      const want = (n === 8) ? { few: 3, mid: 3, many: 2 }
+        : { few: Math.round(n * 0.375), mid: Math.round(n * 0.375), many: n - Math.round(n * 0.375) * 2 };
+      const out = [];
+      const take = (arr, k) => { while (k-- > 0 && arr.length) out.push(arr.shift()); };
+      take(few, want.few); take(mid, want.mid); take(many, want.many);
+      const rest = shuffle(few.concat(mid, many));
+      while (out.length < n && rest.length) out.push(rest.shift());
+      return shuffle(out.slice(0, n)); // randomize the order they're presented in
     }
     // The state the player must tap for a single-target prompt: find/speed-run
     // prompts are plain strings; capitals prompts are { state, capital }.
@@ -5913,13 +6023,17 @@
       return DATA_MAP_DATASETS.filter(d => d.duel);
     }
     // n state pairs from pool — distinct within a pair, no unordered repeats.
-    function arcadePickPairs(n, rng, pool) {
+    function arcadePickPairs(n, rng, pool, data) {
       const pairs = [];
       const seen = new Set();
-      while (pairs.length < n) {
+      let guard = 0;
+      while (pairs.length < n && guard++ < n * 80) {
         const a = pool[Math.floor(rng() * pool.length)];
         let b = pool[Math.floor(rng() * pool.length)];
         while (b === a) b = pool[Math.floor(rng() * pool.length)];
+        // Reject EQUAL-value pairs — otherwise the reveal paints one state
+        // "higher" while showing two identical numbers, which reads as a bug.
+        if (data && data[a] === data[b]) continue;
         const key = a < b ? a + '|' + b : b + '|' + a;
         if (seen.has(key)) continue;
         seen.add(key);
@@ -6146,7 +6260,7 @@
           AG.duelData = data;
           AG.prompts = (game.kind === 'rank')
             ? arcadePickQuads(game.runLength, rng, pool, data)
-            : arcadePickPairs(game.runLength, rng, pool);
+            : arcadePickPairs(game.runLength, rng, pool, data);
         } catch (err) {
           AG.loading = false;
           console.error('Census-data game load failed:', err);
@@ -6564,11 +6678,28 @@
       set('arcadeCompleteBest', AG.isDaily
         ? ('Daily streak: 🔥 ' + dailyStreak + ' day' + (dailyStreak === 1 ? '' : 's') + ' — come back tomorrow!')
         : (isBest ? 'New personal best!' : 'Your best: ' + (prev ? prev.score : 0)));
+
+      // Progression: award XP (one pool across all games; Daily gives a big
+      // bonus) and record on the local leaderboard if it makes the top 10.
+      const xpRes = progAddXp(progArcadeXp(AG.score, AG.correct, medal.key, AG.isDaily));
+      let lbRank = 0;
+      if (progQualifies(game.id, AG.mode, AG.score)) {
+        lbRank = progSubmitScore(game.id, AG.mode, AG.score, medal.key, progPlayerName() || 'YOU').rank;
+      }
+      set('arcadeCompleteXp', '+' + xpRes.gain + ' XP · Lvl ' + xpRes.level + ' ' + progTitle(xpRes.level)
+        + (xpRes.leveledUp ? ' — LEVEL UP! 🎉' : '')
+        + (lbRank ? ' · #' + lbRank + ' on your board' : ''));
+      if (xpRes.leveledUp) {
+        Haptic.win();
+        setTimeout(() => SFX.best(), 700);
+        if (typeof confetti === 'function') setTimeout(() => confetti({ particleCount: 110, spread: 95, origin: { x: 0.5, y: 0.45 } }), 380);
+      }
+
       const status = document.getElementById('arcadeShareStatus');
       if (status) status.textContent = '';
       document.getElementById('arcadeComplete').style.display = 'flex';
       if (typeof trackEvent === 'function') {
-        trackEvent('arcade_run_complete', { game: game.id, mode: AG.mode, score: AG.score, correct: AG.correct, medal: medal.key, daily: !!AG.isDaily });
+        trackEvent('arcade_run_complete', { game: game.id, mode: AG.mode, score: AG.score, correct: AG.correct, medal: medal.key, daily: !!AG.isDaily, xp: xpRes.gain, level: xpRes.level });
       }
     }
 
@@ -6725,14 +6856,120 @@
       arcadeStartRun(gid, arcadeDailySeed(), game.defaultMode || null, true);
     }
 
+    // ========================================================================
+    // PROGRESSION — cross-game XP / levels + a local leaderboard
+    // ========================================================================
+    // All device-local (localStorage). XP is ONE pool fed by every game; the
+    // leaderboard keeps your top-10 per game+mode. A global cross-user board
+    // needs a validated backend (these games are client-scored, so raw POSTed
+    // scores are forgeable) — see docs/specs/2026-06-13-progression-and-
+    // leaderboard.md. Lazy/TDZ-safe: no top-level reads of late globals.
+    const PROG_TITLE_BANDS = [[35, 'Atlas'], [20, 'Geographer'], [10, 'Cartographer'], [5, 'Navigator'], [1, 'Explorer']];
+    function progXpToReach(L) { return 60 * (L - 1) * L / 2; }            // triangular cumulative XP to reach level L
+    function progLevelForXp(xp) { let L = 1; while (progXpToReach(L + 1) <= xp) L++; return L; }
+    function progTitle(L) { for (const band of PROG_TITLE_BANDS) if (L >= band[0]) return band[1]; return 'Explorer'; }
+    function progGetXp() { try { return parseInt(localStorage.getItem('tappymaps_xp') || '0', 10) || 0; } catch (_) { return 0; } }
+    function progAddXp(amount) {
+      const before = progGetXp();
+      const gain = Math.max(0, Math.round(amount));
+      const after = before + gain;
+      try { localStorage.setItem('tappymaps_xp', String(after)); } catch (_) {}
+      return { gain: gain, xp: after, level: progLevelForXp(after), leveledUp: progLevelForXp(after) > progLevelForXp(before) };
+    }
+    function progSnapshot() {
+      const xp = progGetXp(), L = progLevelForXp(xp), cur = progXpToReach(L), next = progXpToReach(L + 1);
+      return { xp: xp, level: L, title: progTitle(L), into: xp - cur, span: next - cur, pct: Math.max(0, Math.min(1, (xp - cur) / (next - cur))) };
+    }
+    // XP a finished Arcade run earns. The Daily gets the biggest bonus to reward the habit.
+    function progArcadeXp(score, correct, medalKey, isDaily) {
+      const medalBonus = { gold: 60, silver: 35, bronze: 18, none: 5 }[medalKey] || 5;
+      return Math.round(Math.max(0, score) / 8) + Math.max(0, correct) * 3 + medalBonus + (isDaily ? 40 : 0);
+    }
+
+    // --- Local leaderboard (top-10 per game+mode) ---
+    function progPlayerName() { try { return localStorage.getItem('tappymaps_player_name') || ''; } catch (_) { return ''; } }
+    function progSetPlayerName(n) { try { localStorage.setItem('tappymaps_player_name', (n || '').slice(0, 12)); } catch (_) {} }
+    function progLbKey(gameId, mode) { return gameId + ((mode && mode !== 'classic') ? ':' + mode : ''); }
+    function progAllBoards() { try { return JSON.parse(localStorage.getItem('tappymaps_leaderboard') || '{}') || {}; } catch (_) { return {}; } }
+    function progGetBoard(gameId, mode) { return progAllBoards()[progLbKey(gameId, mode)] || []; }
+    function progQualifies(gameId, mode, score) {
+      if (!(score > 0)) return false;
+      const board = progGetBoard(gameId, mode);
+      return board.length < 10 || score > board[board.length - 1].score;
+    }
+    function progSubmitScore(gameId, mode, score, medal, name) {
+      const all = progAllBoards();
+      const key = progLbKey(gameId, mode);
+      const board = all[key] || [];
+      const entry = { name: (name || 'YOU').slice(0, 12), score: score, medal: medal, date: arcadeDailyKey() };
+      board.push(entry);
+      board.sort((a, b) => b.score - a.score);
+      all[key] = board.slice(0, 10);
+      try { localStorage.setItem('tappymaps_leaderboard', JSON.stringify(all)); } catch (_) {}
+      return { board: all[key], rank: all[key].indexOf(entry) + 1 };
+    }
+
+    function progRenderChip() {
+      const chip = document.getElementById('arcadeLevelChip');
+      if (!chip) return;
+      const s = progSnapshot();
+      chip.innerHTML =
+        '<span class="prog-chip-lvl">Lvl ' + s.level + '</span>' +
+        '<span class="prog-chip-title">' + s.title + '</span>' +
+        '<span class="prog-chip-bar"><span style="width:' + Math.round(s.pct * 100) + '%"></span></span>';
+      chip.setAttribute('title', s.xp + ' XP · ' + s.into + '/' + s.span + ' to Lvl ' + (s.level + 1));
+    }
+
+    const ARCADE_MEDAL_EMOJI = { gold: '🥇', silver: '🥈', bronze: '🥉' };
+    function progRenderLeaderboard() {
+      const body = document.getElementById('lbBody');
+      if (!body) return;
+      const s = progSnapshot();
+      let html = '<div class="lb-summary">'
+        + '<div class="lb-level">Lvl ' + s.level + ' · ' + s.title + '</div>'
+        + '<div class="lb-xp">' + s.xp + ' XP · ' + s.into + ' / ' + s.span + ' to Lvl ' + (s.level + 1) + '</div>'
+        + '<div class="lb-xpbar"><span style="width:' + Math.round(s.pct * 100) + '%"></span></div></div>';
+      Object.values(ARCADE_GAMES).forEach(game => {
+        if (!game.playable) return;
+        const modes = game.modes ? Object.keys(game.modes) : [null];
+        modes.forEach(mode => {
+          const board = progGetBoard(game.id, mode);
+          const label = game.name + (mode && mode !== (game.defaultMode || 'classic') ? ' · ' + game.modes[mode].label : '');
+          html += '<div class="lb-game"><h3>' + escapeHTML(label) + '</h3>';
+          if (!board.length) {
+            html += '<p class="lb-empty">No runs yet — play to set a score.</p>';
+          } else {
+            html += '<ol class="lb-list">' + board.map((e, i) =>
+              '<li><span class="lb-rank">' + (i + 1) + '</span>'
+              + '<span class="lb-name">' + escapeHTML(e.name || 'YOU') + '</span>'
+              + '<span class="lb-medal">' + (ARCADE_MEDAL_EMOJI[e.medal] || '') + '</span>'
+              + '<span class="lb-score">' + e.score + '</span></li>').join('') + '</ol>';
+          }
+          html += '</div>';
+        });
+      });
+      body.innerHTML = html;
+    }
+    function arcadeShowLeaderboard() {
+      arcadeStopTimers();
+      ['arcadeHub', 'arcadeGame', 'arcadeComplete'].forEach(id => { const e = document.getElementById(id); if (e) e.style.display = 'none'; });
+      const input = document.getElementById('lbNameInput');
+      if (input) input.value = progPlayerName();
+      progRenderLeaderboard();
+      document.getElementById('arcadeLeaderboard').style.display = 'flex';
+    }
+
     function arcadeShowHub() {
       arcadeStopTimers();
       const g = document.getElementById('arcadeStatesGroup');
       if (g) g.classList.remove('is-duel');
       document.getElementById('arcadeGame').style.display = 'none';
       document.getElementById('arcadeComplete').style.display = 'none';
+      const lb = document.getElementById('arcadeLeaderboard');
+      if (lb) lb.style.display = 'none';
       arcadeRenderHub();
       arcadeRenderDaily();
+      progRenderChip();
       document.getElementById('arcadeHub').style.display = 'flex';
     }
 
@@ -6757,6 +6994,8 @@
       onClick('arcadeZoomOut', () => arcadeZoomBy(1 / 1.4));
       onClick('arcadeZoomReset', () => arcadeResetZoom(true));
       onClick('arcadeShareBtn', arcadeShareRun);
+      const nameInput = document.getElementById('lbNameInput');
+      if (nameInput) nameInput.addEventListener('input', () => progSetPlayerName(nameInput.value));
     })();
 
     // --- Mode registration ---
@@ -6767,6 +7006,8 @@
         const sub = route && route.sub;
         if (sub === 'daily') {
           arcadeStartDaily();
+        } else if (sub === 'leaderboard') {
+          arcadeShowLeaderboard();
         } else if (sub && ARCADE_GAMES[sub] && ARCADE_GAMES[sub].playable) {
           // Deep link / shared run — honor ?seed= and ?mode= if present.
           const params = new URLSearchParams(window.location.search);
@@ -6788,6 +7029,13 @@
             title: 'Daily Challenge — Tappymaps Arcade',
             description: 'A new geography puzzle every day — same for everyone. Keep your streak alive. Free on Tappymaps.',
             canonical: 'https://tappymaps.com/games/arcade/daily',
+          };
+        }
+        if (sub === 'leaderboard') {
+          return {
+            title: 'Leaderboard — Tappymaps Arcade',
+            description: 'Your best geography-game runs and level progress. Free on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/arcade/leaderboard',
           };
         }
         const game = sub && ARCADE_GAMES[sub];
@@ -6897,6 +7145,21 @@
       DG.difficulty = d;
       DG.noiseMul = d === 'easy' ? 1.9 : d === 'hard' ? 0.45 : 1.0;   // hard = sharper AI
       DG.biasMag = d === 'easy' ? 4.5 : d === 'hard' ? 1.0 : 2.6;      // hard = smaller blind spots
+    }
+    // Who drafts FIRST in a given round. This is the real lever: you always
+    // taking the first pick means you grab true-ranks {1,3,5} vs the AI's
+    // {2,4,6} and win almost every category regardless of AI skill. Make it
+    // structural by difficulty — Easy keeps your first-pick edge, Normal
+    // alternates (near-even), Hard hands the AI the first-pick advantage so you
+    // must out-think it. (Within a round the turn still alternates as before.)
+    function draftRoundFirstPicker(round) {
+      if (DG.difficulty === 'easy') return 'you';   // you grab the first pick every round
+      if (DG.difficulty === 'hard') return 'ai';    // AI gets the first-pick edge every round
+      // Normal: a SEEDED coin flip per round. Deterministic alternation always
+      // hands you 3 of 5 first picks (=> a near-automatic 3-2), so instead let
+      // the decisive first-pick fall either way — some matches the AI gets the
+      // majority and genuinely wins. Reproducible from the match seed.
+      return DG.rng() < 0.5 ? 'you' : 'ai';
     }
 
     let _draftMapBuilt = false;
@@ -7065,7 +7328,8 @@
       const grp = document.getElementById('draftStatesGroup');
       if (grp) grp.classList.add('is-locked');
       draftSet('draftTurnLabel', 'Get ready…');
-      DG.aiId = setTimeout(function () { draftSetTurn('you'); }, 1150);
+      const first = draftRoundFirstPicker(DG.round);
+      DG.aiId = setTimeout(function () { draftSetTurn(first); }, 1150);
     }
 
     function draftCatPop(cat, round) {
@@ -7227,9 +7491,12 @@
       const won = DG.youWins > DG.aiWins;
       const drew = DG.youWins === DG.aiWins;
       draftSet('draftCompleteTitle', drew ? 'A draw!' : (won ? 'You win the draft! 🏆' : 'The AI takes it.'));
+      // Progression XP (one pool with Arcade): a win is worth more than a loss.
+      const _xp = (typeof progAddXp === 'function') ? progAddXp(won ? 70 : drew ? 45 : 25) : null;
       draftSet('draftCompleteDetail', 'Final score ' + DG.youWins + '–' + DG.aiWins
         + (DG.ties ? ' with ' + DG.ties + ' tied round' + (DG.ties > 1 ? 's' : '') : '')
-        + ' · match seed ' + DG.seed);
+        + ' · match seed ' + DG.seed
+        + (_xp ? ' · +' + _xp.gain + ' XP' + (_xp.leveledUp ? ' — Lvl ' + _xp.level + ' 🎉' : '') : ''));
       const status = document.getElementById('draftShareStatus');
       if (status) status.textContent = '';
       // Juice: victory fanfare + buzz + confetti when you take the match.
@@ -7257,7 +7524,10 @@
       }
     }
     function draftShareMatch() {
-      const url = window.location.origin + '/games/draft/category?seed=' + DG.seed;
+      // Carry the difficulty — it now governs the first-pick structure, so a
+      // shared match only reproduces if the recipient plays the same level.
+      const diffQ = (DG.difficulty && DG.difficulty !== 'normal') ? '&diff=' + DG.difficulty : '';
+      const url = window.location.origin + '/games/draft/category?seed=' + DG.seed + diffQ;
       const result = DG.youWins > DG.aiWins ? 'beat the AI ' + DG.youWins + '-' + DG.aiWins
         : 'went ' + DG.youWins + '-' + DG.aiWins + ' against the AI';
       const text = 'I ' + result + ' on Tappymaps GeoDraft — same categories, your turn: ' + url;
@@ -7568,7 +7838,10 @@
       const you = DT.youCatWins, ai = DT.aiCatWins;
       const win = you > ai, tie = you === ai;
       draftSet('draftTerrCompleteTitle', win ? 'You control the map!' : (tie ? 'Split territory — a draw.' : 'The AI claimed the map.'));
-      draftSet('draftTerrCompleteDetail', 'Categories: ' + you + (win ? ' — ' + ai + ' AI' : ' — ' + ai + ' AI') + '. 3-category territory draft.');
+      // Territory is the longer draft — worth more XP than Category.
+      const _xp = (typeof progAddXp === 'function') ? progAddXp(win ? 90 : tie ? 55 : 30) : null;
+      draftSet('draftTerrCompleteDetail', 'Categories: ' + you + (win ? ' — ' + ai + ' AI' : ' — ' + ai + ' AI') + '. 3-category territory draft.'
+        + (_xp ? ' · +' + _xp.gain + ' XP' + (_xp.leveledUp ? ' — Lvl ' + _xp.level + ' 🎉' : '') : ''));
       // Juice: fanfare + buzz + confetti on a map-control win.
       SFX.complete(win ? 'gold' : (tie ? 'bronze' : 'none'));
       if (win) {

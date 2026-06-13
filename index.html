@@ -3793,6 +3793,7 @@
       <header class="arcade-game-bar">
         <button type="button" class="arcade-back-btn" id="arcadeBackBtn" aria-label="Back to Arcade">←</button>
         <button type="button" class="arcade-help-btn" id="arcadeHelpBtn" aria-label="How to play" title="How to play">?</button>
+        <button type="button" class="arcade-help-btn" id="arcadeMuteBtn" aria-label="Toggle sound" title="Toggle sound" aria-pressed="false">🔊</button>
         <div class="arcade-prompt" id="arcadePrompt">Find the state</div>
         <div class="arcade-stats">
           <div class="arcade-stat"><span class="arcade-stat-label">Score</span><span class="arcade-stat-val" id="arcadeScore">0</span></div>
@@ -5569,7 +5570,94 @@
     // color as you play, like a mini Create session.
     const ARCADE_PAINT_COLORS = ['#0EA5E9','#F97316','#22c55e','#a855f7','#eab308','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#06b6d4','#84cc16','#fb923c'];
 
-    // --- State Capitals (50) — drives the State Capitals game --------------
+    // --- Game audio + haptics (synthesized, zero assets) -------------------
+    // A tiny WebAudio engine for the games — every sound is generated from
+    // oscillators, so it adds ZERO network/loading cost and works offline.
+    // Lazy-inits on the first user gesture (browsers block audio before one),
+    // honors a persisted mute toggle (tappymaps_sfx_muted), and degrades to a
+    // silent no-op if WebAudio is unavailable. Shared by Arcade + GeoDraft.
+    const SFX = (function () {
+      let ctx = null, master = null;
+      let muted = false;
+      try { muted = localStorage.getItem('tappymaps_sfx_muted') === '1'; } catch (_) {}
+
+      function ensure() {
+        if (ctx) return ctx;
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return null;
+          ctx = new AC();
+          master = ctx.createGain();
+          master.gain.value = 0.16;          // gentle overall ceiling
+          master.connect(ctx.destination);
+        } catch (_) { ctx = null; }
+        return ctx;
+      }
+      function tone(freq, dur, type, when, peak) {
+        const c = ensure(); if (!c || muted) return;
+        const t0 = c.currentTime + (when || 0);
+        const osc = c.createOscillator(), g = c.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, t0);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(peak || 0.5, t0 + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(t0); osc.stop(t0 + dur + 0.03);
+      }
+      function glide(f1, f2, dur, type) {
+        const c = ensure(); if (!c || muted) return;
+        const t0 = c.currentTime;
+        const osc = c.createOscillator(), g = c.createGain();
+        osc.type = type || 'triangle';
+        osc.frequency.setValueAtTime(f1, t0);
+        osc.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.5, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(t0); osc.stop(t0 + dur + 0.03);
+      }
+      const api = {
+        // Resume the context on a user gesture (iOS needs this).
+        unlock() { const c = ensure(); if (c && c.state === 'suspended') c.resume(); },
+        isMuted() { return muted; },
+        toggleMute() {
+          muted = !muted;
+          try { localStorage.setItem('tappymaps_sfx_muted', muted ? '1' : '0'); } catch (_) {}
+          if (!muted) { api.unlock(); api.tap(); }  // little confirmation blip
+          return muted;
+        },
+        tap() { tone(330, 0.045, 'sine', 0, 0.22); },
+        correct(streak) {
+          const s = Math.max(0, Math.min(12, streak || 0));
+          tone(523 + s * 18, 0.12, 'sine', 0, 0.5);
+          tone(784 + s * 26, 0.12, 'sine', 0.04, 0.3);
+        },
+        streak(n) { // rising arpeggio at a streak milestone
+          const base = 523 + Math.min(8, n || 0) * 28;
+          [0, 0.07, 0.14].forEach((d, i) => tone(base * Math.pow(1.26, i), 0.11, 'triangle', d, 0.4));
+        },
+        wrong() { tone(196, 0.18, 'sawtooth', 0, 0.34); tone(146, 0.22, 'sawtooth', 0.05, 0.26); },
+        tick() { tone(880, 0.028, 'square', 0, 0.1); },
+        complete(medal) {
+          const tiers = { gold: [523, 659, 784, 1047], silver: [523, 659, 784], bronze: [523, 659], none: [440, 523] };
+          (tiers[medal] || tiers.none).forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.12, 0.5));
+        },
+        best() { glide(523, 1047, 0.4, 'triangle'); },
+      };
+      return api;
+    })();
+
+    // Mobile haptics — guarded no-ops on desktop / unsupported browsers.
+    const Haptic = {
+      light() { try { if (navigator.vibrate) navigator.vibrate(12); } catch (_) {} },
+      ok()    { try { if (navigator.vibrate) navigator.vibrate(22); } catch (_) {} },
+      err()   { try { if (navigator.vibrate) navigator.vibrate([28, 36, 28]); } catch (_) {} },
+      win()   { try { if (navigator.vibrate) navigator.vibrate([20, 40, 20, 40, 70]); } catch (_) {} },
+    };
+
+
     const STATE_CAPITALS = {
       'Alabama':'Montgomery','Alaska':'Juneau','Arizona':'Phoenix','Arkansas':'Little Rock',
       'California':'Sacramento','Colorado':'Denver','Connecticut':'Hartford','Delaware':'Dover',
@@ -5973,6 +6061,7 @@
       const dur = AG.game.perPrompt * 1000;
       AG.deadline = Date.now() + dur;
       if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
+      let lastTick = 0;  // throttles the urgency tick to ~once/second in the low zone
       AG.timerId = setInterval(() => {
         const remain = AG.deadline - Date.now();
         const pct = Math.max(0, remain / dur) * 100;
@@ -5980,6 +6069,7 @@
           fill.style.width = pct + '%';
           fill.classList.toggle('is-low', pct < 25);
         }
+        if (pct < 25 && remain > 0 && Date.now() - lastTick > 600) { lastTick = Date.now(); SFX.tick(); }
         if (remain <= 0) arcadeTimeout(); // timeout = miss
       }, 90);
     }
@@ -5992,6 +6082,7 @@
     // Tap handler registered on every state path.
     function arcadeOnTap(name) {
       if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
+      SFX.unlock();  // first tap satisfies the browser audio-gesture requirement
       const kind = AG.game.kind;
       if (kind === 'duel') {
         const pair = AG.prompts[AG.idx];
@@ -6025,6 +6116,8 @@
           arcadeResolveNeighbors(true, null);
         } else {
           arcadeShowToast('+' + s.perNeighbor + ' · ' + AG.nbFound.size + '/' + AG.nbNeeded.size, 'correct', 800);
+          SFX.correct(AG.nbFound.size);  // climbing pitch as the region fills in
+          Haptic.ok();
         }
       } else {
         arcadeResolveNeighbors(false, name);       // wrong tap ends the round
@@ -6051,12 +6144,16 @@
         AG.score += gained;
         AG.correct += 1;
         arcadeShowToast('All ' + total + ' borders! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''), 'correct', 1300);
+        SFX.streak(AG.streak);
+        Haptic.win();
       } else {
         AG.streak = 0;
         // Reveal the borders the player missed.
         AG.nbNeeded.forEach(n => { if (!AG.nbFound.has(n)) { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); } });
         if (wrongName) { const wp = arcadeStatePath(wrongName); if (wp) wp.classList.add('arcade-state--wrong'); }
         arcadeShowToast((wrongName ? wrongName + " doesn't border " + AG.nbCenter : 'Time!') + ' · ' + found + '/' + total, 'wrong', 1600);
+        SFX.wrong();
+        Haptic.err();
       }
       arcadeUpdateHud();
       AG.idx += 1;
@@ -6106,6 +6203,8 @@
           AG.paintIdx += 1;
         }
         arcadeShowToast('+' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '') + (valueLine ? ' · ' + valueLine : ''), 'correct', valueLine ? 1500 : 1100);
+        if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak);
+        Haptic.ok();
       } else {
         AG.streak = 0;
         const tp = arcadeStatePath(target);
@@ -6119,6 +6218,8 @@
         } else {
           arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
         }
+        SFX.wrong();
+        Haptic.err();
       }
       arcadeUpdateHud();
       AG.idx += 1;
@@ -6154,6 +6255,16 @@
       const isBest = !prev || AG.score > prev.score;
       if (isBest) {
         try { localStorage.setItem(arcadeBestKey(game.id, AG.mode), JSON.stringify({ score: AG.score, medal: medal.key })); } catch (_) {}
+      }
+
+      // Juice: medal-tiered fanfare, a rising flourish + confetti on a new best,
+      // and a celebratory buzz. Confetti is already loaded (CDN script).
+      SFX.complete(medal.key);
+      if (isBest) { setTimeout(() => SFX.best(), 520); Haptic.win(); }
+      else if (medal.key === 'gold') { Haptic.win(); }
+      if ((isBest || medal.key === 'gold') && typeof confetti === 'function') {
+        confetti({ particleCount: 90, spread: 72, origin: { x: 0.5, y: 0.5 } });
+        if (medal.key === 'gold') setTimeout(() => confetti({ particleCount: 70, spread: 80, origin: { x: 0.5, y: 0.4 } }), 220);
       }
 
       const modeLabel = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].label : '';
@@ -6272,6 +6383,16 @@
       onClick('arcadeBackBtn', () => Router.navigate('/games/arcade'));
       onClick('arcadeToHub', () => Router.navigate('/games/arcade'));
       onClick('arcadeHelpBtn', () => { if (AG.game) arcadeShowHowto(AG.game, true); });
+      const muteBtn = document.getElementById('arcadeMuteBtn');
+      if (muteBtn) {
+        const paint = () => {
+          const m = SFX.isMuted();
+          muteBtn.textContent = m ? '🔇' : '🔊';
+          muteBtn.setAttribute('aria-pressed', m ? 'true' : 'false');
+        };
+        paint();
+        muteBtn.addEventListener('click', () => { SFX.toggleMute(); paint(); });
+      }
       onClick('arcadePlayAgain', () => { if (AG.game) arcadeStartRun(AG.game.id, null, AG.mode); });
       onClick('arcadeZoomIn', () => arcadeZoomBy(1.4));
       onClick('arcadeZoomOut', () => arcadeZoomBy(1 / 1.4));
@@ -6642,6 +6763,7 @@
         p.style.fill = (who === 'you') ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR;
         p.classList.add('draft-state--taken');
       }
+      if (who === 'you') { SFX.unlock(); SFX.tap(); Haptic.light(); }
       draftRenderRosters();
       if (DG.youPicks.length === DG.picksPerSide && DG.aiPicks.length === DG.picksPerSide) {
         draftRevealRound();
@@ -6742,6 +6864,12 @@
         + ' · match seed ' + DG.seed);
       const status = document.getElementById('draftShareStatus');
       if (status) status.textContent = '';
+      // Juice: victory fanfare + buzz + confetti when you take the match.
+      SFX.complete(won ? 'gold' : (drew ? 'bronze' : 'none'));
+      if (won) {
+        Haptic.win();
+        if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 75, origin: { x: 0.5, y: 0.5 } });
+      }
       // Clinch burst: wash the whole map in the winner's team colour, then bring
       // up the result card (§7's "big team-colour burst across the map").
       const burstColor = drew ? null : (won ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR);
@@ -6988,6 +7116,7 @@
       (who === 'you' ? DT.youPicks : DT.aiPicks).push(name);
       const p = draftTerrStatePath(name);
       if (p) { p.style.fill = (who === 'you') ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR; p.classList.add('draft-state--taken'); }
+      if (who === 'you') { SFX.unlock(); SFX.tap(); Haptic.light(); }
       draftTerrRenderRosters();
       if (DT.youPicks.length === 25 && DT.aiPicks.length === 25) {
         DT.phase = 'reveal';
@@ -7072,6 +7201,12 @@
       const win = you > ai, tie = you === ai;
       draftSet('draftTerrCompleteTitle', win ? 'You control the map!' : (tie ? 'Split territory — a draw.' : 'The AI claimed the map.'));
       draftSet('draftTerrCompleteDetail', 'Categories: ' + you + (win ? ' — ' + ai + ' AI' : ' — ' + ai + ' AI') + '. 3-category territory draft.');
+      // Juice: fanfare + buzz + confetti on a map-control win.
+      SFX.complete(win ? 'gold' : (tie ? 'bronze' : 'none'));
+      if (win) {
+        Haptic.win();
+        if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 75, origin: { x: 0.5, y: 0.5 } });
+      }
       // Clinch burst — color all states by winner
       const burstColor = win ? DRAFT_YOU_COLOR : (tie ? '#64748b' : DRAFT_AI_COLOR);
       const paths = Array.from(document.querySelectorAll('#draftTerrStatesGroup .draft-state:not(.draft-state--dc)'));

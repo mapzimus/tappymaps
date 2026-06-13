@@ -5466,6 +5466,18 @@
         medals: { bronze: 150, silver: 280, gold: 400 },
         generator: (rng) => arcadePickAlphabet(10, rng),
       },
+      'distance-duel': {
+        id: 'distance-duel',
+        name: 'Distance Duel',
+        tagline: 'Two states, one anchor. Tap whichever sits CLOSER to it on the map.',
+        playable: true,
+        kind: 'distance',        // two contestants + an anchor; tap the geographically closer one
+        runLength: 10,
+        perPrompt: 9,
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+        generator: (rng) => arcadePickDistanceRounds(10, rng),
+      },
     };
 
     // Per-game directions. Shown automatically the first time you play each
@@ -5500,6 +5512,11 @@
         goal: 'Tap any state that starts with the letter we name.',
         steps: ['A letter flashes — tap ANY state whose name starts with it.', 'Each correct answer must be a NEW state; 10 letters per run.', 'Miss reveals the states that would have worked. Wrong taps cost the round.'],
         scoring: 'Faster answers and streaks score more — chase bronze / silver / gold. No data needed.',
+      },
+      'distance-duel': {
+        goal: 'Tap whichever of two states is CLOSER to the anchor state.',
+        steps: ['An anchor state is highlighted, plus two contestants.', 'Tap the contestant you think sits closer to the anchor on the map.', 'The closer one is revealed each round — 10 rounds. No data needed.'],
+        scoring: 'Speed and streaks boost your score — chase bronze / silver / gold.',
       },
     };
     function arcadeHowtoHTML(id) {
@@ -5585,6 +5602,58 @@
         const t = letters[i]; letters[i] = letters[j]; letters[j] = t;
       }
       return letters.slice(0, Math.min(n, letters.length));
+    }
+
+    // --- Distance Duel: per-state centroids from the cached topology --------
+    // Bounding-box centers in projected (Albers) units — exact distances aren't
+    // needed, only which contestant is RELATIVELY closer to the anchor. Computed
+    // once and cached. (Lazy: reads appState/fipsToState only at call time, so
+    // it never trips the Arcade-block TDZ.)
+    let _arcCentroids = null;
+    function arcadeStateCentroids() {
+      if (_arcCentroids) return _arcCentroids;
+      const topo = (typeof appState !== 'undefined') ? appState.topologyData : null;
+      if (!topo || typeof topojson === 'undefined') return null;
+      const feats = topojson.feature(topo, topo.objects.states).features;
+      const out = {};
+      const scan = (ring, box) => ring.forEach(p => {
+        if (p[0] < box.minX) box.minX = p[0]; if (p[0] > box.maxX) box.maxX = p[0];
+        if (p[1] < box.minY) box.minY = p[1]; if (p[1] > box.maxY) box.maxY = p[1];
+      });
+      feats.forEach(f => {
+        const name = fipsToState[String(f.id).padStart(2, '0')];
+        if (!name) return;
+        const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+        const g = f.geometry;
+        if (g.type === 'Polygon') g.coordinates.forEach(r => scan(r, box));
+        else if (g.type === 'MultiPolygon') g.coordinates.forEach(poly => poly.forEach(r => scan(r, box)));
+        if (isFinite(box.minX)) out[name] = { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
+      });
+      _arcCentroids = out;
+      return out;
+    }
+    function arcadeCentroidDist(cents, a, b) {
+      return Math.hypot(cents[a].x - cents[b].x, cents[a].y - cents[b].y);
+    }
+    // Build N rounds of { anchor, a, b }. Reject near-ties (closer/farther within
+    // ~18%) so every round has a defensibly correct answer. Seeded + deterministic.
+    function arcadePickDistanceRounds(n, rng) {
+      const cents = arcadeStateCentroids();
+      if (!cents) return [];
+      const names = Object.keys(cents).filter(nm => !nonColorable.has(nm));
+      const rounds = [];
+      let guard = 0;
+      while (rounds.length < n && guard++ < n * 60) {
+        const anchor = names[Math.floor(rng() * names.length)];
+        const a = names[Math.floor(rng() * names.length)];
+        const b = names[Math.floor(rng() * names.length)];
+        if (a === b || a === anchor || b === anchor) continue;
+        const da = arcadeCentroidDist(cents, anchor, a), db = arcadeCentroidDist(cents, anchor, b);
+        const hi = Math.max(da, db), lo = Math.min(da, db);
+        if (hi === 0 || lo / hi > 0.82) continue; // too close to call — skip
+        rounds.push({ anchor: anchor, a: a, b: b });
+      }
+      return rounds;
     }
     // Sample N states WITH replacement (Shuffle mode). No immediate
     // back-to-back repeat, but a state can absolutely come up again later.
@@ -6020,6 +6089,13 @@
       } else {
         const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
         AG.prompts = gen(rng);
+        // Distance Duel needs the cached topology to compute centroids; if it's
+        // not ready yet, fail soft back to the hub rather than start an empty run.
+        if (game.kind === 'distance' && AG.prompts.length < game.runLength) {
+          arcadeShowToast('Map still loading — try again in a moment', 'wrong');
+          arcadeShowHub();
+          return;
+        }
       }
 
       AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
@@ -6029,7 +6105,7 @@
       document.getElementById('arcadeGame').style.display = 'flex';
       document.getElementById('arcadeComplete').style.display = 'none';
       const group = document.getElementById('arcadeStatesGroup');
-      if (group) group.classList.toggle('is-duel', game.kind === 'duel');
+      if (group) group.classList.toggle('is-duel', game.kind === 'duel' || game.kind === 'distance');
       arcadeClearMarks();
       arcadeClearPaint();
       arcadeResetZoom();
@@ -6081,6 +6157,15 @@
         AG.alphaValid = arcadeStatesByLetter(letter).filter(s => !AG.alphaUsed.has(s));
         if (prompt) prompt.textContent = 'Tap a state starting with “' + letter + '”';
         popText = letter;
+      } else if (kind === 'distance') {
+        const r = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Closer to ' + r.anchor + ' — tap your pick';
+        popText = r.a + ' or ' + r.b + '?';
+        const pa = arcadeStatePath(r.a), pb = arcadeStatePath(r.b);
+        if (pa) pa.classList.add('arcade-state--duel');
+        if (pb) pb.classList.add('arcade-state--duel');
+        const anc = arcadeStatePath(r.anchor);   // anchor glows but isn't tappable (not --duel)
+        if (anc) anc.classList.add('arcade-state--center');
       } else {
         const target = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Find: ' + target;
@@ -6125,9 +6210,9 @@
       if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
       SFX.unlock();  // first tap satisfies the browser audio-gesture requirement
       const kind = AG.game.kind;
-      if (kind === 'duel') {
-        const pair = AG.prompts[AG.idx];
-        if (name !== pair.a && name !== pair.b) return; // belt + CSS pointer-events braces
+      if (kind === 'duel' || kind === 'distance') {
+        const r = AG.prompts[AG.idx];
+        if (name !== r.a && name !== r.b) return; // belt + CSS pointer-events braces
         arcadeResolve(name);
         return;
       }
@@ -6211,6 +6296,7 @@
 
       const isDuel = AG.game.kind === 'duel';
       const isAlpha = AG.game.kind === 'alpha';
+      const isDistance = AG.game.kind === 'distance';
       let target, correct, valueLine = '';
       if (isDuel) {
         const pair = AG.prompts[AG.idx];
@@ -6219,6 +6305,13 @@
         correct = tapped === target || (tapped && AG.duelData[tapped] !== undefined && va === vb);
         const fmt = AG.duelDataset.format;
         valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
+      } else if (isDistance) {
+        const r = AG.prompts[AG.idx];
+        const cents = arcadeStateCentroids();
+        const da = arcadeCentroidDist(cents, r.anchor, r.a), db = arcadeCentroidDist(cents, r.anchor, r.b);
+        target = (da <= db) ? r.a : r.b;   // the closer contestant wins
+        correct = tapped === target;
+        valueLine = target + ' is closer to ' + r.anchor;
       } else if (isAlpha) {
         // Many valid answers: any UNUSED state starting with the prompt letter.
         const letter = AG.prompts[AG.idx];
@@ -6269,7 +6362,7 @@
             const wp = arcadeStatePath(tapped);
             if (wp) wp.classList.add('arcade-state--wrong');
           }
-          if (isDuel) {
+          if (isDuel || isDistance) {
             arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
           } else {
             arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
@@ -6282,7 +6375,7 @@
       AG.idx += 1;
       // Duel reveals show real values, Alpha reveals a list — give misses a
       // beat longer to read.
-      const advance = isDuel ? (correct ? 1100 : 1600)
+      const advance = (isDuel || isDistance) ? (correct ? 1100 : 1600)
         : isAlpha ? (correct ? 750 : 1600)
         : (correct ? 650 : 1150);
       AG.advanceId = setTimeout(arcadeNextPrompt, advance);

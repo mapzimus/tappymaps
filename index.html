@@ -2565,6 +2565,22 @@
         color: var(--arcade);
       }
       .arcade-hub-sub { font-size: 15px; opacity: 0.72; margin: 0; }
+      /* Daily Challenge card — one shared puzzle per day, with a play streak. */
+      .arcade-daily-card {
+        display: block; text-decoration: none; color: inherit;
+        width: 100%; max-width: 760px; margin: 0 auto 18px; box-sizing: border-box;
+        padding: 18px 20px; border-radius: 16px;
+        background: linear-gradient(135deg, color-mix(in srgb, var(--arcade, #F97316) 22%, var(--surface, #1e293b)), var(--surface, #1e293b));
+        border: 1.5px solid color-mix(in srgb, var(--arcade, #F97316) 55%, transparent);
+        transition: transform .12s ease, border-color .12s ease;
+      }
+      .arcade-daily-card:hover { transform: translateY(-2px); border-color: var(--arcade, #F97316); }
+      .arcade-daily-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+      .arcade-daily-kicker { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--arcade, #F97316); }
+      .arcade-daily-streak { font-size: 13px; font-weight: 800; white-space: nowrap; }
+      .arcade-daily-game { font-size: 20px; font-weight: 800; margin: 0 0 2px; }
+      .arcade-daily-cta { font-size: 13px; font-weight: 700; opacity: 0.85; }
+      .arcade-daily-card.is-done .arcade-daily-cta { color: var(--success, #22c55e); opacity: 1; }
       .arcade-tile-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -3782,8 +3798,9 @@
       <header class="arcade-hub-header">
         <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
         <h2 class="arcade-hub-title">Arcade</h2>
-        <p class="arcade-hub-sub">Five fast geography games. All free.</p>
+        <p class="arcade-hub-sub">Eight fast geography games. All free.</p>
       </header>
+      <a class="arcade-daily-card" id="arcadeDailyCard" data-route href="/games/arcade/daily"><!-- populated by arcadeRenderDaily() --></a>
       <div class="arcade-tile-grid" id="arcadeTileGrid"><!-- tiles injected by arcadeRenderHub() --></div>
       <footer class="arcade-hub-footer"><a href="/games/draft" data-route>GeoDraft →</a> &nbsp;·&nbsp; <a href="/" data-route>← Back to Tappymaps</a></footer>
     </div>
@@ -6085,13 +6102,14 @@
     // falls back to the game's defaultMode (or its single generator).
     // Duel runs are async: live Census data loads before round 1 (the seed
     // also picks the dataset, so a shared seed = same stat + same pairs).
-    async function arcadeStartRun(gameId, seed, mode) {
+    async function arcadeStartRun(gameId, seed, mode, isDaily) {
       const game = ARCADE_GAMES[gameId];
       if (!game || !game.playable) { arcadeShowHub(); return; }
       if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'wrong'); return; }
       if (AG.loading) return;
 
       AG.game = game;
+      AG.isDaily = !!isDaily;   // a Daily Challenge run updates the daily streak on completion
       AG.mode = (game.modes && mode && game.modes[mode]) ? mode : (game.defaultMode || 'classic');
       AG.seed = seed || Math.random().toString(36).slice(2, 8);
       const rng = arcadeMakeRng(AG.seed);
@@ -6514,26 +6532,40 @@
       const modeLabel = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].label : '';
       const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
       set('arcadeMedal', medal.emoji);
-      set('arcadeCompleteTitle', medal.key === 'none' ? 'Nice run!' : medal.label + '!');
+      // Daily Challenge: record the play + advance the streak BEFORE composing
+      // the result text, so the completion screen shows the fresh streak.
+      let dailyStreak = 0;
+      if (AG.isDaily) { dailyStreak = (arcadeRecordDaily(AG.score) || {}).streak || 0; }
+
+      set('arcadeCompleteTitle', AG.isDaily ? 'Daily done! 🔥' : (medal.key === 'none' ? 'Nice run!' : medal.label + '!'));
       set('arcadeCompleteScore', AG.score);
-      set('arcadeCompleteDetail', AG.correct + ' of ' + game.runLength + ' correct · best streak ' + AG.bestStreak + (modeLabel ? ' · ' + modeLabel : ''));
-      set('arcadeCompleteBest', isBest ? 'New personal best!' : 'Your best: ' + (prev ? prev.score : 0));
+      set('arcadeCompleteDetail', AG.isDaily
+        ? (game.name + ' · ' + AG.correct + ' of ' + game.runLength + ' correct · ' + medal.label)
+        : (AG.correct + ' of ' + game.runLength + ' correct · best streak ' + AG.bestStreak + (modeLabel ? ' · ' + modeLabel : '')));
+      set('arcadeCompleteBest', AG.isDaily
+        ? ('Daily streak: 🔥 ' + dailyStreak + ' day' + (dailyStreak === 1 ? '' : 's') + ' — come back tomorrow!')
+        : (isBest ? 'New personal best!' : 'Your best: ' + (prev ? prev.score : 0)));
       const status = document.getElementById('arcadeShareStatus');
       if (status) status.textContent = '';
       document.getElementById('arcadeComplete').style.display = 'flex';
       if (typeof trackEvent === 'function') {
-        trackEvent('arcade_run_complete', { game: game.id, mode: AG.mode, score: AG.score, correct: AG.correct, medal: medal.key });
+        trackEvent('arcade_run_complete', { game: game.id, mode: AG.mode, score: AG.score, correct: AG.correct, medal: medal.key, daily: !!AG.isDaily });
       }
     }
 
     function arcadeShareUrl() {
+      // A Daily run shares the stable /daily route (same puzzle for everyone today),
+      // not the seeded game URL.
+      if (AG.isDaily) return window.location.origin + '/games/arcade/daily';
       const modeQ = (AG.mode && AG.mode !== 'classic') ? '&mode=' + AG.mode : '';
       return window.location.origin + '/games/arcade/' + AG.game.id + '?seed=' + AG.seed + modeQ;
     }
     function arcadeShareRun() {
       const url = arcadeShareUrl();
       const status = document.getElementById('arcadeShareStatus');
-      const text = 'I scored ' + AG.score + ' on Tappymaps ' + AG.game.name + ' — beat me: ' + url;
+      const text = AG.isDaily
+        ? ('Tappymaps Daily (' + arcadeDailyKey() + ') — ' + AG.game.name + ': ' + AG.score + '. Same puzzle for everyone today — beat me: ' + url)
+        : ('I scored ' + AG.score + ' on Tappymaps ' + AG.game.name + ' — beat me: ' + url);
       const done = (msg) => { if (status) status.textContent = msg; };
       if (navigator.share) {
         navigator.share({ title: 'Tappymaps ' + AG.game.name, text: text, url: url })
@@ -6611,6 +6643,69 @@
         '<div class="arcade-tile-meta"><span class="arcade-tile-best">Play →</span></div>';
       grid.appendChild(draft);
     }
+    // --- Daily Challenge ---------------------------------------------------
+    // One shared puzzle per UTC day: a deterministic game + seed everyone gets,
+    // plus a play streak in localStorage. The retention loop — come back daily,
+    // keep the 🔥 alive. Pool excludes the two Census-dependent games so the
+    // daily can never fail on a data outage.
+    const ARCADE_DAILY_POOL = ['find-state', 'state-capitals', 'neighbor-challenge', 'speed-run', 'alphabet-race', 'distance-duel'];
+    function arcadeDailyKey(d) {
+      const now = d || new Date();
+      return now.getUTCFullYear() + '-' + String(now.getUTCMonth() + 1).padStart(2, '0') + '-' + String(now.getUTCDate()).padStart(2, '0');
+    }
+    function arcadeDailyGameId(key) {
+      const k = key || arcadeDailyKey();
+      return ARCADE_DAILY_POOL[arcadeHashSeed('daily-game-' + k) % ARCADE_DAILY_POOL.length];
+    }
+    function arcadeDailySeed(key) { return 'daily-' + (key || arcadeDailyKey()); }
+    function arcadeGetDailyRecord() {
+      try { return JSON.parse(localStorage.getItem('tappymaps_daily')) || {}; } catch (_) { return {}; }
+    }
+    function arcadeIsYesterday(prev, today) {
+      const p = new Date(prev + 'T00:00:00Z'), t = new Date(today + 'T00:00:00Z');
+      return (t - p) === 86400000;
+    }
+    function arcadeRecordDaily(score) {
+      const today = arcadeDailyKey();
+      const rec = arcadeGetDailyRecord();
+      if (rec.last !== today) {
+        rec.streak = (rec.last && arcadeIsYesterday(rec.last, today)) ? (rec.streak || 0) + 1 : 1;
+        rec.last = today;
+        rec.bestScore = score;
+      } else {
+        rec.bestScore = Math.max(rec.bestScore || 0, score);
+      }
+      try { localStorage.setItem('tappymaps_daily', JSON.stringify(rec)); } catch (_) {}
+      return rec;
+    }
+    function arcadeDailyPlayedToday() { return arcadeGetDailyRecord().last === arcadeDailyKey(); }
+    function arcadeDailyStreak() {
+      const rec = arcadeGetDailyRecord();
+      if (!rec.last) return 0;
+      const today = arcadeDailyKey();
+      if (rec.last === today || arcadeIsYesterday(rec.last, today)) return rec.streak || 0; // alive
+      return 0; // a missed day breaks it
+    }
+    function arcadeRenderDaily() {
+      const card = document.getElementById('arcadeDailyCard');
+      if (!card) return;
+      const game = ARCADE_GAMES[arcadeDailyGameId()];
+      const played = arcadeDailyPlayedToday();
+      const streak = arcadeDailyStreak();
+      card.classList.toggle('is-done', played);
+      const streakLabel = streak > 0 ? '🔥 ' + streak + ' day' + (streak > 1 ? 's' : '') : 'Start your streak';
+      card.innerHTML =
+        '<div class="arcade-daily-top"><span class="arcade-daily-kicker">Daily Challenge</span><span class="arcade-daily-streak">' + streakLabel + '</span></div>' +
+        '<div class="arcade-daily-game">' + (game ? game.name : 'Today’s game') + '</div>' +
+        '<div class="arcade-daily-cta">' + (played ? '✓ Played today — replay, or come back tomorrow' : 'Everyone gets the same puzzle today — play now →') + '</div>';
+    }
+    function arcadeStartDaily() {
+      const gid = arcadeDailyGameId();
+      const game = ARCADE_GAMES[gid];
+      if (!game) { arcadeShowHub(); return; }
+      arcadeStartRun(gid, arcadeDailySeed(), game.defaultMode || null, true);
+    }
+
     function arcadeShowHub() {
       arcadeStopTimers();
       const g = document.getElementById('arcadeStatesGroup');
@@ -6618,6 +6713,7 @@
       document.getElementById('arcadeGame').style.display = 'none';
       document.getElementById('arcadeComplete').style.display = 'none';
       arcadeRenderHub();
+      arcadeRenderDaily();
       document.getElementById('arcadeHub').style.display = 'flex';
     }
 
@@ -6650,7 +6746,9 @@
         const el = document.getElementById('modeArcade');
         if (el) el.style.display = 'flex';
         const sub = route && route.sub;
-        if (sub && ARCADE_GAMES[sub] && ARCADE_GAMES[sub].playable) {
+        if (sub === 'daily') {
+          arcadeStartDaily();
+        } else if (sub && ARCADE_GAMES[sub] && ARCADE_GAMES[sub].playable) {
           // Deep link / shared run — honor ?seed= and ?mode= if present.
           const params = new URLSearchParams(window.location.search);
           arcadeStartRun(sub, params.get('seed') || null, params.get('mode') || null);
@@ -6666,6 +6764,13 @@
       },
       meta(route) {
         const sub = route && route.sub;
+        if (sub === 'daily') {
+          return {
+            title: 'Daily Challenge — Tappymaps Arcade',
+            description: 'A new geography puzzle every day — same for everyone. Keep your streak alive. Free on Tappymaps.',
+            canonical: 'https://tappymaps.com/games/arcade/daily',
+          };
+        }
         const game = sub && ARCADE_GAMES[sub];
         if (game) {
           return {

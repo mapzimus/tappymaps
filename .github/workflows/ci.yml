@@ -1,0 +1,25 @@
+name: CI
+
+# Advisory CI: runs on every push and PR, reports red/green, but is NOT a
+# required check — it does not block merges (no branch protection rule wired).
+# Validate-only by design: it compiles both inline <script> blocks in
+# index.html so a syntax error can't silently reach master and kill init().
+# The browser smoke test (scripts/smoke.mjs) is committed for local use but
+# intentionally NOT run here, to keep CI to a few seconds.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  validate:
+    name: Validate JS blocks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate index.html script blocks
+        run: node scripts/validate.mjs

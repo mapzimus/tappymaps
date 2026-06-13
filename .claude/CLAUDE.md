@@ -45,14 +45,17 @@ There is no build step. `index.html` is loaded directly by the browser. As of Ph
 
 `index.html` contains **two `<script>` blocks**: the main app (roughly first 60% of file) and a Mobile UX IIFE (roughly last 30%). Line numbers drift — grep to find boundaries. A syntax error in the main block silently kills `init()` but the mobile IIFE still runs, producing partial breakage that's hard to diagnose.
 
-**Use the validation helper at `C:\Users\mhowe\tappymaps\_validate.py`** (gitignored, created in Phase 0 Task 1). It extracts both blocks and `node --check`s them. Run after every JS edit, before committing:
+**Validate after every JS edit, before committing** — `npm run validate` (or `node scripts/validate.mjs`). This is a committed, cross-platform Node script (`scripts/validate.mjs`) that extracts both inline `<script>` blocks and `vm.compileFunction`s them. Works on Linux/macOS/Windows and in CI — it supersedes the old gitignored Windows-only `_validate.py`.
 
-```powershell
-Set-Location C:\Users\mhowe\tappymaps
-python _validate.py
+```bash
+npm run validate
 ```
 
-Expected output: `Block 0 (NNN chars): PASS` + `Block 1 (NNN chars): PASS`. Non-zero exit if either fails. The script is 40 lines and matches the cartographer agent's documented pattern — see that file for the inline source if you ever lose `_validate.py`.
+Expected output: `Block 0 (NNN chars): PASS` + `Block 1 (NNN chars): PASS` + `validate: all 2 block(s) OK.` Non-zero exit if either fails.
+
+**Parse-check is not enough for runtime breakage.** `validate` only catches syntax errors; it can't catch a runtime TDZ (see the Arcade/GeoDraft gotcha below) or a broken mode handler. For that, run **`npm run smoke`** (`scripts/smoke.mjs`) — a Playwright harness that boots every router mode and fails on any console/page error. It skips cleanly when Playwright isn't installed; run it where it is (or set `NODE_PATH` to a global install). House rule: don't claim a fix works from static analysis alone — smoke it.
+
+**CI:** `.github/workflows/ci.yml` runs `validate` on every push/PR. It's **advisory** (reports red/green, does not block merges) and validate-only (smoke stays local) to keep it to a few seconds.
 
 ## Mode Router (Phase 1 — SHIPPED 2026-05-29, commit `619e309`)
 
@@ -73,7 +76,7 @@ The legacy single-page layout is **still in the file** — it is HIDDEN, not rem
 - **`#sourceInput`** (desktop Source field, autofill-defeat intact — see "Source field autofill defeat" below) is the node that lands in the Create Map panel after re-parenting; `#mobileSourceInput` stays dormant in the hidden mobile markup.
 - Net cutover diff was **+155 / −8** (the 8 "deletions" are lines that gained `id=` attributes). Rollback = a single `git revert 619e309`.
 
-Validate editor edits with `_validate.py`. Block 1 (Mobile-UX IIFE) was a stable 33,371 chars through Phase 4; the Phase-5 editor rework (collapsible panel + map zoom) intentionally added a `window.createMapZoom*` API to it, so the new baseline is **34,471 chars**. The point of the check stands: an UNINTENDED change to Block 1's size means you disturbed it by accident.
+Validate editor edits with `npm run validate`. Block 1 (Mobile-UX IIFE) was a stable 33,371 chars through Phase 4; the Phase-5 editor rework (collapsible panel + map zoom) intentionally added a `window.createMapZoom*` API to it, so the new baseline is **34,471 chars**. The point of the check stands: an UNINTENDED change to Block 1's size means you disturbed it by accident.
 
 ## Arcade (Phase 2 — SHIPPED to branch, 2026-06-10)
 
@@ -99,7 +102,7 @@ First device test drove a gameplay overhaul of Find the State plus a second game
 - **Paint-as-you-play**: correct finds keep a cycling inline fill (`ARCADE_PAINT_COLORS`) for the run; the transient `--correct/--wrong/--reveal` classes win over it via `!important`. `arcadeClearPaint()` runs at run start only.
 - **Modes**: games may define `modes: { classic, shuffle }` + `defaultMode`. Shuffle samples WITH replacement (no back-to-back) so painting can't be gamed by elimination. Mode rides `?mode=` in share URLs; best-score keys are suffixed per mode (`classic` keeps the legacy unsuffixed key).
 - **Stat Duel** (`kind:'duel'`): two highlighted states, tap the one higher on a real ACS stat. Reuses `fetchCensusData` + the `duel:true` entries in `DATA_MAP_DATASETS` + the sessionStorage census cache. The run seed picks dataset AND pairs. Duel runs are async (data loads before round 1) and fail soft back to the hub if /api/census is down.
-- **TDZ gotcha (bit us once)**: the Arcade/GeoDraft block evaluates BEFORE `fipsToState` / `nonColorable` / `DATA_MAP_DATASETS` are declared. NEVER read them at the top level of that block — lazy accessors only (`arcadeStateNames()`, `arcadeDuelSets()`, `draftCategories()`). A top-level read throws a ReferenceError that kills the entire main block at load (blank map, dormant-mobile-bar symptom) and `node --check` can NOT catch it.
+- **TDZ gotcha (bit us once)**: the Arcade/GeoDraft block evaluates BEFORE `fipsToState` / `nonColorable` / `DATA_MAP_DATASETS` are declared. NEVER read them at the top level of that block — lazy accessors only (`arcadeStateNames()`, `arcadeDuelSets()`, `draftCategories()`). A top-level read throws a ReferenceError that kills the entire main block at load (blank map, dormant-mobile-bar symptom) and `npm run validate` (parse-only) can NOT catch it — this is exactly the class of bug `npm run smoke` exists to catch.
 
 ## GeoDraft (Phase 2b — same branch, 2026-06-10)
 

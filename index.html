@@ -3793,6 +3793,7 @@
       <header class="arcade-game-bar">
         <button type="button" class="arcade-back-btn" id="arcadeBackBtn" aria-label="Back to Arcade">←</button>
         <button type="button" class="arcade-help-btn" id="arcadeHelpBtn" aria-label="How to play" title="How to play">?</button>
+        <button type="button" class="arcade-help-btn" id="arcadeMuteBtn" aria-label="Toggle sound" title="Toggle sound" aria-pressed="false">🔊</button>
         <div class="arcade-prompt" id="arcadePrompt">Find the state</div>
         <div class="arcade-stats">
           <div class="arcade-stat"><span class="arcade-stat-label">Score</span><span class="arcade-stat-val" id="arcadeScore">0</span></div>
@@ -5453,6 +5454,30 @@
         medals: { bronze: 500, silver: 850, gold: 1150 },
         generator: (rng) => arcadePickStates(50, rng),
       },
+      'alphabet-race': {
+        id: 'alphabet-race',
+        name: 'Alphabet Race',
+        tagline: 'We name a letter. Tap any state that starts with it — no data, pure recall.',
+        playable: true,
+        kind: 'alpha',           // single tap, MANY valid targets (any unused state for the letter)
+        runLength: 10,
+        perPrompt: 8,
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+        generator: (rng) => arcadePickAlphabet(10, rng),
+      },
+      'distance-duel': {
+        id: 'distance-duel',
+        name: 'Distance Duel',
+        tagline: 'Two states, one anchor. Tap whichever sits CLOSER to it on the map.',
+        playable: true,
+        kind: 'distance',        // two contestants + an anchor; tap the geographically closer one
+        runLength: 10,
+        perPrompt: 9,
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+        generator: (rng) => arcadePickDistanceRounds(10, rng),
+      },
     };
 
     // Per-game directions. Shown automatically the first time you play each
@@ -5482,6 +5507,16 @@
         goal: 'Find all 50 states, as fast as you can.',
         steps: ['States are named one after another — tap each before its short timer.', 'One long 50-state run; misses just move you on.', 'Zoom for the tiny northeastern states.'],
         scoring: 'Keep your streak alive for big bonuses; chase your personal best.',
+      },
+      'alphabet-race': {
+        goal: 'Tap any state that starts with the letter we name.',
+        steps: ['A letter flashes — tap ANY state whose name starts with it.', 'Each correct answer must be a NEW state; 10 letters per run.', 'Miss reveals the states that would have worked. Wrong taps cost the round.'],
+        scoring: 'Faster answers and streaks score more — chase bronze / silver / gold. No data needed.',
+      },
+      'distance-duel': {
+        goal: 'Tap whichever of two states is CLOSER to the anchor state.',
+        steps: ['An anchor state is highlighted, plus two contestants.', 'Tap the contestant you think sits closer to the anchor on the map.', 'The closer one is revealed each round — 10 rounds. No data needed.'],
+        scoring: 'Speed and streaks boost your score — chase bronze / silver / gold.',
       },
     };
     function arcadeHowtoHTML(id) {
@@ -5551,6 +5586,75 @@
       }
       return pool.slice(0, n);
     }
+    // Alphabet Race: states whose name starts with a given letter (lazy — TDZ-safe).
+    function arcadeStatesByLetter(letter) {
+      return arcadeStateNames().filter(n => n.charAt(0) === letter);
+    }
+    // Pick N DISTINCT first-letters that each have at least one state. Distinct
+    // letters guarantee the run is always satisfiable (a state maps to exactly
+    // one letter, so used-states never collide across prompts).
+    function arcadePickAlphabet(n, rng) {
+      const seen = {};
+      arcadeStateNames().forEach(s => { seen[s.charAt(0)] = true; });
+      const letters = Object.keys(seen);
+      for (let i = letters.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const t = letters[i]; letters[i] = letters[j]; letters[j] = t;
+      }
+      return letters.slice(0, Math.min(n, letters.length));
+    }
+
+    // --- Distance Duel: per-state centroids from the cached topology --------
+    // Bounding-box centers in projected (Albers) units — exact distances aren't
+    // needed, only which contestant is RELATIVELY closer to the anchor. Computed
+    // once and cached. (Lazy: reads appState/fipsToState only at call time, so
+    // it never trips the Arcade-block TDZ.)
+    let _arcCentroids = null;
+    function arcadeStateCentroids() {
+      if (_arcCentroids) return _arcCentroids;
+      const topo = (typeof appState !== 'undefined') ? appState.topologyData : null;
+      if (!topo || typeof topojson === 'undefined') return null;
+      const feats = topojson.feature(topo, topo.objects.states).features;
+      const out = {};
+      const scan = (ring, box) => ring.forEach(p => {
+        if (p[0] < box.minX) box.minX = p[0]; if (p[0] > box.maxX) box.maxX = p[0];
+        if (p[1] < box.minY) box.minY = p[1]; if (p[1] > box.maxY) box.maxY = p[1];
+      });
+      feats.forEach(f => {
+        const name = fipsToState[String(f.id).padStart(2, '0')];
+        if (!name) return;
+        const box = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+        const g = f.geometry;
+        if (g.type === 'Polygon') g.coordinates.forEach(r => scan(r, box));
+        else if (g.type === 'MultiPolygon') g.coordinates.forEach(poly => poly.forEach(r => scan(r, box)));
+        if (isFinite(box.minX)) out[name] = { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
+      });
+      _arcCentroids = out;
+      return out;
+    }
+    function arcadeCentroidDist(cents, a, b) {
+      return Math.hypot(cents[a].x - cents[b].x, cents[a].y - cents[b].y);
+    }
+    // Build N rounds of { anchor, a, b }. Reject near-ties (closer/farther within
+    // ~18%) so every round has a defensibly correct answer. Seeded + deterministic.
+    function arcadePickDistanceRounds(n, rng) {
+      const cents = arcadeStateCentroids();
+      if (!cents) return [];
+      const names = Object.keys(cents).filter(nm => !nonColorable.has(nm));
+      const rounds = [];
+      let guard = 0;
+      while (rounds.length < n && guard++ < n * 60) {
+        const anchor = names[Math.floor(rng() * names.length)];
+        const a = names[Math.floor(rng() * names.length)];
+        const b = names[Math.floor(rng() * names.length)];
+        if (a === b || a === anchor || b === anchor) continue;
+        const da = arcadeCentroidDist(cents, anchor, a), db = arcadeCentroidDist(cents, anchor, b);
+        const hi = Math.max(da, db), lo = Math.min(da, db);
+        if (hi === 0 || lo / hi > 0.82) continue; // too close to call — skip
+        rounds.push({ anchor: anchor, a: a, b: b });
+      }
+      return rounds;
+    }
     // Sample N states WITH replacement (Shuffle mode). No immediate
     // back-to-back repeat, but a state can absolutely come up again later.
     function arcadePickShuffle(n, rng) {
@@ -5569,7 +5673,94 @@
     // color as you play, like a mini Create session.
     const ARCADE_PAINT_COLORS = ['#0EA5E9','#F97316','#22c55e','#a855f7','#eab308','#ec4899','#14b8a6','#f43f5e','#8b5cf6','#06b6d4','#84cc16','#fb923c'];
 
-    // --- State Capitals (50) — drives the State Capitals game --------------
+    // --- Game audio + haptics (synthesized, zero assets) -------------------
+    // A tiny WebAudio engine for the games — every sound is generated from
+    // oscillators, so it adds ZERO network/loading cost and works offline.
+    // Lazy-inits on the first user gesture (browsers block audio before one),
+    // honors a persisted mute toggle (tappymaps_sfx_muted), and degrades to a
+    // silent no-op if WebAudio is unavailable. Shared by Arcade + GeoDraft.
+    const SFX = (function () {
+      let ctx = null, master = null;
+      let muted = false;
+      try { muted = localStorage.getItem('tappymaps_sfx_muted') === '1'; } catch (_) {}
+
+      function ensure() {
+        if (ctx) return ctx;
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return null;
+          ctx = new AC();
+          master = ctx.createGain();
+          master.gain.value = 0.16;          // gentle overall ceiling
+          master.connect(ctx.destination);
+        } catch (_) { ctx = null; }
+        return ctx;
+      }
+      function tone(freq, dur, type, when, peak) {
+        const c = ensure(); if (!c || muted) return;
+        const t0 = c.currentTime + (when || 0);
+        const osc = c.createOscillator(), g = c.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, t0);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(peak || 0.5, t0 + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(t0); osc.stop(t0 + dur + 0.03);
+      }
+      function glide(f1, f2, dur, type) {
+        const c = ensure(); if (!c || muted) return;
+        const t0 = c.currentTime;
+        const osc = c.createOscillator(), g = c.createGain();
+        osc.type = type || 'triangle';
+        osc.frequency.setValueAtTime(f1, t0);
+        osc.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.5, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(g); g.connect(master);
+        osc.start(t0); osc.stop(t0 + dur + 0.03);
+      }
+      const api = {
+        // Resume the context on a user gesture (iOS needs this).
+        unlock() { const c = ensure(); if (c && c.state === 'suspended') c.resume(); },
+        isMuted() { return muted; },
+        toggleMute() {
+          muted = !muted;
+          try { localStorage.setItem('tappymaps_sfx_muted', muted ? '1' : '0'); } catch (_) {}
+          if (!muted) { api.unlock(); api.tap(); }  // little confirmation blip
+          return muted;
+        },
+        tap() { tone(330, 0.045, 'sine', 0, 0.22); },
+        correct(streak) {
+          const s = Math.max(0, Math.min(12, streak || 0));
+          tone(523 + s * 18, 0.12, 'sine', 0, 0.5);
+          tone(784 + s * 26, 0.12, 'sine', 0.04, 0.3);
+        },
+        streak(n) { // rising arpeggio at a streak milestone
+          const base = 523 + Math.min(8, n || 0) * 28;
+          [0, 0.07, 0.14].forEach((d, i) => tone(base * Math.pow(1.26, i), 0.11, 'triangle', d, 0.4));
+        },
+        wrong() { tone(196, 0.18, 'sawtooth', 0, 0.34); tone(146, 0.22, 'sawtooth', 0.05, 0.26); },
+        tick() { tone(880, 0.028, 'square', 0, 0.1); },
+        complete(medal) {
+          const tiers = { gold: [523, 659, 784, 1047], silver: [523, 659, 784], bronze: [523, 659], none: [440, 523] };
+          (tiers[medal] || tiers.none).forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.12, 0.5));
+        },
+        best() { glide(523, 1047, 0.4, 'triangle'); },
+      };
+      return api;
+    })();
+
+    // Mobile haptics — guarded no-ops on desktop / unsupported browsers.
+    const Haptic = {
+      light() { try { if (navigator.vibrate) navigator.vibrate(12); } catch (_) {} },
+      ok()    { try { if (navigator.vibrate) navigator.vibrate(22); } catch (_) {} },
+      err()   { try { if (navigator.vibrate) navigator.vibrate([28, 36, 28]); } catch (_) {} },
+      win()   { try { if (navigator.vibrate) navigator.vibrate([20, 40, 20, 40, 70]); } catch (_) {} },
+    };
+
+
     const STATE_CAPITALS = {
       'Alabama':'Montgomery','Alaska':'Juneau','Arizona':'Phoenix','Arkansas':'Little Rock',
       'California':'Sacramento','Colorado':'Denver','Connecticut':'Hartford','Delaware':'Dover',
@@ -5898,15 +6089,23 @@
       } else {
         const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
         AG.prompts = gen(rng);
+        // Distance Duel needs the cached topology to compute centroids; if it's
+        // not ready yet, fail soft back to the hub rather than start an empty run.
+        if (game.kind === 'distance' && AG.prompts.length < game.runLength) {
+          arcadeShowToast('Map still loading — try again in a moment', 'wrong');
+          arcadeShowHub();
+          return;
+        }
       }
 
       AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
+      AG.alphaUsed = new Set();   // Alphabet Race: states already claimed this run
 
       document.getElementById('arcadeHub').style.display = 'none';
       document.getElementById('arcadeGame').style.display = 'flex';
       document.getElementById('arcadeComplete').style.display = 'none';
       const group = document.getElementById('arcadeStatesGroup');
-      if (group) group.classList.toggle('is-duel', game.kind === 'duel');
+      if (group) group.classList.toggle('is-duel', game.kind === 'duel' || game.kind === 'distance');
       arcadeClearMarks();
       arcadeClearPaint();
       arcadeResetZoom();
@@ -5952,6 +6151,21 @@
         const entry = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Capital: ' + entry.capital + ' — tap the state';
         popText = entry.capital + '?';
+      } else if (kind === 'alpha') {
+        const letter = AG.prompts[AG.idx];
+        // Unused states that satisfy this letter — cached for scoring + reveal.
+        AG.alphaValid = arcadeStatesByLetter(letter).filter(s => !AG.alphaUsed.has(s));
+        if (prompt) prompt.textContent = 'Tap a state starting with “' + letter + '”';
+        popText = letter;
+      } else if (kind === 'distance') {
+        const r = AG.prompts[AG.idx];
+        if (prompt) prompt.textContent = 'Closer to ' + r.anchor + ' — tap your pick';
+        popText = r.a + ' or ' + r.b + '?';
+        const pa = arcadeStatePath(r.a), pb = arcadeStatePath(r.b);
+        if (pa) pa.classList.add('arcade-state--duel');
+        if (pb) pb.classList.add('arcade-state--duel');
+        const anc = arcadeStatePath(r.anchor);   // anchor glows but isn't tappable (not --duel)
+        if (anc) anc.classList.add('arcade-state--center');
       } else {
         const target = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Find: ' + target;
@@ -5973,6 +6187,7 @@
       const dur = AG.game.perPrompt * 1000;
       AG.deadline = Date.now() + dur;
       if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
+      let lastTick = 0;  // throttles the urgency tick to ~once/second in the low zone
       AG.timerId = setInterval(() => {
         const remain = AG.deadline - Date.now();
         const pct = Math.max(0, remain / dur) * 100;
@@ -5980,6 +6195,7 @@
           fill.style.width = pct + '%';
           fill.classList.toggle('is-low', pct < 25);
         }
+        if (pct < 25 && remain > 0 && Date.now() - lastTick > 600) { lastTick = Date.now(); SFX.tick(); }
         if (remain <= 0) arcadeTimeout(); // timeout = miss
       }, 90);
     }
@@ -5992,10 +6208,11 @@
     // Tap handler registered on every state path.
     function arcadeOnTap(name) {
       if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
+      SFX.unlock();  // first tap satisfies the browser audio-gesture requirement
       const kind = AG.game.kind;
-      if (kind === 'duel') {
-        const pair = AG.prompts[AG.idx];
-        if (name !== pair.a && name !== pair.b) return; // belt + CSS pointer-events braces
+      if (kind === 'duel' || kind === 'distance') {
+        const r = AG.prompts[AG.idx];
+        if (name !== r.a && name !== r.b) return; // belt + CSS pointer-events braces
         arcadeResolve(name);
         return;
       }
@@ -6025,6 +6242,8 @@
           arcadeResolveNeighbors(true, null);
         } else {
           arcadeShowToast('+' + s.perNeighbor + ' · ' + AG.nbFound.size + '/' + AG.nbNeeded.size, 'correct', 800);
+          SFX.correct(AG.nbFound.size);  // climbing pitch as the region fills in
+          Haptic.ok();
         }
       } else {
         arcadeResolveNeighbors(false, name);       // wrong tap ends the round
@@ -6051,12 +6270,16 @@
         AG.score += gained;
         AG.correct += 1;
         arcadeShowToast('All ' + total + ' borders! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''), 'correct', 1300);
+        SFX.streak(AG.streak);
+        Haptic.win();
       } else {
         AG.streak = 0;
         // Reveal the borders the player missed.
         AG.nbNeeded.forEach(n => { if (!AG.nbFound.has(n)) { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); } });
         if (wrongName) { const wp = arcadeStatePath(wrongName); if (wp) wp.classList.add('arcade-state--wrong'); }
         arcadeShowToast((wrongName ? wrongName + " doesn't border " + AG.nbCenter : 'Time!') + ' · ' + found + '/' + total, 'wrong', 1600);
+        SFX.wrong();
+        Haptic.err();
       }
       arcadeUpdateHud();
       AG.idx += 1;
@@ -6072,6 +6295,8 @@
       if (group) group.classList.add('is-locked');
 
       const isDuel = AG.game.kind === 'duel';
+      const isAlpha = AG.game.kind === 'alpha';
+      const isDistance = AG.game.kind === 'distance';
       let target, correct, valueLine = '';
       if (isDuel) {
         const pair = AG.prompts[AG.idx];
@@ -6080,6 +6305,18 @@
         correct = tapped === target || (tapped && AG.duelData[tapped] !== undefined && va === vb);
         const fmt = AG.duelDataset.format;
         valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
+      } else if (isDistance) {
+        const r = AG.prompts[AG.idx];
+        const cents = arcadeStateCentroids();
+        const da = arcadeCentroidDist(cents, r.anchor, r.a), db = arcadeCentroidDist(cents, r.anchor, r.b);
+        target = (da <= db) ? r.a : r.b;   // the closer contestant wins
+        correct = tapped === target;
+        valueLine = target + ' is closer to ' + r.anchor;
+      } else if (isAlpha) {
+        // Many valid answers: any UNUSED state starting with the prompt letter.
+        const letter = AG.prompts[AG.idx];
+        correct = !!(tapped && tapped.charAt(0) === letter && !AG.alphaUsed.has(tapped));
+        target = tapped; // on a correct tap, paint the state they chose
       } else {
         target = arcadeSingleTarget(AG.prompts[AG.idx]); // string, or {state,capital}.state
         correct = tapped === target;
@@ -6096,6 +6333,7 @@
         const gained = s.base + timeBonus + streakBonus;
         AG.score += gained;
         AG.correct += 1;
+        if (isAlpha) AG.alphaUsed.add(target); // claim it so it can't be reused
         const tp = arcadeStatePath(target);
         if (tp) {
           tp.classList.add('arcade-state--correct');
@@ -6105,25 +6343,42 @@
           tp.classList.add('arcade-state--painted');
           AG.paintIdx += 1;
         }
-        arcadeShowToast('+' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '') + (valueLine ? ' · ' + valueLine : ''), 'correct', valueLine ? 1500 : 1100);
+        const okLine = isAlpha ? target + '!  +' + gained : '+' + gained;
+        arcadeShowToast(okLine + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '') + (valueLine ? ' · ' + valueLine : ''), 'correct', valueLine ? 1500 : 1100);
+        if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak);
+        Haptic.ok();
       } else {
         AG.streak = 0;
-        const tp = arcadeStatePath(target);
-        if (tp) tp.classList.add('arcade-state--reveal');
-        if (tapped && tapped !== target) {
-          const wp = arcadeStatePath(tapped);
-          if (wp) wp.classList.add('arcade-state--wrong');
-        }
-        if (isDuel) {
-          arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
+        if (isAlpha) {
+          // No single answer — reveal every state that WOULD have worked.
+          (AG.alphaValid || []).forEach(n => { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); });
+          if (tapped) { const wp = arcadeStatePath(tapped); if (wp) wp.classList.add('arcade-state--wrong'); }
+          const hint = (AG.alphaValid || []).slice(0, 3).join(', ');
+          arcadeShowToast((tapped ? tapped + " doesn't start with " + AG.prompts[AG.idx] : 'Time!') + (hint ? ' · ' + hint : ''), 'wrong', 1700);
         } else {
-          arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
+          const tp = arcadeStatePath(target);
+          if (tp) tp.classList.add('arcade-state--reveal');
+          if (tapped && tapped !== target) {
+            const wp = arcadeStatePath(tapped);
+            if (wp) wp.classList.add('arcade-state--wrong');
+          }
+          if (isDuel || isDistance) {
+            arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
+          } else {
+            arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
+          }
         }
+        SFX.wrong();
+        Haptic.err();
       }
       arcadeUpdateHud();
       AG.idx += 1;
-      // Duel reveals show real values — give them a beat longer to read.
-      AG.advanceId = setTimeout(arcadeNextPrompt, isDuel ? (correct ? 1100 : 1600) : (correct ? 650 : 1150));
+      // Duel reveals show real values, Alpha reveals a list — give misses a
+      // beat longer to read.
+      const advance = (isDuel || isDistance) ? (correct ? 1100 : 1600)
+        : isAlpha ? (correct ? 750 : 1600)
+        : (correct ? 650 : 1150);
+      AG.advanceId = setTimeout(arcadeNextPrompt, advance);
     }
 
     // --- localStorage best score (anon; signed-in sync is a later phase) ---
@@ -6154,6 +6409,16 @@
       const isBest = !prev || AG.score > prev.score;
       if (isBest) {
         try { localStorage.setItem(arcadeBestKey(game.id, AG.mode), JSON.stringify({ score: AG.score, medal: medal.key })); } catch (_) {}
+      }
+
+      // Juice: medal-tiered fanfare, a rising flourish + confetti on a new best,
+      // and a celebratory buzz. Confetti is already loaded (CDN script).
+      SFX.complete(medal.key);
+      if (isBest) { setTimeout(() => SFX.best(), 520); Haptic.win(); }
+      else if (medal.key === 'gold') { Haptic.win(); }
+      if ((isBest || medal.key === 'gold') && typeof confetti === 'function') {
+        confetti({ particleCount: 90, spread: 72, origin: { x: 0.5, y: 0.5 } });
+        if (medal.key === 'gold') setTimeout(() => confetti({ particleCount: 70, spread: 80, origin: { x: 0.5, y: 0.4 } }), 220);
       }
 
       const modeLabel = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].label : '';
@@ -6272,6 +6537,16 @@
       onClick('arcadeBackBtn', () => Router.navigate('/games/arcade'));
       onClick('arcadeToHub', () => Router.navigate('/games/arcade'));
       onClick('arcadeHelpBtn', () => { if (AG.game) arcadeShowHowto(AG.game, true); });
+      const muteBtn = document.getElementById('arcadeMuteBtn');
+      if (muteBtn) {
+        const paint = () => {
+          const m = SFX.isMuted();
+          muteBtn.textContent = m ? '🔇' : '🔊';
+          muteBtn.setAttribute('aria-pressed', m ? 'true' : 'false');
+        };
+        paint();
+        muteBtn.addEventListener('click', () => { SFX.toggleMute(); paint(); });
+      }
       onClick('arcadePlayAgain', () => { if (AG.game) arcadeStartRun(AG.game.id, null, AG.mode); });
       onClick('arcadeZoomIn', () => arcadeZoomBy(1.4));
       onClick('arcadeZoomOut', () => arcadeZoomBy(1 / 1.4));
@@ -6642,6 +6917,7 @@
         p.style.fill = (who === 'you') ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR;
         p.classList.add('draft-state--taken');
       }
+      if (who === 'you') { SFX.unlock(); SFX.tap(); Haptic.light(); }
       draftRenderRosters();
       if (DG.youPicks.length === DG.picksPerSide && DG.aiPicks.length === DG.picksPerSide) {
         draftRevealRound();
@@ -6742,6 +7018,12 @@
         + ' · match seed ' + DG.seed);
       const status = document.getElementById('draftShareStatus');
       if (status) status.textContent = '';
+      // Juice: victory fanfare + buzz + confetti when you take the match.
+      SFX.complete(won ? 'gold' : (drew ? 'bronze' : 'none'));
+      if (won) {
+        Haptic.win();
+        if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 75, origin: { x: 0.5, y: 0.5 } });
+      }
       // Clinch burst: wash the whole map in the winner's team colour, then bring
       // up the result card (§7's "big team-colour burst across the map").
       const burstColor = drew ? null : (won ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR);
@@ -6988,6 +7270,7 @@
       (who === 'you' ? DT.youPicks : DT.aiPicks).push(name);
       const p = draftTerrStatePath(name);
       if (p) { p.style.fill = (who === 'you') ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR; p.classList.add('draft-state--taken'); }
+      if (who === 'you') { SFX.unlock(); SFX.tap(); Haptic.light(); }
       draftTerrRenderRosters();
       if (DT.youPicks.length === 25 && DT.aiPicks.length === 25) {
         DT.phase = 'reveal';
@@ -7072,6 +7355,12 @@
       const win = you > ai, tie = you === ai;
       draftSet('draftTerrCompleteTitle', win ? 'You control the map!' : (tie ? 'Split territory — a draw.' : 'The AI claimed the map.'));
       draftSet('draftTerrCompleteDetail', 'Categories: ' + you + (win ? ' — ' + ai + ' AI' : ' — ' + ai + ' AI') + '. 3-category territory draft.');
+      // Juice: fanfare + buzz + confetti on a map-control win.
+      SFX.complete(win ? 'gold' : (tie ? 'bronze' : 'none'));
+      if (win) {
+        Haptic.win();
+        if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 75, origin: { x: 0.5, y: 0.5 } });
+      }
       // Clinch burst — color all states by winner
       const burstColor = win ? DRAFT_YOU_COLOR : (tie ? '#64748b' : DRAFT_AI_COLOR);
       const paths = Array.from(document.querySelectorAll('#draftTerrStatesGroup .draft-state:not(.draft-state--dc)'));

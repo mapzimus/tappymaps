@@ -2538,13 +2538,21 @@
         color: var(--text, #f0f9ff);
         display: flex;
         flex-direction: column;
-        min-height: 100vh;
+        /* Definite height (not min-height) so the flex chain distributes it and
+           the map <svg> fills its slot instead of falling back to its intrinsic
+           ~1.42 aspect height — which on wide desktops made #arcadeGame taller
+           than the viewport and pushed the how-to card's Start button off-screen. */
+        height: 100dvh;
+        min-height: 0;
+        overflow: hidden;
         box-sizing: border-box;
       }
 
       /* --- Arcade hub (tile grid) --- */
       #arcadeHub {
         flex: 1;
+        min-height: 0;
+        overflow-y: auto;       /* tiles + daily card can exceed a short viewport now that #modeArcade is height-capped */
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -2639,7 +2647,7 @@
       .arcade-hub-footer a:hover { text-decoration: underline; }
 
       /* --- Arcade game shell --- */
-      #arcadeGame { flex: 1; display: flex; flex-direction: column; position: relative; }
+      #arcadeGame { flex: 1; min-height: 0; display: flex; flex-direction: column; position: relative; }
       .arcade-game-bar {
         display: flex; align-items: center; gap: 12px;
         padding: 10px 14px;

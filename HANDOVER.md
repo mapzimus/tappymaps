@@ -4,18 +4,28 @@
 
 ---
 
-## Where we are right now (2026-05-29)
+## Where we are right now (2026-06-13)
 
 **Production:** https://tappymaps.com — live, stable, auto-deploys on every push to `master` via Vercel.
 
-**Reimagining status:**
-- **Phase 0 (Foundation + Audit Fixes)** — SHIPPED 2026-05-24. All 10 punch-list items live.
-- **Tester mode** — LIVE since 2026-05-23. Auth UI hidden, access code `tap26` unlocks Pro. REMOVE BEFORE PUBLIC LAUNCH.
-- **Source field autofill defeat** — LIVE since 2026-05-25. Three-layer fix (HTML + CSS + JS) prevents Chrome from autofilling the user's email into the Source citation field.
-- **Phase 1 (Mode router + Hub + Create rebuild)** — SHIPPED 2026-05-29 (cutover commit `619e309`). The editor now lives at `/design/make`; `/` is the Hub. Verified across desktop + mobile portrait/landscape. See the "Reimagining — Phase 1 shipped" section below.
-- **Phase 2 (Arcade engine + Find the State)** — BUILT 2026-06-10 on branch `claude/tappymaps-setup-launch-ceiqp1` (draft PR). `/games/arcade` is now a real mode: manifest-driven game shell + the first playable game (Find the State), seeded-share URLs, anon localStorage high scores, hub tile grid. Logic unit-tested against the real source; **needs a real-browser/device pass before merge to `master`** (no headless Chrome in the build env). Writeup: `docs/superpowers/plans/2026-06-10-tappymaps-phase-2-arcade.md`.
+**Engineering framework (NEW — 2026-06-13):** The project now has a real safety net.
+- `scripts/validate.mjs` — cross-platform JS-block validator (replaces the old gitignored Windows-only `_validate.py`). `npm run validate`.
+- `scripts/smoke.mjs` — Playwright boot of every router mode, asserts zero console/page errors. `npm run smoke` (skips cleanly if Playwright absent). This is the "never trust static analysis" insurance — it caught a real `window.Router` vs bare-`Router` bug during its own build.
+- `.github/workflows/ci.yml` — **advisory** CI (runs validate on every push/PR, reports red/green, does NOT block merges). Validate-only to stay fast; smoke stays local.
+- `npm run validate | smoke | test` wired in `package.json`.
+- Dev branch `claude/tappymaps-setup-launch-ceiqp1` was reset onto `master` to end the squash-merge "reconcile" treadmill — it now tracks master 1:1.
 
-**Your next action:** Verify Phase 2 Arcade in a real browser (load `/games/arcade`, play Find the State end-to-end, check timer/toasts/medal/seeded-share). Once green, merge the PR. Then Phase 3 (Distribution: embeds + OG renderer + Devvit) or Phase 4 (Gallery + more games) — each gets its own spec → plan → build. Still open before public launch: remove Tester Mode (`tap26`), wire Arcade sign-in score sync, promote Find the State to landscape-required.
+**Reimagining status:**
+- **Phase 0 (Foundation + Audit Fixes)** — SHIPPED 2026-05-24.
+- **Tester mode** — REMOVED pre-launch. Pro is real Stripe + the `ADMIN_EMAILS` gate only. (`/tap-in` + the Create Upgrade access-code form are inert vestiges to retire when convenient.)
+- **Source field autofill defeat** — LIVE (three-layer HTML+CSS+JS).
+- **Phase 1 (Mode router + Hub + Create rebuild)** — SHIPPED 2026-05-29 (cutover `619e309`). Editor at `/design/make`; `/` is the Hub.
+- **Phase 2 (Arcade)** — SHIPPED. `/games/arcade`: 5 playable games (Find the State, Stat Duel, State Capitals, Neighbor Challenge, Speed Run) + per-game How-to-play. Manifest-driven, seeded-share, anon localStorage scores.
+- **Phase 2b (GeoDraft)** — SHIPPED + enhanced. `/games/draft`: Category Draft (best-of-5 vs AI), **Territory Draft** (claim all 50, 3 hidden categories score it), Practice. 50 categories, **difficulty selector** (Easy/Normal/Hard), tiered rounds, reputation-biased AI, dramatic reveal + clinch burst (PR #17).
+- **Phase 3 (Distribution)** — Embed mode shipped. `/embed#<state>` (read-only map) + `/api/render` OG renderer. **Editor embed (PR #18):** `/design/make?embed=1` (or any cross-origin iframe) → clean self-contained editor; link-lock keeps the frame on the editor. First external consumer: maxwellhowegis.com (their PR #36).
+- **Phase 4 (Gallery)** — MVP shipped. `/design/gallery` "My Maps" from localStorage with `/api/render` thumbnails; Recent/Featured await the Supabase backend.
+
+**Your next action:** Foundation is in place — feature work can now lean on `npm run validate` + `npm run smoke` before every push. Open enhancement tracks: more Arcade games (Alphabet Race, Distance Duel, Rank It — see `docs/superpowers/specs/2026-06-11-games-design.md`), GeoDraft Bucket-C categories, Gallery backend (Supabase `user_maps` + publish/moderation), and crawler-facing OG share routes. Each gets its own spec → plan → build.
 
 ---
 

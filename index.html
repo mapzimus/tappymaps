@@ -5454,6 +5454,18 @@
         medals: { bronze: 500, silver: 850, gold: 1150 },
         generator: (rng) => arcadePickStates(50, rng),
       },
+      'alphabet-race': {
+        id: 'alphabet-race',
+        name: 'Alphabet Race',
+        tagline: 'We name a letter. Tap any state that starts with it — no data, pure recall.',
+        playable: true,
+        kind: 'alpha',           // single tap, MANY valid targets (any unused state for the letter)
+        runLength: 10,
+        perPrompt: 8,
+        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        medals: { bronze: 150, silver: 280, gold: 400 },
+        generator: (rng) => arcadePickAlphabet(10, rng),
+      },
     };
 
     // Per-game directions. Shown automatically the first time you play each
@@ -5483,6 +5495,11 @@
         goal: 'Find all 50 states, as fast as you can.',
         steps: ['States are named one after another — tap each before its short timer.', 'One long 50-state run; misses just move you on.', 'Zoom for the tiny northeastern states.'],
         scoring: 'Keep your streak alive for big bonuses; chase your personal best.',
+      },
+      'alphabet-race': {
+        goal: 'Tap any state that starts with the letter we name.',
+        steps: ['A letter flashes — tap ANY state whose name starts with it.', 'Each correct answer must be a NEW state; 10 letters per run.', 'Miss reveals the states that would have worked. Wrong taps cost the round.'],
+        scoring: 'Faster answers and streaks score more — chase bronze / silver / gold. No data needed.',
       },
     };
     function arcadeHowtoHTML(id) {
@@ -5551,6 +5568,23 @@
         const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
       }
       return pool.slice(0, n);
+    }
+    // Alphabet Race: states whose name starts with a given letter (lazy — TDZ-safe).
+    function arcadeStatesByLetter(letter) {
+      return arcadeStateNames().filter(n => n.charAt(0) === letter);
+    }
+    // Pick N DISTINCT first-letters that each have at least one state. Distinct
+    // letters guarantee the run is always satisfiable (a state maps to exactly
+    // one letter, so used-states never collide across prompts).
+    function arcadePickAlphabet(n, rng) {
+      const seen = {};
+      arcadeStateNames().forEach(s => { seen[s.charAt(0)] = true; });
+      const letters = Object.keys(seen);
+      for (let i = letters.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const t = letters[i]; letters[i] = letters[j]; letters[j] = t;
+      }
+      return letters.slice(0, Math.min(n, letters.length));
     }
     // Sample N states WITH replacement (Shuffle mode). No immediate
     // back-to-back repeat, but a state can absolutely come up again later.
@@ -5989,6 +6023,7 @@
       }
 
       AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
+      AG.alphaUsed = new Set();   // Alphabet Race: states already claimed this run
 
       document.getElementById('arcadeHub').style.display = 'none';
       document.getElementById('arcadeGame').style.display = 'flex';
@@ -6040,6 +6075,12 @@
         const entry = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Capital: ' + entry.capital + ' — tap the state';
         popText = entry.capital + '?';
+      } else if (kind === 'alpha') {
+        const letter = AG.prompts[AG.idx];
+        // Unused states that satisfy this letter — cached for scoring + reveal.
+        AG.alphaValid = arcadeStatesByLetter(letter).filter(s => !AG.alphaUsed.has(s));
+        if (prompt) prompt.textContent = 'Tap a state starting with “' + letter + '”';
+        popText = letter;
       } else {
         const target = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Find: ' + target;
@@ -6169,6 +6210,7 @@
       if (group) group.classList.add('is-locked');
 
       const isDuel = AG.game.kind === 'duel';
+      const isAlpha = AG.game.kind === 'alpha';
       let target, correct, valueLine = '';
       if (isDuel) {
         const pair = AG.prompts[AG.idx];
@@ -6177,6 +6219,11 @@
         correct = tapped === target || (tapped && AG.duelData[tapped] !== undefined && va === vb);
         const fmt = AG.duelDataset.format;
         valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
+      } else if (isAlpha) {
+        // Many valid answers: any UNUSED state starting with the prompt letter.
+        const letter = AG.prompts[AG.idx];
+        correct = !!(tapped && tapped.charAt(0) === letter && !AG.alphaUsed.has(tapped));
+        target = tapped; // on a correct tap, paint the state they chose
       } else {
         target = arcadeSingleTarget(AG.prompts[AG.idx]); // string, or {state,capital}.state
         correct = tapped === target;
@@ -6193,6 +6240,7 @@
         const gained = s.base + timeBonus + streakBonus;
         AG.score += gained;
         AG.correct += 1;
+        if (isAlpha) AG.alphaUsed.add(target); // claim it so it can't be reused
         const tp = arcadeStatePath(target);
         if (tp) {
           tp.classList.add('arcade-state--correct');
@@ -6202,29 +6250,42 @@
           tp.classList.add('arcade-state--painted');
           AG.paintIdx += 1;
         }
-        arcadeShowToast('+' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '') + (valueLine ? ' · ' + valueLine : ''), 'correct', valueLine ? 1500 : 1100);
+        const okLine = isAlpha ? target + '!  +' + gained : '+' + gained;
+        arcadeShowToast(okLine + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '') + (valueLine ? ' · ' + valueLine : ''), 'correct', valueLine ? 1500 : 1100);
         if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak);
         Haptic.ok();
       } else {
         AG.streak = 0;
-        const tp = arcadeStatePath(target);
-        if (tp) tp.classList.add('arcade-state--reveal');
-        if (tapped && tapped !== target) {
-          const wp = arcadeStatePath(tapped);
-          if (wp) wp.classList.add('arcade-state--wrong');
-        }
-        if (isDuel) {
-          arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
+        if (isAlpha) {
+          // No single answer — reveal every state that WOULD have worked.
+          (AG.alphaValid || []).forEach(n => { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); });
+          if (tapped) { const wp = arcadeStatePath(tapped); if (wp) wp.classList.add('arcade-state--wrong'); }
+          const hint = (AG.alphaValid || []).slice(0, 3).join(', ');
+          arcadeShowToast((tapped ? tapped + " doesn't start with " + AG.prompts[AG.idx] : 'Time!') + (hint ? ' · ' + hint : ''), 'wrong', 1700);
         } else {
-          arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
+          const tp = arcadeStatePath(target);
+          if (tp) tp.classList.add('arcade-state--reveal');
+          if (tapped && tapped !== target) {
+            const wp = arcadeStatePath(tapped);
+            if (wp) wp.classList.add('arcade-state--wrong');
+          }
+          if (isDuel) {
+            arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
+          } else {
+            arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
+          }
         }
         SFX.wrong();
         Haptic.err();
       }
       arcadeUpdateHud();
       AG.idx += 1;
-      // Duel reveals show real values — give them a beat longer to read.
-      AG.advanceId = setTimeout(arcadeNextPrompt, isDuel ? (correct ? 1100 : 1600) : (correct ? 650 : 1150));
+      // Duel reveals show real values, Alpha reveals a list — give misses a
+      // beat longer to read.
+      const advance = isDuel ? (correct ? 1100 : 1600)
+        : isAlpha ? (correct ? 750 : 1600)
+        : (correct ? 650 : 1150);
+      AG.advanceId = setTimeout(arcadeNextPrompt, advance);
     }
 
     // --- localStorage best score (anon; signed-in sync is a later phase) ---

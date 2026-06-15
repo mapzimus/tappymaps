@@ -3983,7 +3983,7 @@
         </a>
         <a class="draft-card" href="/games/draft/territory" data-route>
           <div class="draft-card-name">Territory Draft</div>
-          <p class="draft-card-tag">25 picks each — claim the whole map blind. Then 3 hidden categories score your territory. No timer. Pure strategy.</p>
+          <p class="draft-card-tag">25 picks each — claim the whole map blind. Then 3 hidden categories score your territory. Pure strategy, against the clock.</p>
           <span class="draft-card-cta">Claim the map →</span>
         </a>
         <a class="draft-card" href="/games/draft/practice" data-route>
@@ -4133,7 +4133,7 @@
           <h3>Territory Draft</h3>
           <div class="draft-howto-sec">
             <h4>The Setup</h4>
-            <p>You and the AI alternate picks until all 50 states are claimed — 25 each. You pick first. No timer.</p>
+            <p>You and the AI alternate picks until all 50 states are claimed — 25 each. You pick first — a pick timer keeps it moving (run out and a random state is claimed for you).</p>
           </div>
           <div class="draft-howto-sec">
             <h4>The Categories</h4>
@@ -6261,7 +6261,7 @@
     // returns, so it drops straight into arcadePickPairs / arcadePickQuads. Lazy
     // read of DRAFT_AREA (declared later in the block) keeps it TDZ-safe.
     function arcadeStaticFallbackSet() {
-      return { dataset: { title: 'Land Area (sq mi)', format: 'number' }, data: DRAFT_AREA };
+      return { dataset: { title: 'Land Area (offline)', format: 'number' }, data: DRAFT_AREA };
     }
 
     async function arcadeStartRun(gameId, seed, mode, isDaily) {
@@ -6301,6 +6301,15 @@
           AG.prompts = (game.kind === 'rank')
             ? arcadePickQuads(game.runLength, rng, pool, fb.data)
             : arcadePickPairs(game.runLength, rng, pool, fb.data);
+          // Mirror the live path's sanity guard: if even the static set can't
+          // fill a run (e.g. a future pool-type fallback), bounce cleanly
+          // instead of crashing mid-run on an undefined prompt.
+          if (AG.prompts.length < game.runLength) {
+            AG.loading = false;
+            arcadeShowToast('Live data offline — try again later', 'info');
+            arcadeShowHub();
+            return;
+          }
           arcadeShowToast('Live data offline — playing on land area', 'info', 1600);
         }
         AG.loading = false;
@@ -6460,7 +6469,7 @@
         p.style.fill = ARCADE_PAINT_COLORS[(AG.rankPicked.length - 1) % ARCADE_PAINT_COLORS.length];
       }
       SFX.tap(); Haptic.light();
-      arcadeShowToast('#' + AG.rankPicked.length + ' · ' + name, 'correct', 700);
+      arcadeShowToast('#' + AG.rankPicked.length + ' · ' + name, 'info', 700); // placement ack, not a verdict — no ✓
       if (AG.rankPicked.length === 4) arcadeResolveRank();
     }
 
@@ -7853,6 +7862,7 @@
       if (who === 'you') { SFX.unlock(); SFX.tap(); Haptic.light(); }
       draftTerrRenderRosters();
       if (DT.youPicks.length === 25 && DT.aiPicks.length === 25) {
+        draftTerrStopPickTimer();   // defensive: don't rely on the AI-makes-50th invariant
         DT.phase = 'reveal';
         setTimeout(draftTerrShowReveal, 500);
         return;
@@ -8016,11 +8026,12 @@
       onClick('draftTerrZoomIn', () => draftTerrZoom.zoomBy(1.4));
       onClick('draftTerrZoomOut', () => draftTerrZoom.zoomBy(1 / 1.4));
       onClick('draftTerrZoomReset', () => draftTerrZoom.reset(true));
-      onClick('draftTerrHelpBtn', () => { document.getElementById('draftTerrHowto').style.display = 'flex'; });
+      onClick('draftTerrHelpBtn', () => { draftTerrStopPickTimer(); document.getElementById('draftTerrHowto').style.display = 'flex'; });
       onClick('draftTerrHowtoClose', () => {
         document.getElementById('draftTerrHowto').style.display = 'none';
         try { localStorage.setItem('tappymaps_terr_seen', '1'); } catch (_) {}
         if (DT.phase === 'pick' && DT.youPicks.length === 0 && DT.aiPicks.length === 0) draftTerrBeginPick();
+        else if (DT.phase === 'pick' && DT.turn === 'you') draftTerrStartPickTimer(); // resume after reading help mid-match
       });
     })();
 

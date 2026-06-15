@@ -2822,10 +2822,14 @@
       }
       .arcade-state:hover { fill: #38516e; }
       .arcade-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
-      .arcade-state--correct { fill: var(--success, #22c55e) !important; }
-      .arcade-state--wrong { fill: var(--error, #ef4444) !important; }
+      /* Colorblind: pair every color with an outline TEXTURE so red↔green is
+         never the only signal — solid thin = your correct tap, solid thick =
+         the revealed answer, dashed = a wrong tap. */
+      .arcade-state--correct { fill: var(--success, #22c55e) !important; stroke: #fff !important; stroke-width: 1.5 !important; }
+      .arcade-state--wrong { fill: var(--error, #ef4444) !important; stroke: #fff !important; stroke-width: 2 !important; stroke-dasharray: 5 3 !important; }
       .arcade-state--reveal {
         fill: var(--success, #22c55e) !important;
+        stroke: #fff !important; stroke-width: 2.5 !important;
         animation: arcadePulse .9s ease;
       }
       @keyframes arcadePulse { 0% { opacity: 0.4; } 100% { opacity: 1; } }
@@ -2883,6 +2887,7 @@
       .arcade-toast.is-show { opacity: 1; transform: translateX(-50%) translateY(0); }
       .arcade-toast.is-correct { border-color: var(--success, #22c55e); color: var(--success, #4ade80); }
       .arcade-toast.is-wrong { border-color: var(--error, #ef4444); color: var(--error, #f87171); }
+      .arcade-toast.is-info { border-color: var(--arcade, #F97316); color: var(--text, #e5e7eb); }
 
       /* --- Completion overlay --- */
       .arcade-complete {
@@ -6218,7 +6223,10 @@
     function arcadeShowToast(text, kind, ms) {
       const t = document.getElementById('arcadeToast');
       if (!t) return;
-      t.textContent = text;
+      // Colorblind cue: a ✓/✗ glyph carries right/wrong without leaning on the
+      // green/red border alone. Status toasts use kind 'info' (no verdict glyph).
+      const glyph = kind === 'correct' ? '✓ ' : kind === 'wrong' ? '✗ ' : '';
+      t.textContent = glyph + text;
       t.className = 'arcade-toast is-show' + (kind ? ' is-' + kind : '');
       clearTimeout(AG._toastId);
       AG._toastId = setTimeout(() => { t.className = 'arcade-toast'; }, ms || 1100);
@@ -6238,7 +6246,7 @@
     async function arcadeStartRun(gameId, seed, mode, isDaily) {
       const game = ARCADE_GAMES[gameId];
       if (!game || !game.playable) { arcadeShowHub(); return; }
-      if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'wrong'); return; }
+      if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'info'); return; }
       if (AG.loading) return;
 
       AG.game = game;
@@ -6251,7 +6259,7 @@
         const sets = arcadeDuelSets();
         const dataset = sets[Math.floor(rng() * sets.length)];
         AG.loading = true;
-        arcadeShowToast('Loading live Census data…', 'correct');
+        arcadeShowToast('Loading live Census data…', 'info');
         try {
           const data = await fetchCensusData(dataset);
           const pool = arcadeStateNames().filter(s => isFinite(data[s]));
@@ -6264,7 +6272,7 @@
         } catch (err) {
           AG.loading = false;
           console.error('Census-data game load failed:', err);
-          arcadeShowToast('Live data unavailable right now — try another game', 'wrong');
+          arcadeShowToast('Live data unavailable right now — try another game', 'info');
           arcadeShowHub();
           return;
         }
@@ -6275,7 +6283,7 @@
         // Distance Duel needs the cached topology to compute centroids; if it's
         // not ready yet, fail soft back to the hub rather than start an empty run.
         if (game.kind === 'distance' && AG.prompts.length < game.runLength) {
-          arcadeShowToast('Map still loading — try again in a moment', 'wrong');
+          arcadeShowToast('Map still loading — try again in a moment', 'info');
           arcadeShowHub();
           return;
         }

@@ -5,6 +5,7 @@
   "scripts": {
     "validate": "node scripts/validate.mjs",
     "smoke": "node scripts/smoke.mjs",
+    "sim": "node scripts/sim.mjs",
     "test": "node scripts/validate.mjs"
   },
   "dependencies": {

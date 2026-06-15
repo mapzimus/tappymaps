@@ -2822,10 +2822,14 @@
       }
       .arcade-state:hover { fill: #38516e; }
       .arcade-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
-      .arcade-state--correct { fill: var(--success, #22c55e) !important; }
-      .arcade-state--wrong { fill: var(--error, #ef4444) !important; }
+      /* Colorblind: pair every color with an outline TEXTURE so red↔green is
+         never the only signal — solid thin = your correct tap, solid thick =
+         the revealed answer, dashed = a wrong tap. */
+      .arcade-state--correct { fill: var(--success, #22c55e) !important; stroke: #fff !important; stroke-width: 1.5 !important; }
+      .arcade-state--wrong { fill: var(--error, #ef4444) !important; stroke: #fff !important; stroke-width: 2 !important; stroke-dasharray: 5 3 !important; }
       .arcade-state--reveal {
         fill: var(--success, #22c55e) !important;
+        stroke: #fff !important; stroke-width: 2.5 !important;
         animation: arcadePulse .9s ease;
       }
       @keyframes arcadePulse { 0% { opacity: 0.4; } 100% { opacity: 1; } }
@@ -2883,6 +2887,7 @@
       .arcade-toast.is-show { opacity: 1; transform: translateX(-50%) translateY(0); }
       .arcade-toast.is-correct { border-color: var(--success, #22c55e); color: var(--success, #4ade80); }
       .arcade-toast.is-wrong { border-color: var(--error, #ef4444); color: var(--error, #f87171); }
+      .arcade-toast.is-info { border-color: var(--arcade, #F97316); color: var(--text, #e5e7eb); }
 
       /* --- Completion overlay --- */
       .arcade-complete {
@@ -3978,7 +3983,7 @@
         </a>
         <a class="draft-card" href="/games/draft/territory" data-route>
           <div class="draft-card-name">Territory Draft</div>
-          <p class="draft-card-tag">25 picks each — claim the whole map blind. Then 3 hidden categories score your territory. No timer. Pure strategy.</p>
+          <p class="draft-card-tag">25 picks each — claim the whole map blind. Then 3 hidden categories score your territory. Pure strategy, against the clock.</p>
           <span class="draft-card-cta">Claim the map →</span>
         </a>
         <a class="draft-card" href="/games/draft/practice" data-route>
@@ -4066,6 +4071,7 @@
           <span class="ai">AI <span id="draftTerrCountAi">0</span></span>
         </div>
       </header>
+      <div class="arcade-timer-track"><div class="arcade-timer-fill" id="draftTerrTimerFill"></div></div>
       <div class="draft-terr-main">
         <div class="draft-terr-map-wrap" id="draftTerrMapWrap">
           <svg id="draftTerrMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap a state to claim it"><g id="draftTerrStatesGroup" transform="translate(5, -20) scale(0.95)"></g></svg>
@@ -4114,8 +4120,10 @@
           <p class="draft-complete-detail" id="draftTerrCompleteDetail"></p>
           <div class="draft-complete-actions">
             <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrPlayAgain">Play again</button>
+            <button type="button" class="arcade-btn" id="draftTerrShareBtn">Share this match</button>
             <button type="button" class="arcade-btn" id="draftTerrToHub">GeoDraft home</button>
           </div>
+          <p class="arcade-share-status" id="draftTerrShareStatus" aria-live="polite"></p>
         </div>
       </div>
 
@@ -4125,7 +4133,7 @@
           <h3>Territory Draft</h3>
           <div class="draft-howto-sec">
             <h4>The Setup</h4>
-            <p>You and the AI alternate picks until all 50 states are claimed — 25 each. You pick first. No timer.</p>
+            <p>You and the AI alternate picks until all 50 states are claimed — 25 each. You pick first — a pick timer keeps it moving (run out and a random state is claimed for you).</p>
           </div>
           <div class="draft-howto-sec">
             <h4>The Categories</h4>
@@ -5563,7 +5571,7 @@
         runLength: 50,
         perPrompt: 5,
         scoring: { base: 10, timeBonusMax: 12, streakThreshold: 5, streakStep: 3, streakCap: 40 },
-        medals: { bronze: 500, silver: 1100, gold: 1600 },
+        medals: { bronze: 500, silver: 1200, gold: 2100 }, // retuned for streak-halving inflation — see scripts/sim.mjs
         generator: (rng) => arcadePickStates(50, rng),
       },
       'alphabet-race': {
@@ -5722,14 +5730,23 @@
     // letters guarantee the run is always satisfiable (a state maps to exactly
     // one letter, so used-states never collide across prompts).
     function arcadePickAlphabet(n, rng) {
-      const seen = {};
-      arcadeStateNames().forEach(s => { seen[s.charAt(0)] = true; });
-      const letters = Object.keys(seen);
-      for (let i = letters.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        const t = letters[i]; letters[i] = letters[j]; letters[j] = t;
+      // Each available letter is weighted by how many states satisfy it.
+      // Singleton letters (D/F/G/H/L/P/R/U — exactly one state) are pinpoint
+      // finds that paid the same base as M/N (8 answers), so bias the DRAW
+      // toward multi-state letters: fewer unfair pinpoint rounds, while still
+      // fully satisfiable (distinct letters) and reproducible from the seed.
+      const weight = {};
+      arcadeStateNames().forEach(s => { const L = s.charAt(0); weight[L] = (weight[L] || 0) + 1; });
+      const avail = Object.keys(weight);
+      const out = [], want = Math.min(n, avail.length);
+      while (out.length < want) {
+        let total = 0; for (const L of avail) total += weight[L];
+        let r = rng() * total, idx = 0;
+        for (; idx < avail.length; idx++) { r -= weight[avail[idx]]; if (r <= 0) break; }
+        if (idx >= avail.length) idx = avail.length - 1;
+        out.push(avail.splice(idx, 1)[0]);
       }
-      return letters.slice(0, Math.min(n, letters.length));
+      return out;
     }
 
     // --- Distance Duel: per-state centroids from the cached topology --------
@@ -6218,7 +6235,10 @@
     function arcadeShowToast(text, kind, ms) {
       const t = document.getElementById('arcadeToast');
       if (!t) return;
-      t.textContent = text;
+      // Colorblind cue: a ✓/✗ glyph carries right/wrong without leaning on the
+      // green/red border alone. Status toasts use kind 'info' (no verdict glyph).
+      const glyph = kind === 'correct' ? '✓ ' : kind === 'wrong' ? '✗ ' : '';
+      t.textContent = glyph + text;
       t.className = 'arcade-toast is-show' + (kind ? ' is-' + kind : '');
       clearTimeout(AG._toastId);
       AG._toastId = setTimeout(() => { t.className = 'arcade-toast'; }, ms || 1100);
@@ -6235,10 +6255,19 @@
     // falls back to the game's defaultMode (or its single generator).
     // Duel runs are async: live Census data loads before round 1 (the seed
     // also picks the dataset, so a shared seed = same stat + same pairs).
+    // Offline fallback for the Census games (Stat Duel / Rank It): if /api/census
+    // is down, degrade to a bundled static stat instead of bouncing to the hub.
+    // Land area (DRAFT_AREA) is keyed by the same state names arcadeStateNames()
+    // returns, so it drops straight into arcadePickPairs / arcadePickQuads. Lazy
+    // read of DRAFT_AREA (declared later in the block) keeps it TDZ-safe.
+    function arcadeStaticFallbackSet() {
+      return { dataset: { title: 'Land Area (offline)', format: 'number' }, data: DRAFT_AREA };
+    }
+
     async function arcadeStartRun(gameId, seed, mode, isDaily) {
       const game = ARCADE_GAMES[gameId];
       if (!game || !game.playable) { arcadeShowHub(); return; }
-      if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'wrong'); return; }
+      if (!arcadeBuildMap()) { arcadeShowToast('Map still loading…', 'info'); return; }
       if (AG.loading) return;
 
       AG.game = game;
@@ -6251,7 +6280,7 @@
         const sets = arcadeDuelSets();
         const dataset = sets[Math.floor(rng() * sets.length)];
         AG.loading = true;
-        arcadeShowToast('Loading live Census data…', 'correct');
+        arcadeShowToast('Loading live Census data…', 'info');
         try {
           const data = await fetchCensusData(dataset);
           const pool = arcadeStateNames().filter(s => isFinite(data[s]));
@@ -6262,11 +6291,26 @@
             ? arcadePickQuads(game.runLength, rng, pool, data)
             : arcadePickPairs(game.runLength, rng, pool, data);
         } catch (err) {
-          AG.loading = false;
-          console.error('Census-data game load failed:', err);
-          arcadeShowToast('Live data unavailable right now — try another game', 'wrong');
-          arcadeShowHub();
-          return;
+          // Degrade to a bundled static stat instead of bouncing to the hub —
+          // an outage becomes a playable round on land area (FOLLOWUPS P3).
+          console.error('Census-data game load failed; using static fallback:', err);
+          const fb = arcadeStaticFallbackSet();
+          const pool = arcadeStateNames().filter(s => isFinite(fb.data[s]));
+          AG.duelDataset = fb.dataset;
+          AG.duelData = fb.data;
+          AG.prompts = (game.kind === 'rank')
+            ? arcadePickQuads(game.runLength, rng, pool, fb.data)
+            : arcadePickPairs(game.runLength, rng, pool, fb.data);
+          // Mirror the live path's sanity guard: if even the static set can't
+          // fill a run (e.g. a future pool-type fallback), bounce cleanly
+          // instead of crashing mid-run on an undefined prompt.
+          if (AG.prompts.length < game.runLength) {
+            AG.loading = false;
+            arcadeShowToast('Live data offline — try again later', 'info');
+            arcadeShowHub();
+            return;
+          }
+          arcadeShowToast('Live data offline — playing on land area', 'info', 1600);
         }
         AG.loading = false;
       } else {
@@ -6275,7 +6319,7 @@
         // Distance Duel needs the cached topology to compute centroids; if it's
         // not ready yet, fail soft back to the hub rather than start an empty run.
         if (game.kind === 'distance' && AG.prompts.length < game.runLength) {
-          arcadeShowToast('Map still loading — try again in a moment', 'wrong');
+          arcadeShowToast('Map still loading — try again in a moment', 'info');
           arcadeShowHub();
           return;
         }
@@ -6425,8 +6469,30 @@
         p.style.fill = ARCADE_PAINT_COLORS[(AG.rankPicked.length - 1) % ARCADE_PAINT_COLORS.length];
       }
       SFX.tap(); Haptic.light();
-      arcadeShowToast('#' + AG.rankPicked.length + ' · ' + name, 'correct', 700);
+      arcadeShowToast('#' + AG.rankPicked.length + ' · ' + name, 'info', 700); // placement ack, not a verdict — no ✓
       if (AG.rankPicked.length === 4) arcadeResolveRank();
+    }
+
+    // --- Shared scoring helpers (single source for all games) ------------
+    // Streak bonus, time bonus, and the streak-on-miss rule are identical math
+    // across Find / Speed / Capitals / Alphabet / Neighbors / Rank. Centralizing
+    // them means a balance change happens ONCE, not in three resolve functions —
+    // and makes the formulas unit-testable (see scripts/sim.mjs).
+    function arcadeStreakBonus(streak, s) {
+      return streak >= s.streakThreshold
+        ? Math.min(s.streakCap, (streak - s.streakThreshold + 1) * s.streakStep) : 0;
+    }
+    // Non-linear time bonus: remainFrac**1.8 flattens the top so only genuinely
+    // FAST answers bank near-max. Under the old linear curve an 8s prompt
+    // answered at 7s still earned ~88% of the bonus — i.e. no speed skill.
+    function arcadeTimeBonus(remainFrac, s) {
+      return Math.round(Math.pow(Math.max(0, remainFrac), 1.8) * s.timeBonusMax);
+    }
+    // A miss used to ZERO the streak — one slip wiped a long correct run, so
+    // medals tracked finger-perfection over knowledge. Halving softens the
+    // cliff: the streak (and its bonus) degrade instead of collapsing.
+    function arcadeStreakOnMiss(streak) {
+      return Math.floor(streak / 2);
     }
 
     function arcadeResolveRank() {
@@ -6441,11 +6507,10 @@
       AG.rankPicked.forEach((nm, i) => { if (trueOrder[i] === nm) correctPositions++; });
       const perfect = correctPositions === 4;
       const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-      const timeBonus = perfect ? Math.round(remainFrac * s.timeBonusMax) : 0;
+      const timeBonus = perfect ? arcadeTimeBonus(remainFrac, s) : 0;
       if (perfect) { AG.streak += 1; AG.bestStreak = Math.max(AG.bestStreak, AG.streak); AG.correct += 1; }
-      else { AG.streak = 0; }
-      const streakBonus = perfect && AG.streak >= s.streakThreshold
-        ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+      else { AG.streak = arcadeStreakOnMiss(AG.streak); }
+      const streakBonus = perfect ? arcadeStreakBonus(AG.streak, s) : 0;
       const gained = correctPositions * s.perPosition + (perfect ? s.perfect + timeBonus + streakBonus : 0);
       AG.score += gained;
       // Reveal the TRUE order, highest→lowest, staggered.
@@ -6502,11 +6567,10 @@
 
       if (success) {
         const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        const timeBonus = arcadeTimeBonus(remainFrac, s);
         AG.streak += 1;
         AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
-        const streakBonus = AG.streak >= s.streakThreshold
-          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+        const streakBonus = arcadeStreakBonus(AG.streak, s);
         const gained = s.completion + timeBonus + streakBonus;
         AG.score += gained;
         AG.correct += 1;
@@ -6514,7 +6578,7 @@
         SFX.streak(AG.streak);
         Haptic.win();
       } else {
-        AG.streak = 0;
+        AG.streak = arcadeStreakOnMiss(AG.streak);
         // Reveal the borders the player missed.
         AG.nbNeeded.forEach(n => { if (!AG.nbFound.has(n)) { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); } });
         if (wrongName) { const wp = arcadeStatePath(wrongName); if (wp) wp.classList.add('arcade-state--wrong'); }
@@ -6566,11 +6630,10 @@
 
       if (correct) {
         const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        const timeBonus = arcadeTimeBonus(remainFrac, s);
         AG.streak += 1;
         AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
-        const streakBonus = AG.streak >= s.streakThreshold
-          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+        const streakBonus = arcadeStreakBonus(AG.streak, s);
         const gained = s.base + timeBonus + streakBonus;
         AG.score += gained;
         AG.correct += 1;
@@ -6589,7 +6652,7 @@
         if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak);
         Haptic.ok();
       } else {
-        AG.streak = 0;
+        AG.streak = arcadeStreakOnMiss(AG.streak);
         if (isAlpha) {
           // No single answer — reveal every state that WOULD have worked.
           (AG.alphaValid || []).forEach(n => { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); });
@@ -6844,10 +6907,20 @@
       const streak = arcadeDailyStreak();
       card.classList.toggle('is-done', played);
       const streakLabel = streak > 0 ? '🔥 ' + streak + ' day' + (streak > 1 ? 's' : '') : 'Start your streak';
+      // The daily flips at UTC midnight (≈7–8pm ET / 4–5pm PT), so an evening US
+      // player is already on tomorrow's puzzle. Surface the LOCAL reset time, and
+      // nudge a player whose streak is alive but not yet played today.
+      const reset = new Date(); reset.setUTCHours(24, 0, 0, 0);
+      const resetLocal = reset.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const atRisk = !played && streak > 0;
+      const cta = played ? '✓ Played today — replay, or come back tomorrow'
+        : atRisk ? '🔥 ' + streak + '-day streak — play today to keep it →'
+        : 'Everyone gets the same puzzle today — play now →';
       card.innerHTML =
         '<div class="arcade-daily-top"><span class="arcade-daily-kicker">Daily Challenge</span><span class="arcade-daily-streak">' + streakLabel + '</span></div>' +
         '<div class="arcade-daily-game">' + (game ? game.name : 'Today’s game') + '</div>' +
-        '<div class="arcade-daily-cta">' + (played ? '✓ Played today — replay, or come back tomorrow' : 'Everyone gets the same puzzle today — play now →') + '</div>';
+        '<div class="arcade-daily-cta">' + cta + '</div>' +
+        '<div class="arcade-daily-reset" style="font-size:11px;opacity:0.55;margin-top:4px">Resets ' + resetLocal + ' your time</div>';
     }
     function arcadeStartDaily() {
       const gid = arcadeDailyGameId();
@@ -7721,6 +7794,35 @@
       draftTerrSetTurn('you');
     }
 
+    // Territory pick-timer — Category has one (draftStartPickTimer); Territory
+    // had none, so an idle player stalled the match forever. On timeout we
+    // auto-pick a random available state. The expiry guards on phase+turn so a
+    // stale timer can never fire a ghost pick during the AI's turn.
+    function draftTerrStartPickTimer() {
+      const fill = document.getElementById('draftTerrTimerFill');
+      const dur = 12000;
+      DT.deadline = Date.now() + dur;
+      if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
+      if (DT.timerId) clearInterval(DT.timerId);
+      DT.timerId = setInterval(() => {
+        const remain = DT.deadline - Date.now();
+        const pct = Math.max(0, remain / dur) * 100;
+        if (fill) { fill.style.width = pct + '%'; fill.classList.toggle('is-low', pct < 25); }
+        if (remain <= 0) {
+          clearInterval(DT.timerId); DT.timerId = null;
+          if (DT.phase === 'pick' && DT.turn === 'you' && DT.available && DT.available.size) {
+            const arr = Array.from(DT.available);
+            draftTerrCommit('you', arr[Math.floor(DT.rng() * arr.length)]); // time's up — auto-pick
+          }
+        }
+      }, 90);
+    }
+    function draftTerrStopPickTimer() {
+      if (DT.timerId) { clearInterval(DT.timerId); DT.timerId = null; }
+      const fill = document.getElementById('draftTerrTimerFill');
+      if (fill) fill.style.width = '0%';
+    }
+
     function draftTerrSetTurn(turn) {
       DT.turn = turn;
       const total = DT.youPicks.length + DT.aiPicks.length;
@@ -7730,7 +7832,9 @@
         draftSet('draftTerrTurnLabel', 'Your pick — ' + left + ' left');
         draftSet('draftTerrRoundLabel', 'Territory Draft · Pick ' + (total + 1) + ' of 50');
         if (grp) grp.classList.remove('is-locked');
+        draftTerrStartPickTimer();
       } else {
+        draftTerrStopPickTimer();
         draftSet('draftTerrTurnLabel', 'AI is picking…');
         if (grp) grp.classList.add('is-locked');
         DT.aiTimerId = setTimeout(draftTerrAiPick, 400 + Math.floor(DT.rng() * 400));
@@ -7740,6 +7844,7 @@
     function draftTerrOnTap(name) {
       if (DT.phase !== 'pick' || DT.turn !== 'you') return;
       if (!DT.available || !DT.available.has(name)) return;
+      draftTerrStopPickTimer();
       draftTerrCommit('you', name);
     }
 
@@ -7757,6 +7862,7 @@
       if (who === 'you') { SFX.unlock(); SFX.tap(); Haptic.light(); }
       draftTerrRenderRosters();
       if (DT.youPicks.length === 25 && DT.aiPicks.length === 25) {
+        draftTerrStopPickTimer();   // defensive: don't rely on the AI-makes-50th invariant
         DT.phase = 'reveal';
         setTimeout(draftTerrShowReveal, 500);
         return;
@@ -7874,6 +7980,26 @@
     })();
 
     // --- Wire buttons (nodes are static in the markup) ----------------------
+    function draftTerrShareMatch() {
+      // Emits a territory rematch URL (?seed= + &diff=) so the recipient gets
+      // the same board + AI behavior, mirroring Category's draftShareMatch.
+      const diffQ = (DG.difficulty && DG.difficulty !== 'normal') ? '&diff=' + DG.difficulty : '';
+      const url = window.location.origin + '/games/draft/territory?seed=' + DT.seed + diffQ;
+      const you = DT.youCatWins, ai = DT.aiCatWins;
+      const result = you > ai ? 'took the map ' + you + '-' + ai
+        : you === ai ? 'split the map ' + you + '-' + ai
+        : 'lost the map ' + you + '-' + ai + ' to the AI';
+      const text = 'I ' + result + ' on Tappymaps Territory Draft — same board, your turn: ' + url;
+      const status = document.getElementById('draftTerrShareStatus');
+      const done = (msg) => { if (status) status.textContent = msg; };
+      if (navigator.share) {
+        navigator.share({ title: 'Tappymaps Territory Draft', text: text, url: url })
+          .then(() => done('Shared!')).catch(() => arcadeCopy(url, done));
+      } else {
+        arcadeCopy(url, done);
+      }
+    }
+
     (function draftWireButtons() {
       const onClick = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener('click', fn); };
       onClick('draftBackBtn', () => Router.navigate('/games/draft'));
@@ -7889,20 +8015,23 @@
       onClick('draftTerrBackBtn', () => {
         DT.phase = 'idle';
         if (DT.aiTimerId) { clearTimeout(DT.aiTimerId); DT.aiTimerId = null; }
+        draftTerrStopPickTimer();
         Router.navigate('/games/draft');
       });
       onClick('draftTerrToHub', () => Router.navigate('/games/draft'));
       onClick('draftTerrPlayAgain', () => { document.getElementById('draftTerrComplete').style.display = 'none'; draftTerrStart(); });
+      onClick('draftTerrShareBtn', draftTerrShareMatch);
       onClick('draftTerrRevealNext', draftTerrRevealNext);
       onClick('draftTerrSeeResult', draftTerrShowComplete);
       onClick('draftTerrZoomIn', () => draftTerrZoom.zoomBy(1.4));
       onClick('draftTerrZoomOut', () => draftTerrZoom.zoomBy(1 / 1.4));
       onClick('draftTerrZoomReset', () => draftTerrZoom.reset(true));
-      onClick('draftTerrHelpBtn', () => { document.getElementById('draftTerrHowto').style.display = 'flex'; });
+      onClick('draftTerrHelpBtn', () => { draftTerrStopPickTimer(); document.getElementById('draftTerrHowto').style.display = 'flex'; });
       onClick('draftTerrHowtoClose', () => {
         document.getElementById('draftTerrHowto').style.display = 'none';
         try { localStorage.setItem('tappymaps_terr_seen', '1'); } catch (_) {}
         if (DT.phase === 'pick' && DT.youPicks.length === 0 && DT.aiPicks.length === 0) draftTerrBeginPick();
+        else if (DT.phase === 'pick' && DT.turn === 'you') draftTerrStartPickTimer(); // resume after reading help mid-match
       });
     })();
 
@@ -7927,6 +8056,7 @@
         draftStopTimers();
         DT.phase = 'idle';
         if (DT.aiTimerId) { clearTimeout(DT.aiTimerId); DT.aiTimerId = null; }
+        draftTerrStopPickTimer();
         draftZoom.reset();
         draftTerrZoom.reset();
         const el = document.getElementById('modeDraft');

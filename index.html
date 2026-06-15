@@ -6243,6 +6243,15 @@
     // falls back to the game's defaultMode (or its single generator).
     // Duel runs are async: live Census data loads before round 1 (the seed
     // also picks the dataset, so a shared seed = same stat + same pairs).
+    // Offline fallback for the Census games (Stat Duel / Rank It): if /api/census
+    // is down, degrade to a bundled static stat instead of bouncing to the hub.
+    // Land area (DRAFT_AREA) is keyed by the same state names arcadeStateNames()
+    // returns, so it drops straight into arcadePickPairs / arcadePickQuads. Lazy
+    // read of DRAFT_AREA (declared later in the block) keeps it TDZ-safe.
+    function arcadeStaticFallbackSet() {
+      return { dataset: { title: 'Land Area (sq mi)', format: 'number' }, data: DRAFT_AREA };
+    }
+
     async function arcadeStartRun(gameId, seed, mode, isDaily) {
       const game = ARCADE_GAMES[gameId];
       if (!game || !game.playable) { arcadeShowHub(); return; }
@@ -6270,11 +6279,17 @@
             ? arcadePickQuads(game.runLength, rng, pool, data)
             : arcadePickPairs(game.runLength, rng, pool, data);
         } catch (err) {
-          AG.loading = false;
-          console.error('Census-data game load failed:', err);
-          arcadeShowToast('Live data unavailable right now — try another game', 'info');
-          arcadeShowHub();
-          return;
+          // Degrade to a bundled static stat instead of bouncing to the hub —
+          // an outage becomes a playable round on land area (FOLLOWUPS P3).
+          console.error('Census-data game load failed; using static fallback:', err);
+          const fb = arcadeStaticFallbackSet();
+          const pool = arcadeStateNames().filter(s => isFinite(fb.data[s]));
+          AG.duelDataset = fb.dataset;
+          AG.duelData = fb.data;
+          AG.prompts = (game.kind === 'rank')
+            ? arcadePickQuads(game.runLength, rng, pool, fb.data)
+            : arcadePickPairs(game.runLength, rng, pool, fb.data);
+          arcadeShowToast('Live data offline — playing on land area', 'info', 1600);
         }
         AG.loading = false;
       } else {

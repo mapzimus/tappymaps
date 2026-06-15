@@ -5727,14 +5727,23 @@
     // letters guarantee the run is always satisfiable (a state maps to exactly
     // one letter, so used-states never collide across prompts).
     function arcadePickAlphabet(n, rng) {
-      const seen = {};
-      arcadeStateNames().forEach(s => { seen[s.charAt(0)] = true; });
-      const letters = Object.keys(seen);
-      for (let i = letters.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        const t = letters[i]; letters[i] = letters[j]; letters[j] = t;
+      // Each available letter is weighted by how many states satisfy it.
+      // Singleton letters (D/F/G/H/L/P/R/U — exactly one state) are pinpoint
+      // finds that paid the same base as M/N (8 answers), so bias the DRAW
+      // toward multi-state letters: fewer unfair pinpoint rounds, while still
+      // fully satisfiable (distinct letters) and reproducible from the seed.
+      const weight = {};
+      arcadeStateNames().forEach(s => { const L = s.charAt(0); weight[L] = (weight[L] || 0) + 1; });
+      const avail = Object.keys(weight);
+      const out = [], want = Math.min(n, avail.length);
+      while (out.length < want) {
+        let total = 0; for (const L of avail) total += weight[L];
+        let r = rng() * total, idx = 0;
+        for (; idx < avail.length; idx++) { r -= weight[avail[idx]]; if (r <= 0) break; }
+        if (idx >= avail.length) idx = avail.length - 1;
+        out.push(avail.splice(idx, 1)[0]);
       }
-      return letters.slice(0, Math.min(n, letters.length));
+      return out;
     }
 
     // --- Distance Duel: per-state centroids from the cached topology --------

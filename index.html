@@ -6898,10 +6898,20 @@
       const streak = arcadeDailyStreak();
       card.classList.toggle('is-done', played);
       const streakLabel = streak > 0 ? '🔥 ' + streak + ' day' + (streak > 1 ? 's' : '') : 'Start your streak';
+      // The daily flips at UTC midnight (≈7–8pm ET / 4–5pm PT), so an evening US
+      // player is already on tomorrow's puzzle. Surface the LOCAL reset time, and
+      // nudge a player whose streak is alive but not yet played today.
+      const reset = new Date(); reset.setUTCHours(24, 0, 0, 0);
+      const resetLocal = reset.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const atRisk = !played && streak > 0;
+      const cta = played ? '✓ Played today — replay, or come back tomorrow'
+        : atRisk ? '🔥 ' + streak + '-day streak — play today to keep it →'
+        : 'Everyone gets the same puzzle today — play now →';
       card.innerHTML =
         '<div class="arcade-daily-top"><span class="arcade-daily-kicker">Daily Challenge</span><span class="arcade-daily-streak">' + streakLabel + '</span></div>' +
         '<div class="arcade-daily-game">' + (game ? game.name : 'Today’s game') + '</div>' +
-        '<div class="arcade-daily-cta">' + (played ? '✓ Played today — replay, or come back tomorrow' : 'Everyone gets the same puzzle today — play now →') + '</div>';
+        '<div class="arcade-daily-cta">' + cta + '</div>' +
+        '<div class="arcade-daily-reset" style="font-size:11px;opacity:0.55;margin-top:4px">Resets ' + resetLocal + ' your time</div>';
     }
     function arcadeStartDaily() {
       const gid = arcadeDailyGameId();

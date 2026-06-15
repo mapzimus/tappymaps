@@ -5563,7 +5563,7 @@
         runLength: 50,
         perPrompt: 5,
         scoring: { base: 10, timeBonusMax: 12, streakThreshold: 5, streakStep: 3, streakCap: 40 },
-        medals: { bronze: 500, silver: 1100, gold: 1600 },
+        medals: { bronze: 500, silver: 1200, gold: 2100 }, // retuned for streak-halving inflation — see scripts/sim.mjs
         generator: (rng) => arcadePickStates(50, rng),
       },
       'alphabet-race': {
@@ -6429,6 +6429,28 @@
       if (AG.rankPicked.length === 4) arcadeResolveRank();
     }
 
+    // --- Shared scoring helpers (single source for all games) ------------
+    // Streak bonus, time bonus, and the streak-on-miss rule are identical math
+    // across Find / Speed / Capitals / Alphabet / Neighbors / Rank. Centralizing
+    // them means a balance change happens ONCE, not in three resolve functions —
+    // and makes the formulas unit-testable (see scripts/sim.mjs).
+    function arcadeStreakBonus(streak, s) {
+      return streak >= s.streakThreshold
+        ? Math.min(s.streakCap, (streak - s.streakThreshold + 1) * s.streakStep) : 0;
+    }
+    // Non-linear time bonus: remainFrac**1.8 flattens the top so only genuinely
+    // FAST answers bank near-max. Under the old linear curve an 8s prompt
+    // answered at 7s still earned ~88% of the bonus — i.e. no speed skill.
+    function arcadeTimeBonus(remainFrac, s) {
+      return Math.round(Math.pow(Math.max(0, remainFrac), 1.8) * s.timeBonusMax);
+    }
+    // A miss used to ZERO the streak — one slip wiped a long correct run, so
+    // medals tracked finger-perfection over knowledge. Halving softens the
+    // cliff: the streak (and its bonus) degrade instead of collapsing.
+    function arcadeStreakOnMiss(streak) {
+      return Math.floor(streak / 2);
+    }
+
     function arcadeResolveRank() {
       if (AG.answered) return;
       AG.answered = true;
@@ -6441,11 +6463,10 @@
       AG.rankPicked.forEach((nm, i) => { if (trueOrder[i] === nm) correctPositions++; });
       const perfect = correctPositions === 4;
       const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-      const timeBonus = perfect ? Math.round(remainFrac * s.timeBonusMax) : 0;
+      const timeBonus = perfect ? arcadeTimeBonus(remainFrac, s) : 0;
       if (perfect) { AG.streak += 1; AG.bestStreak = Math.max(AG.bestStreak, AG.streak); AG.correct += 1; }
-      else { AG.streak = 0; }
-      const streakBonus = perfect && AG.streak >= s.streakThreshold
-        ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+      else { AG.streak = arcadeStreakOnMiss(AG.streak); }
+      const streakBonus = perfect ? arcadeStreakBonus(AG.streak, s) : 0;
       const gained = correctPositions * s.perPosition + (perfect ? s.perfect + timeBonus + streakBonus : 0);
       AG.score += gained;
       // Reveal the TRUE order, highest→lowest, staggered.
@@ -6502,11 +6523,10 @@
 
       if (success) {
         const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        const timeBonus = arcadeTimeBonus(remainFrac, s);
         AG.streak += 1;
         AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
-        const streakBonus = AG.streak >= s.streakThreshold
-          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+        const streakBonus = arcadeStreakBonus(AG.streak, s);
         const gained = s.completion + timeBonus + streakBonus;
         AG.score += gained;
         AG.correct += 1;
@@ -6514,7 +6534,7 @@
         SFX.streak(AG.streak);
         Haptic.win();
       } else {
-        AG.streak = 0;
+        AG.streak = arcadeStreakOnMiss(AG.streak);
         // Reveal the borders the player missed.
         AG.nbNeeded.forEach(n => { if (!AG.nbFound.has(n)) { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); } });
         if (wrongName) { const wp = arcadeStatePath(wrongName); if (wp) wp.classList.add('arcade-state--wrong'); }
@@ -6566,11 +6586,10 @@
 
       if (correct) {
         const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        const timeBonus = arcadeTimeBonus(remainFrac, s);
         AG.streak += 1;
         AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
-        const streakBonus = AG.streak >= s.streakThreshold
-          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
+        const streakBonus = arcadeStreakBonus(AG.streak, s);
         const gained = s.base + timeBonus + streakBonus;
         AG.score += gained;
         AG.correct += 1;
@@ -6589,7 +6608,7 @@
         if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak);
         Haptic.ok();
       } else {
-        AG.streak = 0;
+        AG.streak = arcadeStreakOnMiss(AG.streak);
         if (isAlpha) {
           // No single answer — reveal every state that WOULD have worked.
           (AG.alphaValid || []).forEach(n => { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); });

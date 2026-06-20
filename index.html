@@ -2957,6 +2957,16 @@
         .arcade-prompt { font-size: 15px; }
       }
 
+      /* Phones (any orientation): tighten the game HUD bars so the prompt keeps
+         room and the stat trio (Score/Streak/Round) doesn't crowd. */
+      @media (max-width: 600px) {
+        .arcade-game-bar { gap: 8px; padding-left: 10px; padding-right: 10px; }
+        .arcade-stats { gap: 9px; }
+        .arcade-stat-val { font-size: 16px; }
+        .arcade-stat-label { font-size: 9px; letter-spacing: 0.4px; }
+        .draft-bar, .draft-terr-bar { gap: 8px; padding-left: 10px; padding-right: 10px; }
+      }
+
       /* ===================================================================
          GeoDraft (Phase 2b) — Category Draft vs the AI + Practice. Games
          surface: orange accent per brand spec §8. Own svg, like Arcade.

@@ -3458,7 +3458,16 @@
         background: transparent;
         color: var(--text);
         border: 1px solid var(--border, rgba(255,255,255,0.1));
-        font-size: 18px;
+        border-radius: 50%;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      /* Signed-in-with-Pro avatar — orange accent so the state is legible on
+         mobile, where this button is the only account affordance. */
+      .create-action-btn--account.is-pro {
+        border-color: #F97316;
+        color: #F97316;
+        background: color-mix(in srgb, #F97316 16%, transparent);
       }
 
       /* Narrow phones: the cutover packs SIX action buttons into the top bar
@@ -9889,6 +9898,25 @@
           authIndicator.style.color = appState.proUnlocked ? '#F97316' : '#8a9bb0';
         } else {
           authIndicator.textContent = '';
+        }
+      }
+      // Mirror auth/pro state onto the Create top-bar account button — on mobile
+      // (routed modes) it is the only visible account affordance, since the
+      // legacy account menu is suppressed.
+      const acct = document.getElementById('createAccountBtn');
+      if (acct) {
+        if (appState.currentUser) {
+          const initial = ((appState.currentUser.email || '?').trim().charAt(0) || '?').toUpperCase();
+          const label = appState.currentUser.email + (appState.proUnlocked ? ' (Pro)' : '');
+          acct.textContent = initial;
+          acct.classList.toggle('is-pro', !!appState.proUnlocked);
+          acct.setAttribute('aria-label', 'Account — ' + label);
+          acct.title = label;
+        } else {
+          acct.textContent = '●';
+          acct.classList.remove('is-pro');
+          acct.setAttribute('aria-label', 'Sign in');
+          acct.title = 'Sign in';
         }
       }
     }

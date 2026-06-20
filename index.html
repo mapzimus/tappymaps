@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
     <title>Tappymaps: Tap. Color. Share.</title>
     <meta name="description" content="Make beautiful colored maps of the United States. Tap states, build a legend, share or export. Free.">
 
@@ -481,6 +481,7 @@
     .container {
       display: flex;
       height: 100vh;
+      height: 100dvh;
       overflow: hidden;
     }
 
@@ -685,6 +686,26 @@
     @media (hover: none) {
       .legend-color-edit {
         opacity: 1;
+      }
+    }
+
+    /* Touch-target floor: on touch devices, raise primary controls to the ~44px
+       finger minimum without changing desktop pointer density. min-width/height
+       beat the base width/height by the box model, so source order is moot. */
+    @media (hover: none) and (pointer: coarse) {
+      .create-icon-btn,
+      .create-action-btn--account,
+      .rail-btn,
+      .create-map-nav button,
+      .arcade-back-btn,
+      .arcade-help-btn,
+      .arcade-zoom-btn {
+        min-width: 44px;
+        min-height: 44px;
+      }
+      .color-swatch {
+        min-width: 36px;
+        min-height: 36px;
       }
     }
 
@@ -2304,7 +2325,7 @@
     }
 
       /* Phase 1 — mode containers */
-      .mode { width: 100%; min-height: 100vh; }
+      .mode { width: 100%; min-height: 100vh; min-height: 100dvh; }
 
       /* ComingSoon stub */
       #modeComingSoon {
@@ -2357,7 +2378,7 @@
         height: 100dvh;          /* fixed viewport: body is overflow:hidden, so
                                     the hero must shrink to keep CTAs on-screen */
         overflow: hidden;
-        padding: 24px;
+        padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
         box-sizing: border-box;
       }
       .hub-header {
@@ -2469,6 +2490,7 @@
         justify-content: center;
         padding: 24px;
         min-height: 100vh;
+        min-height: 100dvh;
       }
       .tap-in-inner {
         max-width: 420px;
@@ -2557,6 +2579,7 @@
         flex-direction: column;
         align-items: center;
         padding: 32px 24px 24px;
+        padding-top: max(32px, env(safe-area-inset-top));
         box-sizing: border-box;
       }
       .arcade-hub-header { text-align: center; margin-bottom: 28px; }
@@ -2634,6 +2657,14 @@
       .lb-name { flex: 1; font-weight: 600; }
       .lb-medal { width: 20px; text-align: center; }
       .lb-score { font-variant-numeric: tabular-nums; font-weight: 800; min-width: 56px; text-align: right; }
+      /* Phones: trim the leaderboard padding, honor the notch, give rows a touch-
+         comfortable height, and let the name bar wrap if the label crowds. */
+      @media (max-width: 600px) {
+        #arcadeLeaderboard { padding: 20px 14px 24px; padding-top: max(20px, env(safe-area-inset-top)); }
+        .lb-namebar { flex-wrap: wrap; gap: 8px; }
+        .lb-list li { font-size: 13px; padding: 7px 8px; gap: 8px; }
+        .lb-summary { padding: 14px; }
+      }
       .arcade-tile-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -2696,6 +2727,7 @@
       .arcade-game-bar {
         display: flex; align-items: center; gap: 12px;
         padding: 10px 14px;
+        padding-top: max(10px, env(safe-area-inset-top));
         background: var(--surface, #1e293b);
         border-bottom: 1px solid var(--border, #334155);
       }
@@ -2933,6 +2965,16 @@
         .arcade-prompt { font-size: 15px; }
       }
 
+      /* Phones (any orientation): tighten the game HUD bars so the prompt keeps
+         room and the stat trio (Score/Streak/Round) doesn't crowd. */
+      @media (max-width: 600px) {
+        .arcade-game-bar { gap: 8px; padding-left: 10px; padding-right: 10px; }
+        .arcade-stats { gap: 9px; }
+        .arcade-stat-val { font-size: 16px; }
+        .arcade-stat-label { font-size: 9px; letter-spacing: 0.4px; }
+        .draft-bar, .draft-terr-bar { gap: 8px; padding-left: 10px; padding-right: 10px; }
+      }
+
       /* ===================================================================
          GeoDraft (Phase 2b) — Category Draft vs the AI + Practice. Games
          surface: orange accent per brand spec §8. Own svg, like Arcade.
@@ -2984,6 +3026,7 @@
       .draft-bar {
         display: flex; align-items: center; gap: 12px;
         padding: 10px 14px;
+        padding-top: max(10px, env(safe-area-inset-top));
         background: var(--surface, #1e293b);
         border-bottom: 1px solid var(--border, #334155);
       }
@@ -3132,6 +3175,7 @@
       .draft-terr-bar {
         display: flex; align-items: center; gap: 10px;
         padding: 10px 14px; border-bottom: 1px solid var(--border, #334155);
+        padding-top: max(10px, env(safe-area-inset-top));
         flex: none;
       }
       .draft-terr-round { font-size: 14px; font-weight: 800; flex: 1; min-width: 0; }
@@ -3206,21 +3250,30 @@
 
       @media (max-width: 720px) {
         .draft-main { flex-direction: column; }
+        /* Category rosters sit below the map as a two-column (You | AI) panel;
+           each side scrolls vertically so a full draft stays readable at 13px
+           instead of clipping into a cramped 120px strip. */
         .draft-rosters {
           width: auto; flex-direction: row; border-left: none;
           border-top: 1px solid var(--border, #334155);
-          max-height: 120px;
+          max-height: 26dvh; gap: 16px; overflow: hidden;
         }
-        .draft-roster { flex: 1; }
-        #draftPracticeList li .name { width: 105px; }
+        .draft-roster { flex: 1; min-width: 0; overflow-y: auto; }
+        #draftPracticeList li .name { width: auto; flex: 1; min-width: 0; }
+
         .draft-terr-main { flex-direction: column; }
+        /* Territory holds up to 25 states per side — stack the two panels below
+           the map, let each scroll, and flow names into columns so a full board
+           stays readable rather than clipping into an 11px strip. */
         .draft-terr-sidebar {
-          width: auto; flex-direction: row; border-left: none;
+          width: auto; border-left: none;
           border-top: 1px solid var(--border, #334155);
-          max-height: 110px; padding: 8px 12px; gap: 10px;
+          max-height: 18dvh; padding: 8px 12px;
         }
-        .draft-terr-sidebar h4 { margin-bottom: 3px; }
-        .draft-terr-sidebar li { font-size: 11px; }
+        .draft-terr-sidebar.ai { border-right: none !important; }
+        .draft-terr-sidebar h4 { margin-bottom: 4px; }
+        .draft-terr-sidebar ul { column-count: 3; column-gap: 14px; }
+        .draft-terr-sidebar li { font-size: 12px; break-inside: avoid; }
       }
 
       /* ===================================================================
@@ -3232,6 +3285,7 @@
         display: none;
         flex-direction: column;
         height: 100vh;
+        height: 100dvh;
         background: var(--bg);
       }
       body[data-mode="embed"] #modeEmbed { display: flex; }
@@ -3254,6 +3308,16 @@
       }
       .embed-footer a { color: var(--accent, #0EA5E9); text-decoration: none; font-weight: 700; }
       .embed-footer.is-hidden { display: none; }
+      /* Tiny iframes: claw back space for the map. On very short embeds drop the
+         footer entirely (the on-map logo still carries the brand); on narrow
+         embeds just shrink it. Only .embed-footer / #embedMapHost are touched —
+         never #mapContainer, the live export-shared map node. */
+      @media (max-height: 360px) {
+        .embed-footer { display: none; }
+      }
+      @media (max-width: 400px) {
+        .embed-footer { padding: 5px 8px; font-size: 11px; }
+      }
 
       /* ===================================================================
          Gallery (Phase 4) — browse maps. Design surface: turquoise accent.
@@ -3263,12 +3327,13 @@
       #modeGallery {
         --gal: #0EA5E9;
         display: none; flex-direction: column;
-        min-height: 100vh; background: var(--bg, #0F172A); color: var(--text, #f0f9ff);
+        min-height: 100vh; min-height: 100dvh; background: var(--bg, #0F172A); color: var(--text, #f0f9ff);
       }
       body[data-mode="design/gallery"] #modeGallery { display: flex; }
       .gallery-header {
         display: flex; flex-direction: column; align-items: center;
         padding: 30px 18px 10px; text-align: center;
+        padding-top: max(30px, env(safe-area-inset-top));
       }
       .gallery-title { font-size: 30px; font-weight: 800; margin: 12px 0 2px; }
       .gallery-sub { font-size: 14px; opacity: 0.7; margin: 0 0 18px; }
@@ -3322,27 +3387,43 @@
       .gallery-empty .gallery-card-btn { flex: none; padding: 10px 18px; }
       .gallery-footer { text-align: center; padding: 18px; font-size: 13px; }
       .gallery-footer a { color: var(--gal); text-decoration: none; font-weight: 700; }
+      /* Phones: scale the header, let tabs scroll horizontally instead of
+         wrapping, allow a 2-up card grid on wider phones, and tighten padding. */
+      @media (max-width: 600px) {
+        .gallery-title { font-size: 24px; }
+        .gallery-sub { font-size: 13px; margin-bottom: 14px; }
+        .gallery-tabs {
+          width: 100%; flex-wrap: nowrap; justify-content: flex-start;
+          overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+        }
+        .gallery-tab { flex: none; }
+        .gallery-body { padding: 14px; }
+        .gallery-grid { gap: 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+        .gallery-card-body { padding: 10px 12px; }
+        .gallery-empty { padding: 32px 18px; }
+      }
 
       /* Create mode (Phase 1) — landscape-first 5-panel rail layout */
       #modeCreate {
         display: none;            /* router toggles to flex */
         flex-direction: column;
         height: 100vh;
+        height: 100dvh;
         overflow: hidden;
         background: var(--bg);
       }
       body[data-mode="design/make"] #modeCreate { display: flex; }
 
       #createTopBar {
-        height: 44px;
-        min-height: 44px;
+        height: calc(44px + env(safe-area-inset-top));
+        min-height: calc(44px + env(safe-area-inset-top));
         display: flex;
         align-items: center;
         gap: 12px;
-        padding: 0 12px;
+        padding: env(safe-area-inset-top) 12px 0;
         border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
         background: var(--surface, rgba(255,255,255,0.02));
-        flex: 0 0 44px;
+        flex: 0 0 auto;
       }
       .create-wordmark {
         display: inline-flex;
@@ -3429,7 +3510,40 @@
         background: transparent;
         color: var(--text);
         border: 1px solid var(--border, rgba(255,255,255,0.1));
-        font-size: 18px;
+        border-radius: 50%;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      /* Signed-in-with-Pro avatar — orange accent so the state is legible on
+         mobile, where this button is the only account affordance. */
+      .create-action-btn--account.is-pro {
+        border-color: #F97316;
+        color: #F97316;
+        background: color-mix(in srgb, #F97316 16%, transparent);
+      }
+
+      /* Narrow phones: the cutover packs SIX action buttons into the top bar
+         (help, theme, undo, redo, share, account) plus the wordmark + title, so
+         it overflows below ~400px. Tighten it: the title becomes the flex give
+         (min-width:0 lets it shrink past its content); the redundant top-bar
+         undo/redo are dropped (they also live in the Map panel's Actions
+         section); the theme toggle keeps its icon but sheds the "Themes" label;
+         and below ~380px the wordmark drops its text, keeping the tappable pin. */
+      @media (max-width: 600px) {
+        #createTopBar { gap: 8px; padding: env(safe-area-inset-top) 8px 0; }
+        .create-map-title { flex: 1 1 60px; min-width: 0; max-width: none; }
+        .create-topbar-actions { gap: 6px; flex: 0 0 auto; }
+        .create-action-btn--share { padding: 6px 12px; }
+        #createTopBar #createUndoBtn,
+        #createTopBar #createRedoBtn { display: none; }
+        /* themeToggle carries an inline font-size, so override with !important to
+           collapse its bare "Themes" text node while keeping the moon icon. */
+        #createTopBar #themeToggle { font-size: 0 !important; padding: 5px 6px; }
+        #createTopBar #themeToggle #themeIcon { font-size: 15px !important; }
+      }
+      @media (max-width: 380px) {
+        #createTopBar .create-wordmark .wm-tappy,
+        #createTopBar .create-wordmark .wm-maps { display: none; }
       }
 
       #createBody {
@@ -3590,6 +3704,7 @@
         right: 12px;
         width: 290px;
         max-height: calc(100vh - 64px);
+        max-height: calc(100dvh - 64px);
         overflow-y: auto;
         background: var(--surface-raised, var(--surface, #16213e));
         border: 1px solid var(--border, rgba(255,255,255,0.14));
@@ -3618,14 +3733,63 @@
           border-right: none;
           border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
           justify-content: center;
+          /* Rail stays above the sheet + backdrop so you can switch panels (or
+             dismiss) while the sheet is open. */
+          position: relative;
+          z-index: 42;
         }
-        #createMap { flex: 1 1 auto; min-height: 22dvh; }
+        /* Map fills the whole body; the control panel becomes a bottom sheet
+           that slides up over the map on demand (driven by the rail tabs), so
+           the map — the point of the app — is never permanently shrunk. With
+           the sheet closed by default the bottom-left zoom nav is reachable. */
+        #createMap { flex: 1 1 auto; min-height: 0; }
         #createPanel {
-          flex: 0 0 50dvh;
+          position: absolute;
+          left: 0; right: 0; bottom: 0;
+          z-index: 40;
+          flex: 0 0 auto;
+          max-height: 76dvh;
           border-left: none;
-          border-top: 1px solid var(--border, rgba(255,255,255,0.08));
+          border-top: 1px solid var(--border, rgba(255,255,255,0.12));
+          border-radius: 16px 16px 0 0;
+          box-shadow: 0 -12px 32px rgba(0,0,0,0.4);
+          transform: translateY(110%);
+          transition: transform 0.24s ease;
+          will-change: transform;
         }
-        #createBody.panel-collapsed #createPanel { flex-basis: 0; }
+        #createBody.panel-open #createPanel { transform: none; }
+        /* Backdrop behind the sheet; tap it (or the exposed map strip above the
+           sheet) to dismiss. Sits below the rail so the rail stays usable. */
+        #createSheetBackdrop {
+          position: absolute; inset: 0; z-index: 39;
+          background: rgba(0,0,0,0.32);
+          opacity: 0; pointer-events: none;
+          transition: opacity 0.24s ease;
+        }
+        #createBody.panel-open #createSheetBackdrop { opacity: 1; pointer-events: auto; }
+      }
+      /* Backdrop only matters in the portrait sheet layout — keep it out of the
+         way everywhere else. */
+      #createSheetBackdrop { display: none; }
+      @media (max-width: 600px) and (orientation: portrait) {
+        #createSheetBackdrop { display: block; }
+      }
+
+      /* Landscape phones (short viewport): trim vertical chrome and narrow the
+         rail + docked panel so the map keeps usable width and height. Honor the
+         side-notch insets since the rail/panel hug the screen edges. */
+      @media (orientation: landscape) and (max-height: 500px) {
+        #createTopBar {
+          height: calc(40px + env(safe-area-inset-top));
+          min-height: calc(40px + env(safe-area-inset-top));
+        }
+        #createRail {
+          width: calc(50px + env(safe-area-inset-left));
+          flex-basis: calc(50px + env(safe-area-inset-left));
+          padding-left: env(safe-area-inset-left);
+        }
+        #createPanel { flex-basis: 256px; padding-right: env(safe-area-inset-right); }
+        .create-panel-bar { padding-top: 6px; padding-bottom: 6px; }
       }
 
       /* Rail buttons */
@@ -3809,6 +3973,7 @@
           <button type="button" id="createZoomReset" aria-label="Reset zoom" title="Reset zoom">&#10558;</button>
         </div>
       </div>
+      <div id="createSheetBackdrop" aria-hidden="true"></div>
       <aside id="createPanel" aria-label="Active panel content">
         <div class="create-panel-bar">
           <span class="create-panel-bar-title" id="createPanelBarTitle">Map</span>
@@ -5152,13 +5317,36 @@
       if (scroll) scroll.scrollTop = 0;
     }
 
-    // Rail click delegate — single listener on #createRail, dispatches
-    // based on clicked button's data-panel attribute.
+    // Portrait phones present the panel as a rail-triggered bottom sheet; on
+    // desktop / landscape the panel is always docked, so these helpers no-op.
+    const createIsPortraitSheet = () => window.matchMedia('(max-width: 600px) and (orientation: portrait)').matches;
+    const createReflowLegend = () => { if (typeof updateLegendPosition === 'function') requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} }); };
+
+    // Rail click delegate — single listener on #createRail, dispatches based on
+    // the clicked button's data-panel attribute. In the portrait sheet layout
+    // the rail also toggles the sheet: re-tapping the active tab (while open)
+    // dismisses it; any other tap opens that panel.
     document.addEventListener('click', function(e) {
       const btn = e.target.closest('#createRail .rail-btn');
       if (!btn) return;
       const name = btn.dataset.panel;
-      if (name) switchPanel(name);
+      if (!name) return;
+      const body = document.getElementById('createBody');
+      if (createIsPortraitSheet() && body && body.classList.contains('panel-open') && btn.classList.contains('is-active')) {
+        body.classList.remove('panel-open');
+        createReflowLegend();
+        return;
+      }
+      switchPanel(name);
+      if (createIsPortraitSheet() && body) body.classList.add('panel-open');
+    });
+
+    // Tap the backdrop (or the exposed map strip above the sheet) to dismiss.
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#createSheetBackdrop')) return;
+      const body = document.getElementById('createBody');
+      if (body) body.classList.remove('panel-open');
+      createReflowLegend();
     });
 
     // --- Floating panel collapse / reopen + map zoom nav + accordion -------
@@ -5166,8 +5354,8 @@
       const body = document.getElementById('createBody');
       const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
       const reflowLegend = () => { if (typeof updateLegendPosition === 'function') requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} }); };
-      on('createPanelCollapse', () => { if (body) body.classList.add('panel-collapsed'); reflowLegend(); });
-      on('createPanelReopen',  () => { if (body) body.classList.remove('panel-collapsed'); reflowLegend(); });
+      on('createPanelCollapse', () => { if (body) { body.classList.add('panel-collapsed'); body.classList.remove('panel-open'); } reflowLegend(); });
+      on('createPanelReopen',  () => { if (body) { body.classList.remove('panel-collapsed'); body.classList.add('panel-open'); } reflowLegend(); });
       // Zoom buttons drive the editor map's existing pinch-zoom (exposed by the
       // Mobile-UX IIFE as window.createMapZoom*). Guarded — no-op until ready.
       on('createZoomIn',    () => { if (window.createMapZoomIn)    window.createMapZoomIn(); });
@@ -6160,6 +6348,43 @@
         }
         apply();
       }
+      // Frame a set of path elements: zoom + pan so their union fills `fill` of
+      // the wrap and lands centered. Transform-origin is center center, so a
+      // point's on-screen offset from center maps as offset0*scale + pan; we
+      // invert that to solve for pan. Clamped to the same 1..4 range as manual
+      // zoom; skips when the union is already big (no useful zoom).
+      function zoomToPaths(paths, fill) {
+        const wrap = document.getElementById(wrapId);
+        const svg = document.getElementById(svgId);
+        if (!wrap || !svg || !paths || !paths.length) return;
+        let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+        paths.forEach(p => {
+          if (!p) return;
+          const rc = p.getBoundingClientRect();
+          if (rc.width === 0 && rc.height === 0) return;
+          l = Math.min(l, rc.left); t = Math.min(t, rc.top);
+          r = Math.max(r, rc.right); b = Math.max(b, rc.bottom);
+        });
+        if (!isFinite(l)) return;
+        const wr = wrap.getBoundingClientRect();
+        const tw = r - l, th = b - t;
+        const cx = (l + tw / 2) - (wr.left + wr.width / 2);
+        const cy = (t + th / 2) - (wr.top + wr.height / 2);
+        const base0x = (cx - Z.panX) / Z.scale;
+        const base0y = (cy - Z.panY) / Z.scale;
+        const tw0 = tw / Z.scale, th0 = th / Z.scale;
+        const f = fill || 0.5;
+        let s = Math.min(wr.width * f / tw0, wr.height * f / th0);
+        s = Math.max(1, Math.min(4, s));
+        if (s < 1.35) return;       // big target — leave the full map in view
+        Z.scale = s;
+        Z.panX = -base0x * s;
+        Z.panY = -base0y * s;
+        clampPan();
+        svg.style.transition = 'transform 0.3s ease';
+        setTimeout(() => { svg.style.transition = ''; }, 320);
+        apply();
+      }
       (function wire() {
         const wrap = document.getElementById(wrapId);
         if (!wrap) return;
@@ -6205,7 +6430,7 @@
           zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
         }, { passive: false });
       })();
-      return { zoomBy: zoomBy, reset: reset, state: Z };
+      return { zoomBy: zoomBy, reset: reset, zoomToPaths: zoomToPaths, state: Z };
     }
     const arcadeZoom = makeMapZoom('arcadeMapWrap', 'arcadeMapSvg');
     function arcadeZoomBy(factor) { arcadeZoom.zoomBy(factor); }
@@ -6367,6 +6592,23 @@
         pop.classList.remove('is-pop');
         void pop.offsetWidth; // restart the CSS animation
         pop.classList.add('is-pop');
+      }
+      // On touch devices, auto-frame the contenders so small states are tappable.
+      // ONLY for modes whose relevant states are already highlighted on the map
+      // (duel / distance / rank) — never find/capitals/neighbors, where zooming
+      // to the target would give away the answer.
+      if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+        let focus = null;
+        if (kind === 'duel') { const p = AG.prompts[AG.idx]; focus = [p.a, p.b]; }
+        else if (kind === 'distance') { const p = AG.prompts[AG.idx]; focus = [p.a, p.b, p.anchor]; }
+        else if (kind === 'rank') { focus = AG.prompts[AG.idx].states || []; }
+        if (focus) {
+          const fp = focus.map(arcadeStatePath).filter(Boolean);
+          if (fp.length) {
+            arcadeZoom.reset(false);   // baseline before measuring
+            requestAnimationFrame(() => arcadeZoom.zoomToPaths(fp, 0.5));
+          }
+        }
       }
       arcadeUpdateHud();
       arcadeStartTimer();
@@ -9762,6 +10004,25 @@
           authIndicator.style.color = appState.proUnlocked ? '#F97316' : '#8a9bb0';
         } else {
           authIndicator.textContent = '';
+        }
+      }
+      // Mirror auth/pro state onto the Create top-bar account button — on mobile
+      // (routed modes) it is the only visible account affordance, since the
+      // legacy account menu is suppressed.
+      const acct = document.getElementById('createAccountBtn');
+      if (acct) {
+        if (appState.currentUser) {
+          const initial = ((appState.currentUser.email || '?').trim().charAt(0) || '?').toUpperCase();
+          const label = appState.currentUser.email + (appState.proUnlocked ? ' (Pro)' : '');
+          acct.textContent = initial;
+          acct.classList.toggle('is-pro', !!appState.proUnlocked);
+          acct.setAttribute('aria-label', 'Account — ' + label);
+          acct.title = label;
+        } else {
+          acct.textContent = '●';
+          acct.classList.remove('is-pro');
+          acct.setAttribute('aria-label', 'Sign in');
+          acct.title = 'Sign in';
         }
       }
     }

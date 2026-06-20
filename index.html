@@ -3475,8 +3475,10 @@
         .create-action-btn--share { padding: 6px 12px; }
         #createTopBar #createUndoBtn,
         #createTopBar #createRedoBtn { display: none; }
-        #createTopBar #themeToggle { font-size: 0; padding: 5px 6px; }
-        #createTopBar #themeToggle #themeIcon { font-size: 15px; }
+        /* themeToggle carries an inline font-size, so override with !important to
+           collapse its bare "Themes" text node while keeping the moon icon. */
+        #createTopBar #themeToggle { font-size: 0 !important; padding: 5px 6px; }
+        #createTopBar #themeToggle #themeIcon { font-size: 15px !important; }
       }
       @media (max-width: 380px) {
         #createTopBar .create-wordmark .wm-tappy,
@@ -3670,14 +3672,46 @@
           border-right: none;
           border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
           justify-content: center;
+          /* Rail stays above the sheet + backdrop so you can switch panels (or
+             dismiss) while the sheet is open. */
+          position: relative;
+          z-index: 42;
         }
-        #createMap { flex: 1 1 auto; min-height: 22dvh; }
+        /* Map fills the whole body; the control panel becomes a bottom sheet
+           that slides up over the map on demand (driven by the rail tabs), so
+           the map — the point of the app — is never permanently shrunk. With
+           the sheet closed by default the bottom-left zoom nav is reachable. */
+        #createMap { flex: 1 1 auto; min-height: 0; }
         #createPanel {
-          flex: 0 0 50dvh;
+          position: absolute;
+          left: 0; right: 0; bottom: 0;
+          z-index: 40;
+          flex: 0 0 auto;
+          max-height: 76dvh;
           border-left: none;
-          border-top: 1px solid var(--border, rgba(255,255,255,0.08));
+          border-top: 1px solid var(--border, rgba(255,255,255,0.12));
+          border-radius: 16px 16px 0 0;
+          box-shadow: 0 -12px 32px rgba(0,0,0,0.4);
+          transform: translateY(110%);
+          transition: transform 0.24s ease;
+          will-change: transform;
         }
-        #createBody.panel-collapsed #createPanel { flex-basis: 0; }
+        #createBody.panel-open #createPanel { transform: none; }
+        /* Backdrop behind the sheet; tap it (or the exposed map strip above the
+           sheet) to dismiss. Sits below the rail so the rail stays usable. */
+        #createSheetBackdrop {
+          position: absolute; inset: 0; z-index: 39;
+          background: rgba(0,0,0,0.32);
+          opacity: 0; pointer-events: none;
+          transition: opacity 0.24s ease;
+        }
+        #createBody.panel-open #createSheetBackdrop { opacity: 1; pointer-events: auto; }
+      }
+      /* Backdrop only matters in the portrait sheet layout — keep it out of the
+         way everywhere else. */
+      #createSheetBackdrop { display: none; }
+      @media (max-width: 600px) and (orientation: portrait) {
+        #createSheetBackdrop { display: block; }
       }
 
       /* Rail buttons */
@@ -3861,6 +3895,7 @@
           <button type="button" id="createZoomReset" aria-label="Reset zoom" title="Reset zoom">&#10558;</button>
         </div>
       </div>
+      <div id="createSheetBackdrop" aria-hidden="true"></div>
       <aside id="createPanel" aria-label="Active panel content">
         <div class="create-panel-bar">
           <span class="create-panel-bar-title" id="createPanelBarTitle">Map</span>
@@ -5204,13 +5239,36 @@
       if (scroll) scroll.scrollTop = 0;
     }
 
-    // Rail click delegate — single listener on #createRail, dispatches
-    // based on clicked button's data-panel attribute.
+    // Portrait phones present the panel as a rail-triggered bottom sheet; on
+    // desktop / landscape the panel is always docked, so these helpers no-op.
+    const createIsPortraitSheet = () => window.matchMedia('(max-width: 600px) and (orientation: portrait)').matches;
+    const createReflowLegend = () => { if (typeof updateLegendPosition === 'function') requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} }); };
+
+    // Rail click delegate — single listener on #createRail, dispatches based on
+    // the clicked button's data-panel attribute. In the portrait sheet layout
+    // the rail also toggles the sheet: re-tapping the active tab (while open)
+    // dismisses it; any other tap opens that panel.
     document.addEventListener('click', function(e) {
       const btn = e.target.closest('#createRail .rail-btn');
       if (!btn) return;
       const name = btn.dataset.panel;
-      if (name) switchPanel(name);
+      if (!name) return;
+      const body = document.getElementById('createBody');
+      if (createIsPortraitSheet() && body && body.classList.contains('panel-open') && btn.classList.contains('is-active')) {
+        body.classList.remove('panel-open');
+        createReflowLegend();
+        return;
+      }
+      switchPanel(name);
+      if (createIsPortraitSheet() && body) body.classList.add('panel-open');
+    });
+
+    // Tap the backdrop (or the exposed map strip above the sheet) to dismiss.
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#createSheetBackdrop')) return;
+      const body = document.getElementById('createBody');
+      if (body) body.classList.remove('panel-open');
+      createReflowLegend();
     });
 
     // --- Floating panel collapse / reopen + map zoom nav + accordion -------
@@ -5218,8 +5276,8 @@
       const body = document.getElementById('createBody');
       const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
       const reflowLegend = () => { if (typeof updateLegendPosition === 'function') requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} }); };
-      on('createPanelCollapse', () => { if (body) body.classList.add('panel-collapsed'); reflowLegend(); });
-      on('createPanelReopen',  () => { if (body) body.classList.remove('panel-collapsed'); reflowLegend(); });
+      on('createPanelCollapse', () => { if (body) { body.classList.add('panel-collapsed'); body.classList.remove('panel-open'); } reflowLegend(); });
+      on('createPanelReopen',  () => { if (body) { body.classList.remove('panel-collapsed'); body.classList.add('panel-open'); } reflowLegend(); });
       // Zoom buttons drive the editor map's existing pinch-zoom (exposed by the
       // Mobile-UX IIFE as window.createMapZoom*). Guarded — no-op until ready.
       on('createZoomIn',    () => { if (window.createMapZoomIn)    window.createMapZoomIn(); });

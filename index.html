@@ -3714,6 +3714,23 @@
         #createSheetBackdrop { display: block; }
       }
 
+      /* Landscape phones (short viewport): trim vertical chrome and narrow the
+         rail + docked panel so the map keeps usable width and height. Honor the
+         side-notch insets since the rail/panel hug the screen edges. */
+      @media (orientation: landscape) and (max-height: 500px) {
+        #createTopBar {
+          height: calc(40px + env(safe-area-inset-top));
+          min-height: calc(40px + env(safe-area-inset-top));
+        }
+        #createRail {
+          width: calc(50px + env(safe-area-inset-left));
+          flex-basis: calc(50px + env(safe-area-inset-left));
+          padding-left: env(safe-area-inset-left);
+        }
+        #createPanel { flex-basis: 256px; padding-right: env(safe-area-inset-right); }
+        .create-panel-bar { padding-top: 6px; padding-bottom: 6px; }
+      }
+
       /* Rail buttons */
       .rail-btn {
         width: 40px;

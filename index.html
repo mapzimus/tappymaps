@@ -3242,21 +3242,30 @@
 
       @media (max-width: 720px) {
         .draft-main { flex-direction: column; }
+        /* Category rosters sit below the map as a two-column (You | AI) panel;
+           each side scrolls vertically so a full draft stays readable at 13px
+           instead of clipping into a cramped 120px strip. */
         .draft-rosters {
           width: auto; flex-direction: row; border-left: none;
           border-top: 1px solid var(--border, #334155);
-          max-height: 120px;
+          max-height: 26dvh; gap: 16px; overflow: hidden;
         }
-        .draft-roster { flex: 1; }
-        #draftPracticeList li .name { width: 105px; }
+        .draft-roster { flex: 1; min-width: 0; overflow-y: auto; }
+        #draftPracticeList li .name { width: auto; flex: 1; min-width: 0; }
+
         .draft-terr-main { flex-direction: column; }
+        /* Territory holds up to 25 states per side — stack the two panels below
+           the map, let each scroll, and flow names into columns so a full board
+           stays readable rather than clipping into an 11px strip. */
         .draft-terr-sidebar {
-          width: auto; flex-direction: row; border-left: none;
+          width: auto; border-left: none;
           border-top: 1px solid var(--border, #334155);
-          max-height: 110px; padding: 8px 12px; gap: 10px;
+          max-height: 18dvh; padding: 8px 12px;
         }
-        .draft-terr-sidebar h4 { margin-bottom: 3px; }
-        .draft-terr-sidebar li { font-size: 11px; }
+        .draft-terr-sidebar.ai { border-right: none !important; }
+        .draft-terr-sidebar h4 { margin-bottom: 4px; }
+        .draft-terr-sidebar ul { column-count: 3; column-gap: 14px; }
+        .draft-terr-sidebar li { font-size: 12px; break-inside: avoid; }
       }
 
       /* ===================================================================

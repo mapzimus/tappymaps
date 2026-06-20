@@ -2657,6 +2657,14 @@
       .lb-name { flex: 1; font-weight: 600; }
       .lb-medal { width: 20px; text-align: center; }
       .lb-score { font-variant-numeric: tabular-nums; font-weight: 800; min-width: 56px; text-align: right; }
+      /* Phones: trim the leaderboard padding, honor the notch, give rows a touch-
+         comfortable height, and let the name bar wrap if the label crowds. */
+      @media (max-width: 600px) {
+        #arcadeLeaderboard { padding: 20px 14px 24px; padding-top: max(20px, env(safe-area-inset-top)); }
+        .lb-namebar { flex-wrap: wrap; gap: 8px; }
+        .lb-list li { font-size: 13px; padding: 7px 8px; gap: 8px; }
+        .lb-summary { padding: 14px; }
+      }
       .arcade-tile-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));

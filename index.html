@@ -3461,6 +3461,28 @@
         font-size: 18px;
       }
 
+      /* Narrow phones: the cutover packs SIX action buttons into the top bar
+         (help, theme, undo, redo, share, account) plus the wordmark + title, so
+         it overflows below ~400px. Tighten it: the title becomes the flex give
+         (min-width:0 lets it shrink past its content); the redundant top-bar
+         undo/redo are dropped (they also live in the Map panel's Actions
+         section); the theme toggle keeps its icon but sheds the "Themes" label;
+         and below ~380px the wordmark drops its text, keeping the tappable pin. */
+      @media (max-width: 600px) {
+        #createTopBar { gap: 8px; padding: env(safe-area-inset-top) 8px 0; }
+        .create-map-title { flex: 1 1 60px; min-width: 0; max-width: none; }
+        .create-topbar-actions { gap: 6px; flex: 0 0 auto; }
+        .create-action-btn--share { padding: 6px 12px; }
+        #createTopBar #createUndoBtn,
+        #createTopBar #createRedoBtn { display: none; }
+        #createTopBar #themeToggle { font-size: 0; padding: 5px 6px; }
+        #createTopBar #themeToggle #themeIcon { font-size: 15px; }
+      }
+      @media (max-width: 380px) {
+        #createTopBar .create-wordmark .wm-tappy,
+        #createTopBar .create-wordmark .wm-maps { display: none; }
+      }
+
       #createBody {
         flex: 1;
         display: flex;

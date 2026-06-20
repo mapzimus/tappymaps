@@ -6296,6 +6296,43 @@
         }
         apply();
       }
+      // Frame a set of path elements: zoom + pan so their union fills `fill` of
+      // the wrap and lands centered. Transform-origin is center center, so a
+      // point's on-screen offset from center maps as offset0*scale + pan; we
+      // invert that to solve for pan. Clamped to the same 1..4 range as manual
+      // zoom; skips when the union is already big (no useful zoom).
+      function zoomToPaths(paths, fill) {
+        const wrap = document.getElementById(wrapId);
+        const svg = document.getElementById(svgId);
+        if (!wrap || !svg || !paths || !paths.length) return;
+        let l = Infinity, t = Infinity, r = -Infinity, b = -Infinity;
+        paths.forEach(p => {
+          if (!p) return;
+          const rc = p.getBoundingClientRect();
+          if (rc.width === 0 && rc.height === 0) return;
+          l = Math.min(l, rc.left); t = Math.min(t, rc.top);
+          r = Math.max(r, rc.right); b = Math.max(b, rc.bottom);
+        });
+        if (!isFinite(l)) return;
+        const wr = wrap.getBoundingClientRect();
+        const tw = r - l, th = b - t;
+        const cx = (l + tw / 2) - (wr.left + wr.width / 2);
+        const cy = (t + th / 2) - (wr.top + wr.height / 2);
+        const base0x = (cx - Z.panX) / Z.scale;
+        const base0y = (cy - Z.panY) / Z.scale;
+        const tw0 = tw / Z.scale, th0 = th / Z.scale;
+        const f = fill || 0.5;
+        let s = Math.min(wr.width * f / tw0, wr.height * f / th0);
+        s = Math.max(1, Math.min(4, s));
+        if (s < 1.35) return;       // big target — leave the full map in view
+        Z.scale = s;
+        Z.panX = -base0x * s;
+        Z.panY = -base0y * s;
+        clampPan();
+        svg.style.transition = 'transform 0.3s ease';
+        setTimeout(() => { svg.style.transition = ''; }, 320);
+        apply();
+      }
       (function wire() {
         const wrap = document.getElementById(wrapId);
         if (!wrap) return;
@@ -6341,7 +6378,7 @@
           zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12);
         }, { passive: false });
       })();
-      return { zoomBy: zoomBy, reset: reset, state: Z };
+      return { zoomBy: zoomBy, reset: reset, zoomToPaths: zoomToPaths, state: Z };
     }
     const arcadeZoom = makeMapZoom('arcadeMapWrap', 'arcadeMapSvg');
     function arcadeZoomBy(factor) { arcadeZoom.zoomBy(factor); }
@@ -6503,6 +6540,23 @@
         pop.classList.remove('is-pop');
         void pop.offsetWidth; // restart the CSS animation
         pop.classList.add('is-pop');
+      }
+      // On touch devices, auto-frame the contenders so small states are tappable.
+      // ONLY for modes whose relevant states are already highlighted on the map
+      // (duel / distance / rank) — never find/capitals/neighbors, where zooming
+      // to the target would give away the answer.
+      if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
+        let focus = null;
+        if (kind === 'duel') { const p = AG.prompts[AG.idx]; focus = [p.a, p.b]; }
+        else if (kind === 'distance') { const p = AG.prompts[AG.idx]; focus = [p.a, p.b, p.anchor]; }
+        else if (kind === 'rank') { focus = AG.prompts[AG.idx].states || []; }
+        if (focus) {
+          const fp = focus.map(arcadeStatePath).filter(Boolean);
+          if (fp.length) {
+            arcadeZoom.reset(false);   // baseline before measuring
+            requestAnimationFrame(() => arcadeZoom.zoomToPaths(fp, 0.5));
+          }
+        }
       }
       arcadeUpdateHud();
       arcadeStartTimer();

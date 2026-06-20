@@ -3308,6 +3308,16 @@
       }
       .embed-footer a { color: var(--accent, #0EA5E9); text-decoration: none; font-weight: 700; }
       .embed-footer.is-hidden { display: none; }
+      /* Tiny iframes: claw back space for the map. On very short embeds drop the
+         footer entirely (the on-map logo still carries the brand); on narrow
+         embeds just shrink it. Only .embed-footer / #embedMapHost are touched —
+         never #mapContainer, the live export-shared map node. */
+      @media (max-height: 360px) {
+        .embed-footer { display: none; }
+      }
+      @media (max-width: 400px) {
+        .embed-footer { padding: 5px 8px; font-size: 11px; }
+      }
 
       /* ===================================================================
          Gallery (Phase 4) — browse maps. Design surface: turquoise accent.

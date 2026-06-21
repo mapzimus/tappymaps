@@ -2874,14 +2874,13 @@
         stroke: var(--arcade); stroke-width: 2;
         animation: arcadePulse .5s ease;
       }
-      /* Neighbor Challenge: the "center" state glows and is not tappable */
+      /* Distance Duel: the anchor state glows and is not tappable */
       .arcade-state--center {
         fill: var(--arcade) !important;
         stroke: #fff; stroke-width: 2;
         pointer-events: none;
         animation: arcadePulse .5s ease;
       }
-
       /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it.
          Top-right so they never sit over Florida or the AK/HI insets. */
       .arcade-zoom-controls {
@@ -3890,7 +3889,7 @@
       </div>
       <nav class="hub-quick">
         <a data-route href="/games/arcade/find-state">Find the State</a>
-        <a data-route href="/games/arcade/neighbor-challenge">Neighbor Challenge</a>
+        <a data-route href="/games/arcade/stat-duel">Stat Duel</a>
         <a data-route href="/games/draft">GeoDraft</a>
         <a data-route href="/design/gallery/mine">Gallery</a>
       </nav>
@@ -5731,18 +5730,6 @@
         medals: { bronze: 150, silver: 280, gold: 400 },
         generator: (rng) => arcadePickCapitals(10, rng),
       },
-      'neighbor-challenge': {
-        id: 'neighbor-challenge',
-        name: 'Neighbor Challenge',
-        tagline: 'We name a state. Tap every state that borders it before the clock runs out.',
-        playable: true,
-        kind: 'neighbors',       // multi-tap: find ALL bordering states per prompt
-        runLength: 8,
-        perPrompt: 14,
-        scoring: { base: 0, timeBonusMax: 20, streakThreshold: 3, streakStep: 6, streakCap: 30, perNeighbor: 7, completion: 18 },
-        medals: { bronze: 280, silver: 470, gold: 620 },
-        generator: (rng) => arcadePickNeighborCenters(8, rng),
-      },
       'speed-run': {
         id: 'speed-run',
         name: 'Speed Run',
@@ -5808,11 +5795,6 @@
         goal: 'Tap the state a capital city belongs to.',
         steps: ['A capital city flashes — tap the state it’s the capital of.', 'Beat the timer; 10 capitals per run.', 'Zoom with +/− or pinch for the small states.'],
         scoring: 'Faster answers and streaks score more — chase bronze / silver / gold.',
-      },
-      'neighbor-challenge': {
-        goal: 'Tap EVERY state that borders the named state.',
-        steps: ['The center state is highlighted — find all of its neighbors.', 'Tap each bordering state. Wrong taps don’t end the round.', 'Get them all before the timer for a completion bonus — 8 rounds.'],
-        scoring: 'Points per correct neighbor, plus a bonus for finding them all and for speed.',
       },
       'speed-run': {
         goal: 'Find all 50 states, as fast as you can.',
@@ -6108,94 +6090,10 @@
       'Wisconsin':'Madison','Wyoming':'Cheyenne',
     };
 
-    // --- State adjacency — drives Neighbor Challenge ----------------------
-    // Land borders between the 50 states (Four Corners point-touches counted,
-    // DC not counted). Verified two ways at load in dev: each list length
-    // equals the DRAFT_BORDERS count, and the relation is symmetric.
-    const STATE_ADJACENCY = {
-      'Alabama':['Florida','Georgia','Tennessee','Mississippi'],
-      'Alaska':[],
-      'Arizona':['California','Nevada','Utah','New Mexico','Colorado'],
-      'Arkansas':['Missouri','Tennessee','Mississippi','Louisiana','Texas','Oklahoma'],
-      'California':['Oregon','Nevada','Arizona'],
-      'Colorado':['Wyoming','Nebraska','Kansas','Oklahoma','New Mexico','Utah','Arizona'],
-      'Connecticut':['New York','Massachusetts','Rhode Island'],
-      'Delaware':['Maryland','Pennsylvania','New Jersey'],
-      'Florida':['Georgia','Alabama'],
-      'Georgia':['Florida','Alabama','Tennessee','North Carolina','South Carolina'],
-      'Hawaii':[],
-      'Idaho':['Washington','Oregon','Nevada','Utah','Wyoming','Montana'],
-      'Illinois':['Wisconsin','Iowa','Missouri','Kentucky','Indiana'],
-      'Indiana':['Illinois','Michigan','Ohio','Kentucky'],
-      'Iowa':['Minnesota','Wisconsin','Illinois','Missouri','Nebraska','South Dakota'],
-      'Kansas':['Nebraska','Missouri','Oklahoma','Colorado'],
-      'Kentucky':['Indiana','Ohio','West Virginia','Virginia','Tennessee','Missouri','Illinois'],
-      'Louisiana':['Texas','Arkansas','Mississippi'],
-      'Maine':['New Hampshire'],
-      'Maryland':['Virginia','West Virginia','Pennsylvania','Delaware'],
-      'Massachusetts':['Rhode Island','Connecticut','New York','Vermont','New Hampshire'],
-      'Michigan':['Ohio','Indiana','Wisconsin'],
-      'Minnesota':['Wisconsin','Iowa','South Dakota','North Dakota'],
-      'Mississippi':['Louisiana','Arkansas','Tennessee','Alabama'],
-      'Missouri':['Iowa','Illinois','Kentucky','Tennessee','Arkansas','Oklahoma','Kansas','Nebraska'],
-      'Montana':['Idaho','Wyoming','South Dakota','North Dakota'],
-      'Nebraska':['South Dakota','Iowa','Missouri','Kansas','Colorado','Wyoming'],
-      'Nevada':['Oregon','Idaho','Utah','Arizona','California'],
-      'New Hampshire':['Maine','Massachusetts','Vermont'],
-      'New Jersey':['New York','Pennsylvania','Delaware'],
-      'New Mexico':['Arizona','Utah','Colorado','Oklahoma','Texas'],
-      'New York':['New Jersey','Pennsylvania','Connecticut','Massachusetts','Vermont'],
-      'North Carolina':['Virginia','Tennessee','Georgia','South Carolina'],
-      'North Dakota':['Minnesota','South Dakota','Montana'],
-      'Ohio':['Michigan','Indiana','Kentucky','West Virginia','Pennsylvania'],
-      'Oklahoma':['Kansas','Missouri','Arkansas','Texas','New Mexico','Colorado'],
-      'Oregon':['Washington','Idaho','Nevada','California'],
-      'Pennsylvania':['New York','New Jersey','Delaware','Maryland','West Virginia','Ohio'],
-      'Rhode Island':['Connecticut','Massachusetts'],
-      'South Carolina':['North Carolina','Georgia'],
-      'South Dakota':['North Dakota','Minnesota','Iowa','Nebraska','Wyoming','Montana'],
-      'Tennessee':['Kentucky','Virginia','North Carolina','Georgia','Alabama','Mississippi','Arkansas','Missouri'],
-      'Texas':['New Mexico','Oklahoma','Arkansas','Louisiana'],
-      'Utah':['Idaho','Wyoming','Colorado','New Mexico','Arizona','Nevada'],
-      'Vermont':['New York','New Hampshire','Massachusetts'],
-      'Virginia':['Maryland','West Virginia','Kentucky','Tennessee','North Carolina'],
-      'Washington':['Oregon','Idaho'],
-      'West Virginia':['Pennsylvania','Maryland','Virginia','Kentucky','Ohio'],
-      'Wisconsin':['Michigan','Minnesota','Iowa','Illinois'],
-      'Wyoming':['Montana','South Dakota','Nebraska','Colorado','Utah','Idaho'],
-    };
 
     // n distinct {state, capital} prompts (State Capitals game).
     function arcadePickCapitals(n, rng) {
       return arcadePickStates(n, rng).map(s => ({ state: s, capital: STATE_CAPITALS[s] }));
-    }
-    // n distinct center states that actually have neighbors (Neighbor Challenge).
-    function arcadePickNeighborCenters(n, rng) {
-      const pool = arcadeStateNames().filter(s => (STATE_ADJACENCY[s] || []).length > 0);
-      const shuffle = (arr) => {
-        for (let i = arr.length - 1; i > 0; i--) {
-          const j = Math.floor(rng() * (i + 1));
-          const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
-        }
-        return arr;
-      };
-      // Stratify by border count so every run draws a CONSISTENT total number of
-      // borders. With a flat random draw the total swung 18–54, so a flawless
-      // player's gold depended on the seed (easy Maine-heavy draws couldn't even
-      // reach it). A fixed low/mid/high composition removes that lottery while
-      // keeping variety. Falls back to a plain shuffle if a bucket runs short.
-      const bc = (s) => (STATE_ADJACENCY[s] || []).length;
-      const few = shuffle(pool.filter(s => bc(s) <= 3));
-      const mid = shuffle(pool.filter(s => bc(s) === 4 || bc(s) === 5));
-      const many = shuffle(pool.filter(s => bc(s) >= 6));
-      const want = (n === 8) ? { few: 3, mid: 3, many: 2 }
-        : { few: Math.round(n * 0.375), mid: Math.round(n * 0.375), many: n - Math.round(n * 0.375) * 2 };
-      const out = [];
-      const take = (arr, k) => { while (k-- > 0 && arr.length) out.push(arr.shift()); };
-      take(few, want.few); take(mid, want.mid); take(many, want.many);
-      const rest = shuffle(few.concat(mid, many));
-      while (out.length < n && rest.length) out.push(rest.shift());
-      return shuffle(out.slice(0, n)); // randomize the order they're presented in
     }
     // The state the player must tap for a single-target prompt: find/speed-run
     // prompts are plain strings; capitals prompts are { state, capital }.
@@ -6545,16 +6443,6 @@
         const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
         if (pa) pa.classList.add('arcade-state--duel');
         if (pb) pb.classList.add('arcade-state--duel');
-      } else if (kind === 'neighbors') {
-        const center = AG.prompts[AG.idx];
-        const needed = STATE_ADJACENCY[center] || [];
-        AG.nbCenter = center;
-        AG.nbNeeded = new Set(needed);
-        AG.nbFound = new Set();
-        const cp = arcadeStatePath(center);
-        if (cp) cp.classList.add('arcade-state--center');
-        if (prompt) prompt.textContent = 'Borders of ' + center + ' — tap all ' + needed.length;
-        popText = center + ' — find its ' + needed.length + ' neighbors';
       } else if (kind === 'capitals') {
         const entry = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Capital: ' + entry.capital + ' — tap the state';
@@ -6595,7 +6483,7 @@
       }
       // On touch devices, auto-frame the contenders so small states are tappable.
       // ONLY for modes whose relevant states are already highlighted on the map
-      // (duel / distance / rank) — never find/capitals/neighbors, where zooming
+      // (duel / distance / rank) — never find/capitals, where zooming
       // to the target would give away the answer.
       if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
         let focus = null;
@@ -6631,10 +6519,9 @@
         if (remain <= 0) arcadeTimeout(); // timeout = miss
       }, 90);
     }
-    // Timeout dispatch — neighbors ends the multi-tap round, others resolve.
+    // Timeout dispatch — rank scores whatever's placed so far; others resolve.
     function arcadeTimeout() {
-      if (AG.game.kind === 'neighbors') arcadeResolveNeighbors(false, null);
-      else if (AG.game.kind === 'rank') arcadeResolveRank(); // score whatever's placed so far
+      if (AG.game.kind === 'rank') arcadeResolveRank(); // score whatever's placed so far
       else arcadeResolve(null);
     }
 
@@ -6649,7 +6536,6 @@
         arcadeResolve(name);
         return;
       }
-      if (kind === 'neighbors') { arcadeNeighborTap(name); return; }
       if (kind === 'rank') { arcadeRankTap(name); return; }
       arcadeResolve(name);
     }
@@ -6701,72 +6587,6 @@
       arcadeUpdateHud();
       AG.idx += 1;
       AG.advanceId = setTimeout(arcadeNextPrompt, 2300);
-    }
-
-    // Neighbor Challenge: accumulate taps until all borders are found (success)
-    // or a wrong tap / timeout ends the round (miss). Correct neighbors score
-    // and paint live; a completion bonus + time + streak land on full success.
-    function arcadeNeighborTap(name) {
-      if (AG.answered) return;
-      if (name === AG.nbCenter) return;            // the center is not an answer
-      if (AG.nbFound.has(name)) return;            // already found
-      const s = AG.game.scoring;
-      if (AG.nbNeeded.has(name)) {
-        AG.nbFound.add(name);
-        AG.score += s.perNeighbor;
-        const tp = arcadeStatePath(name);
-        if (tp) {
-          tp.classList.add('arcade-state--correct', 'arcade-state--painted');
-          tp.style.fill = ARCADE_PAINT_COLORS[AG.paintIdx % ARCADE_PAINT_COLORS.length];
-          AG.paintIdx += 1;
-        }
-        arcadeUpdateHud();
-        if (AG.nbFound.size === AG.nbNeeded.size) {
-          arcadeResolveNeighbors(true, null);
-        } else {
-          arcadeShowToast('+' + s.perNeighbor + ' · ' + AG.nbFound.size + '/' + AG.nbNeeded.size, 'correct', 800);
-          SFX.correct(AG.nbFound.size);  // climbing pitch as the region fills in
-          Haptic.ok();
-        }
-      } else {
-        arcadeResolveNeighbors(false, name);       // wrong tap ends the round
-      }
-    }
-
-    function arcadeResolveNeighbors(success, wrongName) {
-      if (AG.answered) return;
-      AG.answered = true;
-      arcadeStopTimers();
-      const group = document.getElementById('arcadeStatesGroup');
-      if (group) group.classList.add('is-locked');
-      const s = AG.game.scoring;
-      const total = AG.nbNeeded.size, found = AG.nbFound.size;
-
-      if (success) {
-        const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
-        AG.streak += 1;
-        AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
-        const streakBonus = AG.streak >= s.streakThreshold
-          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
-        const gained = s.completion + timeBonus + streakBonus;
-        AG.score += gained;
-        AG.correct += 1;
-        arcadeShowToast('All ' + total + ' borders! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''), 'correct', 1300);
-        SFX.streak(AG.streak);
-        Haptic.win();
-      } else {
-        AG.streak = 0;
-        // Reveal the borders the player missed.
-        AG.nbNeeded.forEach(n => { if (!AG.nbFound.has(n)) { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); } });
-        if (wrongName) { const wp = arcadeStatePath(wrongName); if (wp) wp.classList.add('arcade-state--wrong'); }
-        arcadeShowToast((wrongName ? wrongName + " doesn't border " + AG.nbCenter : 'Time!') + ' · ' + found + '/' + total, 'wrong', 1600);
-        SFX.wrong();
-        Haptic.err();
-      }
-      arcadeUpdateHud();
-      AG.idx += 1;
-      AG.advanceId = setTimeout(arcadeNextPrompt, success ? 900 : 1700);
     }
 
     // Resolve the current prompt. tapped===null means timeout.
@@ -7040,7 +6860,7 @@
     // plus a play streak in localStorage. The retention loop — come back daily,
     // keep the 🔥 alive. Pool excludes the two Census-dependent games so the
     // daily can never fail on a data outage.
-    const ARCADE_DAILY_POOL = ['find-state', 'state-capitals', 'neighbor-challenge', 'speed-run', 'alphabet-race', 'distance-duel'];
+    const ARCADE_DAILY_POOL = ['find-state', 'state-capitals', 'speed-run', 'alphabet-race', 'distance-duel'];
     function arcadeDailyKey(d) {
       const now = d || new Date();
       return now.getUTCFullYear() + '-' + String(now.getUTCMonth() + 1).padStart(2, '0') + '-' + String(now.getUTCDate()).padStart(2, '0');

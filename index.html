@@ -3589,25 +3589,6 @@
       #createMap > #mapContainer { min-height: 0; max-height: 100%; }
       #createMap > #mapContainer > #mapSVG { flex: 1 1 0; min-height: 0; }
 
-      /* Desktop: show the map as the export frame itself — a centered landscape
-         card at the 1010:710 export aspect — so the editor is WYSIWYG with the
-         exported image instead of letting #mapContainer sprawl across the wide
-         panel area (which shrank the map and floated the corner legend toward
-         page-center). Capture forces its own inline dims + restores them, so
-         this live-view rule never affects export fidelity. Mobile portrait keeps
-         its own stacked layout below. */
-      @media (min-width: 901px) {
-        #createMap { align-items: center; }
-        #createMap > #mapContainer {
-          flex: 0 1 auto;
-          height: 100%;
-          width: auto;
-          aspect-ratio: 1010 / 710;
-          max-width: 100%;
-          max-height: 100%;
-        }
-      }
-
       /* Docked, collapsible control panel — sits in its own column beside the
          map (the map keeps its old size / position, never covered). Collapsing
          shrinks the column to 0 so the map expands to full width. A bar holds
@@ -5512,6 +5493,10 @@
         // First-visit welcome card — only ever in the editor, never the Hub
         // or games (its own guards skip it once seen / when a map is loaded).
         if (typeof showOnboarding === 'function') showOnboarding();
+        // Re-anchor legend after the map fills its new (full-width) space.
+        if (typeof updateLegendPosition === 'function') {
+          requestAnimationFrame(() => { try { updateLegendPosition(); } catch (_) {} });
+        }
       },
       exit() {
         const el = document.getElementById('modeCreate');

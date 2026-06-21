@@ -2854,10 +2854,20 @@
       }
       .arcade-state:hover { fill: #38516e; }
       .arcade-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
-      .arcade-state--correct { fill: var(--success, #22c55e) !important; }
-      .arcade-state--wrong { fill: var(--error, #ef4444) !important; }
+      /* Non-color cues (colorblind): the revealed answer gets a SOLID white
+         ring, a wrong tap gets a DASHED white ring — distinct shapes, not just
+         green vs red. */
+      .arcade-state--correct {
+        fill: var(--success, #22c55e) !important;
+        stroke: #fff !important; stroke-width: 2.5 !important;
+      }
+      .arcade-state--wrong {
+        fill: var(--error, #ef4444) !important;
+        stroke: #fff !important; stroke-width: 2.5 !important; stroke-dasharray: 5 3 !important;
+      }
       .arcade-state--reveal {
         fill: var(--success, #22c55e) !important;
+        stroke: #fff !important; stroke-width: 3 !important;
         animation: arcadePulse .9s ease;
       }
       @keyframes arcadePulse { 0% { opacity: 0.4; } 100% { opacity: 1; } }
@@ -6215,7 +6225,12 @@
     function arcadeShowToast(text, kind, ms) {
       const t = document.getElementById('arcadeToast');
       if (!t) return;
-      t.textContent = text;
+      // Prefix a ✓/✗ glyph so correct vs wrong reads without relying on the
+      // green/red color alone (colorblind cue). Skip if text already leads
+      // with one (callers that pre-format their own).
+      const glyph = kind === 'correct' ? '✓ ' : kind === 'wrong' ? '✗ ' : '';
+      const lead = text && (text.charAt(0) === '✓' || text.charAt(0) === '✗');
+      t.textContent = (lead ? '' : glyph) + text;
       t.className = 'arcade-toast is-show' + (kind ? ' is-' + kind : '');
       clearTimeout(AG._toastId);
       AG._toastId = setTimeout(() => { t.className = 'arcade-toast'; }, ms || 1100);

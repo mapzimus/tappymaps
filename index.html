@@ -9596,8 +9596,13 @@
     // SUPABASE AUTH & SUBSCRIPTION
     // ============================================================================
 
-    const SUPABASE_URL = 'https://qbhqdicppoahhvnuvcwd.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_hnxAIsNKXS1pERTqdU5Mew_GGpw9lsf';
+    // Client auth points at the LIVE "mapparatus" project (tylnxovujbhdmagugjew)
+    // — the same project the server-side /api/stripe/* functions verify JWTs
+    // against and where user_subscriptions / export_counts live. The original
+    // "tappymaps" project (qbhqdicppoahhvnuvcwd) was paused/INACTIVE, so the old
+    // client URL could no longer issue sessions and sign-in silently failed.
+    const SUPABASE_URL = 'https://tylnxovujbhdmagugjew.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_wRYolYcDWeiUzobTmaCnrQ__J0quzOq';
     const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
     function isPro() {

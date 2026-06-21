@@ -4290,8 +4290,10 @@
           <p class="draft-complete-detail" id="draftTerrCompleteDetail"></p>
           <div class="draft-complete-actions">
             <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrPlayAgain">Play again</button>
+            <button type="button" class="arcade-btn" id="draftTerrShareBtn">Share this match</button>
             <button type="button" class="arcade-btn" id="draftTerrToHub">GeoDraft home</button>
           </div>
+          <p class="arcade-share-status" id="draftTerrShareStatus" aria-live="polite"></p>
         </div>
       </div>
 
@@ -7142,6 +7144,10 @@
       DG.noiseMul = d === 'easy' ? 1.9 : d === 'hard' ? 0.45 : 1.0;   // hard = sharper AI
       DG.biasMag = d === 'easy' ? 4.5 : d === 'hard' ? 1.0 : 2.6;      // hard = smaller blind spots
     }
+    // Human-readable current difficulty — surfaced in-match so "Hard" is visible.
+    function draftDiffLabel() {
+      return { easy: 'Easy', normal: 'Normal', hard: 'Hard' }[DG.difficulty] || 'Normal';
+    }
     // Who drafts FIRST in a given round. This is the real lever: you always
     // taking the first pick means you grab true-ranks {1,3,5} vs the AI's
     // {2,4,6} and win almost every category regardless of AI skill. Make it
@@ -7311,7 +7317,7 @@
         p.classList.toggle('draft-state--out', !DG.available.has(p.getAttribute('data-state')));
       });
       draftZoom.reset();
-      draftSet('draftRoundLabel', 'Round ' + (DG.round + 1) + ' · Best of 5');
+      draftSet('draftRoundLabel', 'Round ' + (DG.round + 1) + ' · Best of 5 · ' + draftDiffLabel());
       draftSet('draftCatTitle', cat.title);
       draftSet('draftCatDesc', cat.desc);
       draftSet('draftCatRule', cat.rule || (cat.inverted ? 'Lowest total wins' : 'Highest total wins'));
@@ -7537,6 +7543,24 @@
       }
     }
 
+    function draftTerrShareMatch() {
+      const diffQ = (DG.difficulty && DG.difficulty !== 'normal') ? '&diff=' + DG.difficulty : '';
+      const url = window.location.origin + '/games/draft/territory?seed=' + DT.seed + diffQ;
+      const you = DT.youCatWins, ai = DT.aiCatWins;
+      const result = you > ai ? 'won the map ' + you + '-' + ai
+        : you === ai ? 'split the map ' + you + '-' + ai + ' with the AI'
+        : 'lost the map ' + you + '-' + ai + ' to the AI';
+      const text = 'I ' + result + ' on Tappymaps Territory Draft — same hidden categories, your turn: ' + url;
+      const status = document.getElementById('draftTerrShareStatus');
+      const done = (msg) => { if (status) status.textContent = msg; };
+      if (navigator.share) {
+        navigator.share({ title: 'Tappymaps Territory Draft', text: text, url: url })
+          .then(() => done('Shared!')).catch(() => arcadeCopy(url, done));
+      } else {
+        arcadeCopy(url, done);
+      }
+    }
+
     // --- Practice ----------------------------------------------------------
     let _draftPracticeFilled = false;
     function draftShowPractice() {
@@ -7645,6 +7669,7 @@
 
     async function draftTerrStart(seed) {
       if (!draftTerrBuildMap()) { draftShowView('draftHub'); return; }
+      if (typeof draftTerrClearIdleGuard === 'function') draftTerrClearIdleGuard();
       draftShowView('draftTerritory');
       document.getElementById('draftTerrReveal').style.display = 'none';
       document.getElementById('draftTerrComplete').style.display = 'none';
@@ -7717,6 +7742,23 @@
       draftTerrSetTurn('you');
     }
 
+    // Territory is deliberately a NO-TIMER mode ("pure strategy"), so this is a
+    // stall-guard, not a gameplay clock: only a long inactivity window triggers
+    // a seeded-random auto-pick, so an idle player can't freeze the match
+    // forever. No countdown is shown — the no-timer feel is preserved.
+    function draftTerrClearIdleGuard() {
+      if (DT.idleId) { clearTimeout(DT.idleId); DT.idleId = null; }
+    }
+    function draftTerrArmIdleGuard() {
+      draftTerrClearIdleGuard();
+      DT.idleId = setTimeout(() => {
+        if (DT.phase === 'pick' && DT.turn === 'you' && DT.available && DT.available.size) {
+          const arr = Array.from(DT.available);
+          draftTerrCommit('you', arr[Math.floor(DT.rng() * arr.length)]);
+        }
+      }, 45000);
+    }
+
     function draftTerrSetTurn(turn) {
       DT.turn = turn;
       const total = DT.youPicks.length + DT.aiPicks.length;
@@ -7724,9 +7766,11 @@
       if (turn === 'you') {
         const left = 25 - DT.youPicks.length;
         draftSet('draftTerrTurnLabel', 'Your pick — ' + left + ' left');
-        draftSet('draftTerrRoundLabel', 'Territory Draft · Pick ' + (total + 1) + ' of 50');
+        draftSet('draftTerrRoundLabel', 'Territory Draft · Pick ' + (total + 1) + ' of 50 · ' + draftDiffLabel());
         if (grp) grp.classList.remove('is-locked');
+        draftTerrArmIdleGuard();
       } else {
+        draftTerrClearIdleGuard();
         draftSet('draftTerrTurnLabel', 'AI is picking…');
         if (grp) grp.classList.add('is-locked');
         DT.aiTimerId = setTimeout(draftTerrAiPick, 400 + Math.floor(DT.rng() * 400));
@@ -7736,6 +7780,7 @@
     function draftTerrOnTap(name) {
       if (DT.phase !== 'pick' || DT.turn !== 'you') return;
       if (!DT.available || !DT.available.has(name)) return;
+      draftTerrClearIdleGuard();
       draftTerrCommit('you', name);
     }
 
@@ -7754,6 +7799,7 @@
       draftTerrRenderRosters();
       if (DT.youPicks.length === 25 && DT.aiPicks.length === 25) {
         DT.phase = 'reveal';
+        draftTerrClearIdleGuard();
         setTimeout(draftTerrShowReveal, 500);
         return;
       }
@@ -7836,7 +7882,9 @@
       draftSet('draftTerrCompleteTitle', win ? 'You control the map!' : (tie ? 'Split territory — a draw.' : 'The AI claimed the map.'));
       // Territory is the longer draft — worth more XP than Category.
       const _xp = (typeof progAddXp === 'function') ? progAddXp(win ? 90 : tie ? 55 : 30) : null;
-      draftSet('draftTerrCompleteDetail', 'Categories: ' + you + (win ? ' — ' + ai + ' AI' : ' — ' + ai + ' AI') + '. 3-category territory draft.'
+      const tiedCats = 3 - you - ai;   // a tie category awards no point — say so
+      draftSet('draftTerrCompleteDetail', 'Categories: ' + you + ' — ' + ai + ' AI'
+        + (tiedCats > 0 ? ' · ' + tiedCats + ' tied (no point)' : '') + '. 3-category territory draft.'
         + (_xp ? ' · +' + _xp.gain + ' XP' + (_xp.leveledUp ? ' — Lvl ' + _xp.level + ' 🎉' : '') : ''));
       // Juice: fanfare + buzz + confetti on a map-control win.
       SFX.complete(win ? 'gold' : (tie ? 'bronze' : 'none'));
@@ -7885,10 +7933,12 @@
       onClick('draftTerrBackBtn', () => {
         DT.phase = 'idle';
         if (DT.aiTimerId) { clearTimeout(DT.aiTimerId); DT.aiTimerId = null; }
+        draftTerrClearIdleGuard();
         Router.navigate('/games/draft');
       });
       onClick('draftTerrToHub', () => Router.navigate('/games/draft'));
       onClick('draftTerrPlayAgain', () => { document.getElementById('draftTerrComplete').style.display = 'none'; draftTerrStart(); });
+      onClick('draftTerrShareBtn', draftTerrShareMatch);
       onClick('draftTerrRevealNext', draftTerrRevealNext);
       onClick('draftTerrSeeResult', draftTerrShowComplete);
       onClick('draftTerrZoomIn', () => draftTerrZoom.zoomBy(1.4));

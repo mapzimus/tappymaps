@@ -5849,16 +5849,18 @@
     }
     // Pick N DISTINCT first-letters that each have at least one state. Distinct
     // letters guarantee the run is always satisfiable (a state maps to exactly
-    // one letter, so used-states never collide across prompts).
+    // one letter, so used-states never collide across prompts). The draw is
+    // WEIGHTED by how many states share each letter, so single-answer letters
+    // (D/F/G/H/L/P/R/U) — which are disguised pinpoint-finds paying the same as
+    // an 8-answer M or N — show up less often. Efraimidis–Spirakis weighted
+    // sampling without replacement (key = rng()^(1/weight), take the top n),
+    // seeded + deterministic.
     function arcadePickAlphabet(n, rng) {
-      const seen = {};
-      arcadeStateNames().forEach(s => { seen[s.charAt(0)] = true; });
-      const letters = Object.keys(seen);
-      for (let i = letters.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        const t = letters[i]; letters[i] = letters[j]; letters[j] = t;
-      }
-      return letters.slice(0, Math.min(n, letters.length));
+      const counts = {};
+      arcadeStateNames().forEach(s => { const c = s.charAt(0); counts[c] = (counts[c] || 0) + 1; });
+      const keyed = Object.keys(counts).map(L => ({ L: L, k: Math.pow(rng(), 1 / counts[L]) }));
+      keyed.sort((a, b) => b.k - a.k);
+      return keyed.slice(0, Math.min(n, keyed.length)).map(o => o.L);
     }
 
     // Sample N states WITH replacement (Shuffle mode). No immediate
@@ -6313,7 +6315,7 @@
         // Unused states that satisfy this letter — cached for scoring + reveal.
         AG.alphaValid = arcadeStatesByLetter(letter).filter(s => !AG.alphaUsed.has(s));
         if (prompt) prompt.textContent = 'Tap a state starting with “' + letter + '”';
-        popText = letter;
+        popText = 'Letter: ' + letter; // labelled so a flashed I/1 or U/V isn't misread
       } else if (kind === 'rank') {
         arcadeClearPaint();          // wipe last round's order colors
         AG.rankPicked = [];

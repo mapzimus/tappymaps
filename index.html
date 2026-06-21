@@ -2788,6 +2788,13 @@
         box-shadow: 0 8px 40px rgba(0,0,0,0.35);
       }
       .arcade-prompt-pop.is-pop { animation: arcadePromptPop 1.3s ease forwards; }
+      /* Stat Duel / Rank It: a muted definition line under the big prompt. */
+      .arcade-prompt-pop.has-sub { white-space: normal; }
+      .arcade-pop-sub {
+        display: block; margin-top: 8px;
+        font-size: clamp(13px, 1.8vw, 18px); font-weight: 600;
+        opacity: 0.78; line-height: 1.3;
+      }
       /* GeoDraft round-start category flash — big center-screen, not corner text */
       .draft-cat-pop {
         position: absolute; left: 50%; top: 40%;
@@ -6274,11 +6281,20 @@
             ? arcadePickQuads(game.runLength, rng, pool, data)
             : arcadePickPairs(game.runLength, rng, pool, data);
         } catch (err) {
-          AG.loading = false;
-          console.error('Census-data game load failed:', err);
-          arcadeShowToast('Live data unavailable right now — try another game', 'wrong');
-          arcadeShowHub();
-          return;
+          // Census down? Don't dead-end to the hub — degrade to a bundled
+          // static stat (state land area) so the run is still playable. Uses a
+          // SEPARATE synthetic dataset object + DRAFT_AREA data, so it never
+          // touches/poisons the sessionStorage census cache.
+          console.warn('Census-data game load failed — using static fallback:', err);
+          arcadeShowToast('Live data unavailable — using state land area', 'wrong', 1500);
+          const fallback = { title: 'Total Area', desc: 'Total state area in square miles.', format: 'number', fallback: true };
+          const data = DRAFT_AREA;
+          const pool = arcadeStateNames().filter(s => isFinite(data[s]));
+          AG.duelDataset = fallback;
+          AG.duelData = data;
+          AG.prompts = (game.kind === 'rank')
+            ? arcadePickQuads(game.runLength, rng, pool, data)
+            : arcadePickPairs(game.runLength, rng, pool, data);
         }
         AG.loading = false;
       } else {
@@ -6317,11 +6333,12 @@
       const prompt = document.getElementById('arcadePrompt');
       const pop = document.getElementById('arcadePromptPop');
       const kind = AG.game.kind;
-      let popText;
+      let popText, popSub = '';
       if (kind === 'duel') {
         const pair = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Higher ' + AG.duelDataset.title + ' — tap your pick';
         popText = pair.a + ' or ' + pair.b + '?';
+        popSub = AG.duelDataset.desc || '';   // remind players what the stat means
         const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
         if (pa) pa.classList.add('arcade-state--duel');
         if (pb) pb.classList.add('arcade-state--duel');
@@ -6337,15 +6354,31 @@
         const q = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Order by ' + AG.duelDataset.title + ' — highest first';
         popText = AG.duelDataset.title + ' — highest → lowest';
+        popSub = AG.duelDataset.desc || '';
         q.states.forEach(st => { const p = arcadeStatePath(st); if (p) p.classList.add('arcade-state--duel'); });
       } else {
         const target = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Find: ' + target;
         popText = target;
       }
-      // Big center-screen pop of the prompt (taps pass through it)
+      // Big center-screen pop of the prompt (taps pass through it). When a stat
+      // has a one-line description (Stat Duel / Rank It), show it as a muted
+      // second line so players duel on a stat they understand.
       if (pop) {
-        pop.textContent = popText;
+        if (popSub) {
+          const main = document.createElement('span');
+          main.textContent = popText;
+          const sub = document.createElement('span');
+          sub.className = 'arcade-pop-sub';
+          sub.textContent = popSub;
+          pop.textContent = '';
+          pop.appendChild(main);
+          pop.appendChild(sub);
+          pop.classList.add('has-sub');
+        } else {
+          pop.textContent = popText;
+          pop.classList.remove('has-sub');
+        }
         pop.classList.remove('is-pop');
         void pop.offsetWidth; // restart the CSS animation
         pop.classList.add('is-pop');
@@ -6448,8 +6481,13 @@
       trueOrder.forEach((nm, i) => {
         setTimeout(() => { const p = arcadeStatePath(nm); if (p) p.classList.add('arcade-state--reveal'); }, i * 240);
       });
-      arcadeShowToast(perfect ? 'Perfect order! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '')
-        : correctPositions + '/4 placed · +' + gained, perfect ? 'correct' : 'wrong', 1800);
+      // A timeout (fewer than 4 placed) reads as a wrong answer unless we say so.
+      const timedOut = AG.rankPicked.length < 4;
+      arcadeShowToast(
+        perfect ? 'Perfect order! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '')
+        : timedOut ? 'Time! — ' + AG.rankPicked.length + '/4 placed · ' + correctPositions + ' correct · +' + gained
+        : correctPositions + '/4 correct · +' + gained,
+        perfect ? 'correct' : 'wrong', 1800);
       if (perfect) { if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak); Haptic.ok(); }
       else { SFX.wrong(); Haptic.err(); }
       arcadeUpdateHud();

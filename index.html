@@ -7082,6 +7082,9 @@
     const DRAFT_PARKS = { 'California':9,'Alaska':8,'Utah':5,'Colorado':4,'Arizona':3,'Florida':3,'Washington':3,'Hawaii':2,'Montana':2,'Nevada':2,'New Mexico':2,'South Dakota':2,'Texas':2,'Wyoming':2,'Arkansas':1,'Idaho':1,'Indiana':1,'Kentucky':1,'Maine':1,'Michigan':1,'Minnesota':1,'Missouri':1,'North Carolina':1,'North Dakota':1,'Ohio':1,'Oregon':1,'South Carolina':1,'Tennessee':1,'Virginia':1,'West Virginia':1 };
     const DRAFT_BORDERS = { 'Alabama':4,'Alaska':0,'Arizona':5,'Arkansas':6,'California':3,'Colorado':7,'Connecticut':3,'Delaware':3,'Florida':2,'Georgia':5,'Hawaii':0,'Idaho':6,'Illinois':5,'Indiana':4,'Iowa':6,'Kansas':4,'Kentucky':7,'Louisiana':3,'Maine':1,'Maryland':4,'Massachusetts':5,'Michigan':3,'Minnesota':4,'Mississippi':4,'Missouri':8,'Montana':4,'Nebraska':6,'Nevada':5,'New Hampshire':3,'New Jersey':3,'New Mexico':5,'New York':5,'North Carolina':4,'North Dakota':3,'Ohio':5,'Oklahoma':6,'Oregon':4,'Pennsylvania':6,'Rhode Island':2,'South Carolina':2,'South Dakota':6,'Tennessee':8,'Texas':4,'Utah':6,'Vermont':3,'Virginia':5,'Washington':2,'West Virginia':5,'Wisconsin':4,'Wyoming':6 };
 
+    // Census stats whose GeoDraft category should be decided by the LOWEST
+    // total (lower is intuitively "better"), not the highest.
+    const DRAFT_CENSUS_LOWWINS = new Set(['poverty', 'unemployment']);
     // Category registry — lazy + memoized for the same TDZ reason as
     // arcadeStateNames(): DATA_MAP_DATASETS is declared later in the block.
     let _draftCats = null;
@@ -7102,7 +7105,11 @@
         { id: 'name-length-short', title: 'Shortest Names', desc: 'Letters in the state name — shortest wins.', format: 'number', computed: true, inverted: true, noise: 0.06, rule: 'Lowest total wins' },
       ];
       DATA_MAP_DATASETS.filter(d => !d.years).forEach(d => {
-        cats.push({ id: 'census-' + d.id, title: d.title, desc: d.desc, format: d.format, census: d, noise: 0.30 });
+        // A few census stats read as "lower is better" (you shouldn't win a
+        // round by drafting the MOST poverty / unemployment) — flag those so the
+        // lowest total takes the round. The reveal rule line updates automatically.
+        const lowWins = DRAFT_CENSUS_LOWWINS.has(d.id);
+        cats.push({ id: 'census-' + d.id, title: d.title, desc: d.desc, format: d.format, census: d, noise: 0.30, inverted: lowWins });
       });
       _draftCats = cats;
       return cats;

@@ -2611,7 +2611,9 @@
       .arcade-daily-streak { font-size: 13px; font-weight: 800; white-space: nowrap; }
       .arcade-daily-game { font-size: 20px; font-weight: 800; margin: 0 0 2px; }
       .arcade-daily-cta { font-size: 13px; font-weight: 700; opacity: 0.85; }
+      .arcade-daily-cta.is-at-risk { color: var(--arcade); opacity: 1; }
       .arcade-daily-card.is-done .arcade-daily-cta { color: var(--success, #22c55e); opacity: 1; }
+      .arcade-daily-reset { font-size: 11px; font-weight: 600; opacity: 0.55; margin-top: 3px; }
 
       /* Level chip (hub header) */
       .prog-chip {
@@ -2788,6 +2790,13 @@
         box-shadow: 0 8px 40px rgba(0,0,0,0.35);
       }
       .arcade-prompt-pop.is-pop { animation: arcadePromptPop 1.3s ease forwards; }
+      /* Stat Duel / Rank It: a muted definition line under the big prompt. */
+      .arcade-prompt-pop.has-sub { white-space: normal; }
+      .arcade-pop-sub {
+        display: block; margin-top: 8px;
+        font-size: clamp(13px, 1.8vw, 18px); font-weight: 600;
+        opacity: 0.78; line-height: 1.3;
+      }
       /* GeoDraft round-start category flash — big center-screen, not corner text */
       .draft-cat-pop {
         position: absolute; left: 50%; top: 40%;
@@ -2854,10 +2863,20 @@
       }
       .arcade-state:hover { fill: #38516e; }
       .arcade-state--dc { fill: #1a2433; cursor: default; pointer-events: none; }
-      .arcade-state--correct { fill: var(--success, #22c55e) !important; }
-      .arcade-state--wrong { fill: var(--error, #ef4444) !important; }
+      /* Non-color cues (colorblind): the revealed answer gets a SOLID white
+         ring, a wrong tap gets a DASHED white ring — distinct shapes, not just
+         green vs red. */
+      .arcade-state--correct {
+        fill: var(--success, #22c55e) !important;
+        stroke: #fff !important; stroke-width: 2.5 !important;
+      }
+      .arcade-state--wrong {
+        fill: var(--error, #ef4444) !important;
+        stroke: #fff !important; stroke-width: 2.5 !important; stroke-dasharray: 5 3 !important;
+      }
       .arcade-state--reveal {
         fill: var(--success, #22c55e) !important;
+        stroke: #fff !important; stroke-width: 3 !important;
         animation: arcadePulse .9s ease;
       }
       @keyframes arcadePulse { 0% { opacity: 0.4; } 100% { opacity: 1; } }
@@ -2874,14 +2893,6 @@
         stroke: var(--arcade); stroke-width: 2;
         animation: arcadePulse .5s ease;
       }
-      /* Neighbor Challenge: the "center" state glows and is not tappable */
-      .arcade-state--center {
-        fill: var(--arcade) !important;
-        stroke: #fff; stroke-width: 2;
-        pointer-events: none;
-        animation: arcadePulse .5s ease;
-      }
-
       /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it.
          Top-right so they never sit over Florida or the AK/HI insets. */
       .arcade-zoom-controls {
@@ -3890,7 +3901,7 @@
       </div>
       <nav class="hub-quick">
         <a data-route href="/games/arcade/find-state">Find the State</a>
-        <a data-route href="/games/arcade/neighbor-challenge">Neighbor Challenge</a>
+        <a data-route href="/games/arcade/stat-duel">Stat Duel</a>
         <a data-route href="/games/draft">GeoDraft</a>
         <a data-route href="/design/gallery/mine">Gallery</a>
       </nav>
@@ -4279,8 +4290,10 @@
           <p class="draft-complete-detail" id="draftTerrCompleteDetail"></p>
           <div class="draft-complete-actions">
             <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrPlayAgain">Play again</button>
+            <button type="button" class="arcade-btn" id="draftTerrShareBtn">Share this match</button>
             <button type="button" class="arcade-btn" id="draftTerrToHub">GeoDraft home</button>
           </div>
+          <p class="arcade-share-status" id="draftTerrShareStatus" aria-live="polite"></p>
         </div>
       </div>
 
@@ -5697,7 +5710,10 @@
         playable: true,
         runLength: 10,
         perPrompt: 8,            // seconds per prompt
-        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        // timeCurve > 1 makes the time bonus reward genuinely fast taps: the
+        // max (instant answer) is unchanged, but knowing-it-but-slow no longer
+        // banks near-max — so the clock is a speed skill, not a flat tax.
+        scoring: { base: 20, timeBonusMax: 15, timeCurve: 1.7, streakThreshold: 3, streakStep: 4, streakCap: 20 },
         medals: { bronze: 150, silver: 280, gold: 400 },
         // Run variants. Classic = 10 distinct states, paint as you go.
         // Shuffle = sampled with replacement (no back-to-back repeats), so a
@@ -5719,30 +5735,6 @@
         scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
         medals: { bronze: 150, silver: 280, gold: 400 },
       },
-      'state-capitals': {
-        id: 'state-capitals',
-        name: 'State Capitals',
-        tagline: 'We name a capital city. Tap the state it belongs to.',
-        playable: true,
-        kind: 'capitals',        // single-tap, but the target is derived from a capital
-        runLength: 10,
-        perPrompt: 9,
-        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
-        medals: { bronze: 150, silver: 280, gold: 400 },
-        generator: (rng) => arcadePickCapitals(10, rng),
-      },
-      'neighbor-challenge': {
-        id: 'neighbor-challenge',
-        name: 'Neighbor Challenge',
-        tagline: 'We name a state. Tap every state that borders it before the clock runs out.',
-        playable: true,
-        kind: 'neighbors',       // multi-tap: find ALL bordering states per prompt
-        runLength: 8,
-        perPrompt: 14,
-        scoring: { base: 0, timeBonusMax: 20, streakThreshold: 3, streakStep: 6, streakCap: 30, perNeighbor: 7, completion: 18 },
-        medals: { bronze: 280, silver: 470, gold: 620 },
-        generator: (rng) => arcadePickNeighborCenters(8, rng),
-      },
       'speed-run': {
         id: 'speed-run',
         name: 'Speed Run',
@@ -5750,7 +5742,7 @@
         playable: true,
         runLength: 50,
         perPrompt: 5,
-        scoring: { base: 10, timeBonusMax: 12, streakThreshold: 5, streakStep: 3, streakCap: 40 },
+        scoring: { base: 10, timeBonusMax: 12, timeCurve: 1.7, streakThreshold: 5, streakStep: 3, streakCap: 40 },
         medals: { bronze: 500, silver: 1100, gold: 1600 },
         generator: (rng) => arcadePickStates(50, rng),
       },
@@ -5765,18 +5757,6 @@
         scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
         medals: { bronze: 150, silver: 280, gold: 400 },
         generator: (rng) => arcadePickAlphabet(10, rng),
-      },
-      'distance-duel': {
-        id: 'distance-duel',
-        name: 'Distance Duel',
-        tagline: 'Two states, one anchor. Tap whichever sits CLOSER to it on the map.',
-        playable: true,
-        kind: 'distance',        // two contestants + an anchor; tap the geographically closer one
-        runLength: 10,
-        perPrompt: 9,
-        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
-        medals: { bronze: 150, silver: 280, gold: 400 },
-        generator: (rng) => arcadePickDistanceRounds(10, rng),
       },
       'rank-it': {
         id: 'rank-it',
@@ -5804,16 +5784,6 @@
         steps: ['Two states glow and a stat is named (population, income, …).', 'Tap whichever one you think is higher.', 'The real values are revealed after each pick — 10 rounds.'],
         scoring: 'Speed and streaks boost your score. Needs live Census data to play.',
       },
-      'state-capitals': {
-        goal: 'Tap the state a capital city belongs to.',
-        steps: ['A capital city flashes — tap the state it’s the capital of.', 'Beat the timer; 10 capitals per run.', 'Zoom with +/− or pinch for the small states.'],
-        scoring: 'Faster answers and streaks score more — chase bronze / silver / gold.',
-      },
-      'neighbor-challenge': {
-        goal: 'Tap EVERY state that borders the named state.',
-        steps: ['The center state is highlighted — find all of its neighbors.', 'Tap each bordering state. Wrong taps don’t end the round.', 'Get them all before the timer for a completion bonus — 8 rounds.'],
-        scoring: 'Points per correct neighbor, plus a bonus for finding them all and for speed.',
-      },
       'speed-run': {
         goal: 'Find all 50 states, as fast as you can.',
         steps: ['States are named one after another — tap each before its short timer.', 'One long 50-state run; misses just move you on.', 'Zoom for the tiny northeastern states.'],
@@ -5823,11 +5793,6 @@
         goal: 'Tap any state that starts with the letter we name.',
         steps: ['A letter flashes — tap ANY state whose name starts with it.', 'Each correct answer must be a NEW state; 10 letters per run.', 'Miss reveals the states that would have worked. Wrong taps cost the round.'],
         scoring: 'Faster answers and streaks score more — chase bronze / silver / gold. No data needed.',
-      },
-      'distance-duel': {
-        goal: 'Tap whichever of two states is CLOSER to the anchor state.',
-        steps: ['An anchor state is highlighted, plus two contestants.', 'Tap the contestant you think sits closer to the anchor on the map.', 'The closer one is revealed each round — 10 rounds. No data needed.'],
-        scoring: 'Speed and streaks boost your score — chase bronze / silver / gold.',
       },
       'rank-it': {
         goal: 'Tap four highlighted states in order, highest to lowest on a stat.',
@@ -5908,84 +5873,20 @@
     }
     // Pick N DISTINCT first-letters that each have at least one state. Distinct
     // letters guarantee the run is always satisfiable (a state maps to exactly
-    // one letter, so used-states never collide across prompts).
+    // one letter, so used-states never collide across prompts). The draw is
+    // WEIGHTED by how many states share each letter, so single-answer letters
+    // (D/F/G/H/L/P/R/U) — which are disguised pinpoint-finds paying the same as
+    // an 8-answer M or N — show up less often. Efraimidis–Spirakis weighted
+    // sampling without replacement (key = rng()^(1/weight), take the top n),
+    // seeded + deterministic.
     function arcadePickAlphabet(n, rng) {
-      const seen = {};
-      arcadeStateNames().forEach(s => { seen[s.charAt(0)] = true; });
-      const letters = Object.keys(seen);
-      for (let i = letters.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        const t = letters[i]; letters[i] = letters[j]; letters[j] = t;
-      }
-      return letters.slice(0, Math.min(n, letters.length));
+      const counts = {};
+      arcadeStateNames().forEach(s => { const c = s.charAt(0); counts[c] = (counts[c] || 0) + 1; });
+      const keyed = Object.keys(counts).map(L => ({ L: L, k: Math.pow(rng(), 1 / counts[L]) }));
+      keyed.sort((a, b) => b.k - a.k);
+      return keyed.slice(0, Math.min(n, keyed.length)).map(o => o.L);
     }
 
-    // --- Distance Duel: per-state centroids from the cached topology --------
-    // AREA centroid of each state's LARGEST landmass (projected Albers units).
-    // A bounding-box center is visually wrong for irregular/multi-part states —
-    // Michigan's bbox-center lands in the lake between its peninsulas, Florida's
-    // and Maryland's sit off the visible mass — which made "which is closer"
-    // mark the shape-obviously-closer state wrong. The polygon centroid of the
-    // biggest piece tracks where a player actually sees the state. Cached; lazy
-    // (reads appState/fipsToState only at call time, TDZ-safe).
-    let _arcCentroids = null;
-    function arcadeStateCentroids() {
-      if (_arcCentroids) return _arcCentroids;
-      const topo = (typeof appState !== 'undefined') ? appState.topologyData : null;
-      if (!topo || typeof topojson === 'undefined') return null;
-      const feats = topojson.feature(topo, topo.objects.states).features;
-      const out = {};
-      // Signed area + area-centroid of one ring (shoelace).
-      const ringCentroid = (ring) => {
-        let a = 0, cx = 0, cy = 0;
-        for (let i = 0, len = ring.length; i < len; i++) {
-          const p0 = ring[i], p1 = ring[(i + 1) % len];
-          const cross = p0[0] * p1[1] - p1[0] * p0[1];
-          a += cross; cx += (p0[0] + p1[0]) * cross; cy += (p0[1] + p1[1]) * cross;
-        }
-        a *= 0.5;
-        if (Math.abs(a) < 1e-9) return null;
-        return { x: cx / (6 * a), y: cy / (6 * a), area: Math.abs(a) };
-      };
-      feats.forEach(f => {
-        const name = fipsToState[String(f.id).padStart(2, '0')];
-        if (!name) return;
-        const g = f.geometry;
-        const polys = g.type === 'Polygon' ? [g.coordinates]
-          : g.type === 'MultiPolygon' ? g.coordinates : [];
-        let best = null; // the largest-area outer ring = the visual mass
-        polys.forEach(poly => {
-          const c = poly[0] && ringCentroid(poly[0]);
-          if (c && (!best || c.area > best.area)) best = c;
-        });
-        if (best) out[name] = { x: best.x, y: best.y };
-      });
-      _arcCentroids = out;
-      return out;
-    }
-    function arcadeCentroidDist(cents, a, b) {
-      return Math.hypot(cents[a].x - cents[b].x, cents[a].y - cents[b].y);
-    }
-    // Build N rounds of { anchor, a, b }. Reject near-ties (closer/farther within
-    // ~18%) so every round has a defensibly correct answer. Seeded + deterministic.
-    function arcadePickDistanceRounds(n, rng) {
-      const cents = arcadeStateCentroids();
-      if (!cents) return [];
-      const names = Object.keys(cents).filter(nm => !nonColorable.has(nm));
-      const rounds = [];
-      let guard = 0;
-      while (rounds.length < n && guard++ < n * 60) {
-        const anchor = names[Math.floor(rng() * names.length)];
-        const a = names[Math.floor(rng() * names.length)];
-        const b = names[Math.floor(rng() * names.length)];
-        if (a === b || a === anchor || b === anchor) continue;
-        const da = arcadeCentroidDist(cents, anchor, a), db = arcadeCentroidDist(cents, anchor, b);
-        const hi = Math.max(da, db), lo = Math.min(da, db);
-        if (hi === 0 || lo / hi > 0.82) continue; // too close to call — skip
-        rounds.push({ anchor: anchor, a: a, b: b });
-      }
-      return rounds;
-    }
     // Sample N states WITH replacement (Shuffle mode). No immediate
     // back-to-back repeat, but a state can absolutely come up again later.
     function arcadePickShuffle(n, rng) {
@@ -6092,113 +5993,8 @@
     };
 
 
-    const STATE_CAPITALS = {
-      'Alabama':'Montgomery','Alaska':'Juneau','Arizona':'Phoenix','Arkansas':'Little Rock',
-      'California':'Sacramento','Colorado':'Denver','Connecticut':'Hartford','Delaware':'Dover',
-      'Florida':'Tallahassee','Georgia':'Atlanta','Hawaii':'Honolulu','Idaho':'Boise',
-      'Illinois':'Springfield','Indiana':'Indianapolis','Iowa':'Des Moines','Kansas':'Topeka',
-      'Kentucky':'Frankfort','Louisiana':'Baton Rouge','Maine':'Augusta','Maryland':'Annapolis',
-      'Massachusetts':'Boston','Michigan':'Lansing','Minnesota':'Saint Paul','Mississippi':'Jackson',
-      'Missouri':'Jefferson City','Montana':'Helena','Nebraska':'Lincoln','Nevada':'Carson City',
-      'New Hampshire':'Concord','New Jersey':'Trenton','New Mexico':'Santa Fe','New York':'Albany',
-      'North Carolina':'Raleigh','North Dakota':'Bismarck','Ohio':'Columbus','Oklahoma':'Oklahoma City',
-      'Oregon':'Salem','Pennsylvania':'Harrisburg','Rhode Island':'Providence','South Carolina':'Columbia',
-      'South Dakota':'Pierre','Tennessee':'Nashville','Texas':'Austin','Utah':'Salt Lake City',
-      'Vermont':'Montpelier','Virginia':'Richmond','Washington':'Olympia','West Virginia':'Charleston',
-      'Wisconsin':'Madison','Wyoming':'Cheyenne',
-    };
-
-    // --- State adjacency — drives Neighbor Challenge ----------------------
-    // Land borders between the 50 states (Four Corners point-touches counted,
-    // DC not counted). Verified two ways at load in dev: each list length
-    // equals the DRAFT_BORDERS count, and the relation is symmetric.
-    const STATE_ADJACENCY = {
-      'Alabama':['Florida','Georgia','Tennessee','Mississippi'],
-      'Alaska':[],
-      'Arizona':['California','Nevada','Utah','New Mexico','Colorado'],
-      'Arkansas':['Missouri','Tennessee','Mississippi','Louisiana','Texas','Oklahoma'],
-      'California':['Oregon','Nevada','Arizona'],
-      'Colorado':['Wyoming','Nebraska','Kansas','Oklahoma','New Mexico','Utah','Arizona'],
-      'Connecticut':['New York','Massachusetts','Rhode Island'],
-      'Delaware':['Maryland','Pennsylvania','New Jersey'],
-      'Florida':['Georgia','Alabama'],
-      'Georgia':['Florida','Alabama','Tennessee','North Carolina','South Carolina'],
-      'Hawaii':[],
-      'Idaho':['Washington','Oregon','Nevada','Utah','Wyoming','Montana'],
-      'Illinois':['Wisconsin','Iowa','Missouri','Kentucky','Indiana'],
-      'Indiana':['Illinois','Michigan','Ohio','Kentucky'],
-      'Iowa':['Minnesota','Wisconsin','Illinois','Missouri','Nebraska','South Dakota'],
-      'Kansas':['Nebraska','Missouri','Oklahoma','Colorado'],
-      'Kentucky':['Indiana','Ohio','West Virginia','Virginia','Tennessee','Missouri','Illinois'],
-      'Louisiana':['Texas','Arkansas','Mississippi'],
-      'Maine':['New Hampshire'],
-      'Maryland':['Virginia','West Virginia','Pennsylvania','Delaware'],
-      'Massachusetts':['Rhode Island','Connecticut','New York','Vermont','New Hampshire'],
-      'Michigan':['Ohio','Indiana','Wisconsin'],
-      'Minnesota':['Wisconsin','Iowa','South Dakota','North Dakota'],
-      'Mississippi':['Louisiana','Arkansas','Tennessee','Alabama'],
-      'Missouri':['Iowa','Illinois','Kentucky','Tennessee','Arkansas','Oklahoma','Kansas','Nebraska'],
-      'Montana':['Idaho','Wyoming','South Dakota','North Dakota'],
-      'Nebraska':['South Dakota','Iowa','Missouri','Kansas','Colorado','Wyoming'],
-      'Nevada':['Oregon','Idaho','Utah','Arizona','California'],
-      'New Hampshire':['Maine','Massachusetts','Vermont'],
-      'New Jersey':['New York','Pennsylvania','Delaware'],
-      'New Mexico':['Arizona','Utah','Colorado','Oklahoma','Texas'],
-      'New York':['New Jersey','Pennsylvania','Connecticut','Massachusetts','Vermont'],
-      'North Carolina':['Virginia','Tennessee','Georgia','South Carolina'],
-      'North Dakota':['Minnesota','South Dakota','Montana'],
-      'Ohio':['Michigan','Indiana','Kentucky','West Virginia','Pennsylvania'],
-      'Oklahoma':['Kansas','Missouri','Arkansas','Texas','New Mexico','Colorado'],
-      'Oregon':['Washington','Idaho','Nevada','California'],
-      'Pennsylvania':['New York','New Jersey','Delaware','Maryland','West Virginia','Ohio'],
-      'Rhode Island':['Connecticut','Massachusetts'],
-      'South Carolina':['North Carolina','Georgia'],
-      'South Dakota':['North Dakota','Minnesota','Iowa','Nebraska','Wyoming','Montana'],
-      'Tennessee':['Kentucky','Virginia','North Carolina','Georgia','Alabama','Mississippi','Arkansas','Missouri'],
-      'Texas':['New Mexico','Oklahoma','Arkansas','Louisiana'],
-      'Utah':['Idaho','Wyoming','Colorado','New Mexico','Arizona','Nevada'],
-      'Vermont':['New York','New Hampshire','Massachusetts'],
-      'Virginia':['Maryland','West Virginia','Kentucky','Tennessee','North Carolina'],
-      'Washington':['Oregon','Idaho'],
-      'West Virginia':['Pennsylvania','Maryland','Virginia','Kentucky','Ohio'],
-      'Wisconsin':['Michigan','Minnesota','Iowa','Illinois'],
-      'Wyoming':['Montana','South Dakota','Nebraska','Colorado','Utah','Idaho'],
-    };
-
-    // n distinct {state, capital} prompts (State Capitals game).
-    function arcadePickCapitals(n, rng) {
-      return arcadePickStates(n, rng).map(s => ({ state: s, capital: STATE_CAPITALS[s] }));
-    }
-    // n distinct center states that actually have neighbors (Neighbor Challenge).
-    function arcadePickNeighborCenters(n, rng) {
-      const pool = arcadeStateNames().filter(s => (STATE_ADJACENCY[s] || []).length > 0);
-      const shuffle = (arr) => {
-        for (let i = arr.length - 1; i > 0; i--) {
-          const j = Math.floor(rng() * (i + 1));
-          const t = arr[i]; arr[i] = arr[j]; arr[j] = t;
-        }
-        return arr;
-      };
-      // Stratify by border count so every run draws a CONSISTENT total number of
-      // borders. With a flat random draw the total swung 18–54, so a flawless
-      // player's gold depended on the seed (easy Maine-heavy draws couldn't even
-      // reach it). A fixed low/mid/high composition removes that lottery while
-      // keeping variety. Falls back to a plain shuffle if a bucket runs short.
-      const bc = (s) => (STATE_ADJACENCY[s] || []).length;
-      const few = shuffle(pool.filter(s => bc(s) <= 3));
-      const mid = shuffle(pool.filter(s => bc(s) === 4 || bc(s) === 5));
-      const many = shuffle(pool.filter(s => bc(s) >= 6));
-      const want = (n === 8) ? { few: 3, mid: 3, many: 2 }
-        : { few: Math.round(n * 0.375), mid: Math.round(n * 0.375), many: n - Math.round(n * 0.375) * 2 };
-      const out = [];
-      const take = (arr, k) => { while (k-- > 0 && arr.length) out.push(arr.shift()); };
-      take(few, want.few); take(mid, want.mid); take(many, want.many);
-      const rest = shuffle(few.concat(mid, many));
-      while (out.length < n && rest.length) out.push(rest.shift());
-      return shuffle(out.slice(0, n)); // randomize the order they're presented in
-    }
     // The state the player must tap for a single-target prompt: find/speed-run
-    // prompts are plain strings; capitals prompts are { state, capital }.
+    // prompts are plain strings.
     function arcadeSingleTarget(entry) {
       return (typeof entry === 'string') ? entry : entry.state;
     }
@@ -6301,7 +6097,7 @@
     }
     function arcadeClearMarks() {
       document.querySelectorAll('#arcadeStatesGroup .arcade-state')
-        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal', 'arcade-state--duel', 'arcade-state--center'));
+        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal', 'arcade-state--duel'));
     }
     // Strip the persistent paint fills — run start only, NOT between prompts.
     function arcadeClearPaint() {
@@ -6443,7 +6239,12 @@
     function arcadeShowToast(text, kind, ms) {
       const t = document.getElementById('arcadeToast');
       if (!t) return;
-      t.textContent = text;
+      // Prefix a ✓/✗ glyph so correct vs wrong reads without relying on the
+      // green/red color alone (colorblind cue). Skip if text already leads
+      // with one (callers that pre-format their own).
+      const glyph = kind === 'correct' ? '✓ ' : kind === 'wrong' ? '✗ ' : '';
+      const lead = text && (text.charAt(0) === '✓' || text.charAt(0) === '✗');
+      t.textContent = (lead ? '' : glyph) + text;
       t.className = 'arcade-toast is-show' + (kind ? ' is-' + kind : '');
       clearTimeout(AG._toastId);
       AG._toastId = setTimeout(() => { t.className = 'arcade-toast'; }, ms || 1100);
@@ -6487,23 +6288,25 @@
             ? arcadePickQuads(game.runLength, rng, pool, data)
             : arcadePickPairs(game.runLength, rng, pool, data);
         } catch (err) {
-          AG.loading = false;
-          console.error('Census-data game load failed:', err);
-          arcadeShowToast('Live data unavailable right now — try another game', 'wrong');
-          arcadeShowHub();
-          return;
+          // Census down? Don't dead-end to the hub — degrade to a bundled
+          // static stat (state land area) so the run is still playable. Uses a
+          // SEPARATE synthetic dataset object + DRAFT_AREA data, so it never
+          // touches/poisons the sessionStorage census cache.
+          console.warn('Census-data game load failed — using static fallback:', err);
+          arcadeShowToast('Live data unavailable — using state land area', 'wrong', 1500);
+          const fallback = { title: 'Total Area', desc: 'Total state area in square miles.', format: 'number', fallback: true };
+          const data = DRAFT_AREA;
+          const pool = arcadeStateNames().filter(s => isFinite(data[s]));
+          AG.duelDataset = fallback;
+          AG.duelData = data;
+          AG.prompts = (game.kind === 'rank')
+            ? arcadePickQuads(game.runLength, rng, pool, data)
+            : arcadePickPairs(game.runLength, rng, pool, data);
         }
         AG.loading = false;
       } else {
         const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
         AG.prompts = gen(rng);
-        // Distance Duel needs the cached topology to compute centroids; if it's
-        // not ready yet, fail soft back to the hub rather than start an empty run.
-        if (game.kind === 'distance' && AG.prompts.length < game.runLength) {
-          arcadeShowToast('Map still loading — try again in a moment', 'wrong');
-          arcadeShowHub();
-          return;
-        }
       }
 
       AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
@@ -6513,7 +6316,7 @@
       document.getElementById('arcadeGame').style.display = 'flex';
       document.getElementById('arcadeComplete').style.display = 'none';
       const group = document.getElementById('arcadeStatesGroup');
-      if (group) group.classList.toggle('is-duel', game.kind === 'duel' || game.kind === 'distance' || game.kind === 'rank');
+      if (group) group.classList.toggle('is-duel', game.kind === 'duel' || game.kind === 'rank');
       arcadeClearMarks();
       arcadeClearPaint();
       arcadeResetZoom();
@@ -6537,70 +6340,63 @@
       const prompt = document.getElementById('arcadePrompt');
       const pop = document.getElementById('arcadePromptPop');
       const kind = AG.game.kind;
-      let popText;
+      let popText, popSub = '';
       if (kind === 'duel') {
         const pair = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Higher ' + AG.duelDataset.title + ' — tap your pick';
         popText = pair.a + ' or ' + pair.b + '?';
+        popSub = AG.duelDataset.desc || '';   // remind players what the stat means
         const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
         if (pa) pa.classList.add('arcade-state--duel');
         if (pb) pb.classList.add('arcade-state--duel');
-      } else if (kind === 'neighbors') {
-        const center = AG.prompts[AG.idx];
-        const needed = STATE_ADJACENCY[center] || [];
-        AG.nbCenter = center;
-        AG.nbNeeded = new Set(needed);
-        AG.nbFound = new Set();
-        const cp = arcadeStatePath(center);
-        if (cp) cp.classList.add('arcade-state--center');
-        if (prompt) prompt.textContent = 'Borders of ' + center + ' — tap all ' + needed.length;
-        popText = center + ' — find its ' + needed.length + ' neighbors';
-      } else if (kind === 'capitals') {
-        const entry = AG.prompts[AG.idx];
-        if (prompt) prompt.textContent = 'Capital: ' + entry.capital + ' — tap the state';
-        popText = entry.capital + '?';
       } else if (kind === 'alpha') {
         const letter = AG.prompts[AG.idx];
         // Unused states that satisfy this letter — cached for scoring + reveal.
         AG.alphaValid = arcadeStatesByLetter(letter).filter(s => !AG.alphaUsed.has(s));
         if (prompt) prompt.textContent = 'Tap a state starting with “' + letter + '”';
-        popText = letter;
-      } else if (kind === 'distance') {
-        const r = AG.prompts[AG.idx];
-        if (prompt) prompt.textContent = 'Closer to ' + r.anchor + ' — tap your pick';
-        popText = r.a + ' or ' + r.b + '?';
-        const pa = arcadeStatePath(r.a), pb = arcadeStatePath(r.b);
-        if (pa) pa.classList.add('arcade-state--duel');
-        if (pb) pb.classList.add('arcade-state--duel');
-        const anc = arcadeStatePath(r.anchor);   // anchor glows but isn't tappable (not --duel)
-        if (anc) anc.classList.add('arcade-state--center');
+        popText = 'Letter: ' + letter; // labelled so a flashed I/1 or U/V isn't misread
       } else if (kind === 'rank') {
         arcadeClearPaint();          // wipe last round's order colors
         AG.rankPicked = [];
         const q = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Order by ' + AG.duelDataset.title + ' — highest first';
         popText = AG.duelDataset.title + ' — highest → lowest';
+        popSub = AG.duelDataset.desc || '';
         q.states.forEach(st => { const p = arcadeStatePath(st); if (p) p.classList.add('arcade-state--duel'); });
       } else {
         const target = AG.prompts[AG.idx];
         if (prompt) prompt.textContent = 'Find: ' + target;
         popText = target;
       }
-      // Big center-screen pop of the prompt (taps pass through it)
+      // Big center-screen pop of the prompt (taps pass through it). When a stat
+      // has a one-line description (Stat Duel / Rank It), show it as a muted
+      // second line so players duel on a stat they understand.
       if (pop) {
-        pop.textContent = popText;
+        if (popSub) {
+          const main = document.createElement('span');
+          main.textContent = popText;
+          const sub = document.createElement('span');
+          sub.className = 'arcade-pop-sub';
+          sub.textContent = popSub;
+          pop.textContent = '';
+          pop.appendChild(main);
+          pop.appendChild(sub);
+          pop.classList.add('has-sub');
+        } else {
+          pop.textContent = popText;
+          pop.classList.remove('has-sub');
+        }
         pop.classList.remove('is-pop');
         void pop.offsetWidth; // restart the CSS animation
         pop.classList.add('is-pop');
       }
       // On touch devices, auto-frame the contenders so small states are tappable.
       // ONLY for modes whose relevant states are already highlighted on the map
-      // (duel / distance / rank) — never find/capitals/neighbors, where zooming
-      // to the target would give away the answer.
+      // (duel / rank) — never find/alpha, where zooming to the target would
+      // give away the answer.
       if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
         let focus = null;
         if (kind === 'duel') { const p = AG.prompts[AG.idx]; focus = [p.a, p.b]; }
-        else if (kind === 'distance') { const p = AG.prompts[AG.idx]; focus = [p.a, p.b, p.anchor]; }
         else if (kind === 'rank') { focus = AG.prompts[AG.idx].states || []; }
         if (focus) {
           const fp = focus.map(arcadeStatePath).filter(Boolean);
@@ -6631,10 +6427,9 @@
         if (remain <= 0) arcadeTimeout(); // timeout = miss
       }, 90);
     }
-    // Timeout dispatch — neighbors ends the multi-tap round, others resolve.
+    // Timeout dispatch — rank scores whatever's placed so far; others resolve.
     function arcadeTimeout() {
-      if (AG.game.kind === 'neighbors') arcadeResolveNeighbors(false, null);
-      else if (AG.game.kind === 'rank') arcadeResolveRank(); // score whatever's placed so far
+      if (AG.game.kind === 'rank') arcadeResolveRank(); // score whatever's placed so far
       else arcadeResolve(null);
     }
 
@@ -6643,13 +6438,12 @@
       if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
       SFX.unlock();  // first tap satisfies the browser audio-gesture requirement
       const kind = AG.game.kind;
-      if (kind === 'duel' || kind === 'distance') {
+      if (kind === 'duel') {
         const r = AG.prompts[AG.idx];
         if (name !== r.a && name !== r.b) return; // belt + CSS pointer-events braces
         arcadeResolve(name);
         return;
       }
-      if (kind === 'neighbors') { arcadeNeighborTap(name); return; }
       if (kind === 'rank') { arcadeRankTap(name); return; }
       arcadeResolve(name);
     }
@@ -6685,7 +6479,7 @@
       const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
       const timeBonus = perfect ? Math.round(remainFrac * s.timeBonusMax) : 0;
       if (perfect) { AG.streak += 1; AG.bestStreak = Math.max(AG.bestStreak, AG.streak); AG.correct += 1; }
-      else { AG.streak = 0; }
+      else { AG.streak = Math.floor(AG.streak / 2); } // soften the cliff: halve, don't zero
       const streakBonus = perfect && AG.streak >= s.streakThreshold
         ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
       const gained = correctPositions * s.perPosition + (perfect ? s.perfect + timeBonus + streakBonus : 0);
@@ -6694,79 +6488,18 @@
       trueOrder.forEach((nm, i) => {
         setTimeout(() => { const p = arcadeStatePath(nm); if (p) p.classList.add('arcade-state--reveal'); }, i * 240);
       });
-      arcadeShowToast(perfect ? 'Perfect order! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '')
-        : correctPositions + '/4 placed · +' + gained, perfect ? 'correct' : 'wrong', 1800);
+      // A timeout (fewer than 4 placed) reads as a wrong answer unless we say so.
+      const timedOut = AG.rankPicked.length < 4;
+      arcadeShowToast(
+        perfect ? 'Perfect order! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : '')
+        : timedOut ? 'Time! — ' + AG.rankPicked.length + '/4 placed · ' + correctPositions + ' correct · +' + gained
+        : correctPositions + '/4 correct · +' + gained,
+        perfect ? 'correct' : 'wrong', 1800);
       if (perfect) { if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak); Haptic.ok(); }
       else { SFX.wrong(); Haptic.err(); }
       arcadeUpdateHud();
       AG.idx += 1;
       AG.advanceId = setTimeout(arcadeNextPrompt, 2300);
-    }
-
-    // Neighbor Challenge: accumulate taps until all borders are found (success)
-    // or a wrong tap / timeout ends the round (miss). Correct neighbors score
-    // and paint live; a completion bonus + time + streak land on full success.
-    function arcadeNeighborTap(name) {
-      if (AG.answered) return;
-      if (name === AG.nbCenter) return;            // the center is not an answer
-      if (AG.nbFound.has(name)) return;            // already found
-      const s = AG.game.scoring;
-      if (AG.nbNeeded.has(name)) {
-        AG.nbFound.add(name);
-        AG.score += s.perNeighbor;
-        const tp = arcadeStatePath(name);
-        if (tp) {
-          tp.classList.add('arcade-state--correct', 'arcade-state--painted');
-          tp.style.fill = ARCADE_PAINT_COLORS[AG.paintIdx % ARCADE_PAINT_COLORS.length];
-          AG.paintIdx += 1;
-        }
-        arcadeUpdateHud();
-        if (AG.nbFound.size === AG.nbNeeded.size) {
-          arcadeResolveNeighbors(true, null);
-        } else {
-          arcadeShowToast('+' + s.perNeighbor + ' · ' + AG.nbFound.size + '/' + AG.nbNeeded.size, 'correct', 800);
-          SFX.correct(AG.nbFound.size);  // climbing pitch as the region fills in
-          Haptic.ok();
-        }
-      } else {
-        arcadeResolveNeighbors(false, name);       // wrong tap ends the round
-      }
-    }
-
-    function arcadeResolveNeighbors(success, wrongName) {
-      if (AG.answered) return;
-      AG.answered = true;
-      arcadeStopTimers();
-      const group = document.getElementById('arcadeStatesGroup');
-      if (group) group.classList.add('is-locked');
-      const s = AG.game.scoring;
-      const total = AG.nbNeeded.size, found = AG.nbFound.size;
-
-      if (success) {
-        const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
-        AG.streak += 1;
-        AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
-        const streakBonus = AG.streak >= s.streakThreshold
-          ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
-        const gained = s.completion + timeBonus + streakBonus;
-        AG.score += gained;
-        AG.correct += 1;
-        arcadeShowToast('All ' + total + ' borders! +' + gained + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''), 'correct', 1300);
-        SFX.streak(AG.streak);
-        Haptic.win();
-      } else {
-        AG.streak = 0;
-        // Reveal the borders the player missed.
-        AG.nbNeeded.forEach(n => { if (!AG.nbFound.has(n)) { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); } });
-        if (wrongName) { const wp = arcadeStatePath(wrongName); if (wp) wp.classList.add('arcade-state--wrong'); }
-        arcadeShowToast((wrongName ? wrongName + " doesn't border " + AG.nbCenter : 'Time!') + ' · ' + found + '/' + total, 'wrong', 1600);
-        SFX.wrong();
-        Haptic.err();
-      }
-      arcadeUpdateHud();
-      AG.idx += 1;
-      AG.advanceId = setTimeout(arcadeNextPrompt, success ? 900 : 1700);
     }
 
     // Resolve the current prompt. tapped===null means timeout.
@@ -6779,7 +6512,6 @@
 
       const isDuel = AG.game.kind === 'duel';
       const isAlpha = AG.game.kind === 'alpha';
-      const isDistance = AG.game.kind === 'distance';
       let target, correct, valueLine = '';
       if (isDuel) {
         const pair = AG.prompts[AG.idx];
@@ -6788,13 +6520,6 @@
         correct = tapped === target || (tapped && AG.duelData[tapped] !== undefined && va === vb);
         const fmt = AG.duelDataset.format;
         valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
-      } else if (isDistance) {
-        const r = AG.prompts[AG.idx];
-        const cents = arcadeStateCentroids();
-        const da = arcadeCentroidDist(cents, r.anchor, r.a), db = arcadeCentroidDist(cents, r.anchor, r.b);
-        target = (da <= db) ? r.a : r.b;   // the closer contestant wins
-        correct = tapped === target;
-        valueLine = target + ' is closer to ' + r.anchor;
       } else if (isAlpha) {
         // Many valid answers: any UNUSED state starting with the prompt letter.
         const letter = AG.prompts[AG.idx];
@@ -6808,7 +6533,9 @@
 
       if (correct) {
         const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        // Optional non-linear curve (locate games): pow keeps the instant-answer
+        // ceiling but makes slow-but-correct bank less, so speed actually counts.
+        const timeBonus = Math.round(Math.pow(remainFrac, s.timeCurve || 1) * s.timeBonusMax);
         AG.streak += 1;
         AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
         const streakBonus = AG.streak >= s.streakThreshold
@@ -6831,7 +6558,7 @@
         if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak);
         Haptic.ok();
       } else {
-        AG.streak = 0;
+        AG.streak = Math.floor(AG.streak / 2); // soften the cliff: halve, don't zero
         if (isAlpha) {
           // No single answer — reveal every state that WOULD have worked.
           (AG.alphaValid || []).forEach(n => { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); });
@@ -6845,7 +6572,7 @@
             const wp = arcadeStatePath(tapped);
             if (wp) wp.classList.add('arcade-state--wrong');
           }
-          if (isDuel || isDistance) {
+          if (isDuel) {
             arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
           } else {
             arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
@@ -6858,7 +6585,7 @@
       AG.idx += 1;
       // Duel reveals show real values, Alpha reveals a list — give misses a
       // beat longer to read.
-      const advance = (isDuel || isDistance) ? (correct ? 1100 : 1600)
+      const advance = isDuel ? (correct ? 1100 : 1600)
         : isAlpha ? (correct ? 750 : 1600)
         : (correct ? 650 : 1150);
       AG.advanceId = setTimeout(arcadeNextPrompt, advance);
@@ -7040,14 +6767,35 @@
     // plus a play streak in localStorage. The retention loop — come back daily,
     // keep the 🔥 alive. Pool excludes the two Census-dependent games so the
     // daily can never fail on a data outage.
-    const ARCADE_DAILY_POOL = ['find-state', 'state-capitals', 'neighbor-challenge', 'speed-run', 'alphabet-race', 'distance-duel'];
+    const ARCADE_DAILY_POOL = ['find-state', 'speed-run', 'alphabet-race'];
     function arcadeDailyKey(d) {
       const now = d || new Date();
       return now.getUTCFullYear() + '-' + String(now.getUTCMonth() + 1).padStart(2, '0') + '-' + String(now.getUTCDate()).padStart(2, '0');
     }
+    function arcadeDailyPick(k) {
+      return ARCADE_DAILY_POOL[arcadeHashSeed('daily-game-' + k) % ARCADE_DAILY_POOL.length];
+    }
     function arcadeDailyGameId(key) {
       const k = key || arcadeDailyKey();
-      return ARCADE_DAILY_POOL[arcadeHashSeed('daily-game-' + k) % ARCADE_DAILY_POOL.length];
+      let id = arcadeDailyPick(k);
+      // Anti-repeat: a pure hash can stack the same game several days in a row.
+      // If today's pick matches yesterday's, re-hash once with a salt to cap
+      // consecutive repeats. Still fully deterministic for a given day (so the
+      // seeded share + daily reproduction are unaffected).
+      if (ARCADE_DAILY_POOL.length > 1) {
+        const yKey = arcadeDailyKey(new Date(new Date(k + 'T00:00:00Z') - 86400000));
+        if (id === arcadeDailyPick(yKey)) {
+          id = ARCADE_DAILY_POOL[arcadeHashSeed('daily-game-rehash-' + k) % ARCADE_DAILY_POOL.length];
+        }
+      }
+      return id;
+    }
+    // Local clock time at which the next UTC-midnight rollover happens — the day
+    // flips at UTC midnight (7–8pm ET), which surprises US players otherwise.
+    function arcadeDailyResetLocal() {
+      const now = new Date();
+      const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+      return next.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     }
     function arcadeDailySeed(key) { return 'daily-' + (key || arcadeDailyKey()); }
     function arcadeGetDailyRecord() {
@@ -7086,10 +6834,18 @@
       const streak = arcadeDailyStreak();
       card.classList.toggle('is-done', played);
       const streakLabel = streak > 0 ? '🔥 ' + streak + ' day' + (streak > 1 ? 's' : '') : 'Start your streak';
+      // When a streak is alive but today isn't played yet, make the stakes loud.
+      const atRisk = !played && streak > 0;
+      const cta = played
+        ? '✓ Played today — replay, or come back tomorrow'
+        : atRisk
+          ? '🔥 ' + streak + '-day streak — play today to keep it →'
+          : 'Everyone gets the same puzzle today — play now →';
       card.innerHTML =
         '<div class="arcade-daily-top"><span class="arcade-daily-kicker">Daily Challenge</span><span class="arcade-daily-streak">' + streakLabel + '</span></div>' +
         '<div class="arcade-daily-game">' + (game ? game.name : 'Today’s game') + '</div>' +
-        '<div class="arcade-daily-cta">' + (played ? '✓ Played today — replay, or come back tomorrow' : 'Everyone gets the same puzzle today — play now →') + '</div>';
+        '<div class="arcade-daily-cta' + (atRisk ? ' is-at-risk' : '') + '">' + cta + '</div>' +
+        '<div class="arcade-daily-reset">Resets daily at ' + arcadeDailyResetLocal() + ' your time</div>';
     }
     function arcadeStartDaily() {
       const gid = arcadeDailyGameId();
@@ -7326,6 +7082,9 @@
     const DRAFT_PARKS = { 'California':9,'Alaska':8,'Utah':5,'Colorado':4,'Arizona':3,'Florida':3,'Washington':3,'Hawaii':2,'Montana':2,'Nevada':2,'New Mexico':2,'South Dakota':2,'Texas':2,'Wyoming':2,'Arkansas':1,'Idaho':1,'Indiana':1,'Kentucky':1,'Maine':1,'Michigan':1,'Minnesota':1,'Missouri':1,'North Carolina':1,'North Dakota':1,'Ohio':1,'Oregon':1,'South Carolina':1,'Tennessee':1,'Virginia':1,'West Virginia':1 };
     const DRAFT_BORDERS = { 'Alabama':4,'Alaska':0,'Arizona':5,'Arkansas':6,'California':3,'Colorado':7,'Connecticut':3,'Delaware':3,'Florida':2,'Georgia':5,'Hawaii':0,'Idaho':6,'Illinois':5,'Indiana':4,'Iowa':6,'Kansas':4,'Kentucky':7,'Louisiana':3,'Maine':1,'Maryland':4,'Massachusetts':5,'Michigan':3,'Minnesota':4,'Mississippi':4,'Missouri':8,'Montana':4,'Nebraska':6,'Nevada':5,'New Hampshire':3,'New Jersey':3,'New Mexico':5,'New York':5,'North Carolina':4,'North Dakota':3,'Ohio':5,'Oklahoma':6,'Oregon':4,'Pennsylvania':6,'Rhode Island':2,'South Carolina':2,'South Dakota':6,'Tennessee':8,'Texas':4,'Utah':6,'Vermont':3,'Virginia':5,'Washington':2,'West Virginia':5,'Wisconsin':4,'Wyoming':6 };
 
+    // Census stats whose GeoDraft category should be decided by the LOWEST
+    // total (lower is intuitively "better"), not the highest.
+    const DRAFT_CENSUS_LOWWINS = new Set(['poverty', 'unemployment']);
     // Category registry — lazy + memoized for the same TDZ reason as
     // arcadeStateNames(): DATA_MAP_DATASETS is declared later in the block.
     let _draftCats = null;
@@ -7346,7 +7105,11 @@
         { id: 'name-length-short', title: 'Shortest Names', desc: 'Letters in the state name — shortest wins.', format: 'number', computed: true, inverted: true, noise: 0.06, rule: 'Lowest total wins' },
       ];
       DATA_MAP_DATASETS.filter(d => !d.years).forEach(d => {
-        cats.push({ id: 'census-' + d.id, title: d.title, desc: d.desc, format: d.format, census: d, noise: 0.30 });
+        // A few census stats read as "lower is better" (you shouldn't win a
+        // round by drafting the MOST poverty / unemployment) — flag those so the
+        // lowest total takes the round. The reveal rule line updates automatically.
+        const lowWins = DRAFT_CENSUS_LOWWINS.has(d.id);
+        cats.push({ id: 'census-' + d.id, title: d.title, desc: d.desc, format: d.format, census: d, noise: 0.30, inverted: lowWins });
       });
       _draftCats = cats;
       return cats;
@@ -7387,6 +7150,10 @@
       DG.difficulty = d;
       DG.noiseMul = d === 'easy' ? 1.9 : d === 'hard' ? 0.45 : 1.0;   // hard = sharper AI
       DG.biasMag = d === 'easy' ? 4.5 : d === 'hard' ? 1.0 : 2.6;      // hard = smaller blind spots
+    }
+    // Human-readable current difficulty — surfaced in-match so "Hard" is visible.
+    function draftDiffLabel() {
+      return { easy: 'Easy', normal: 'Normal', hard: 'Hard' }[DG.difficulty] || 'Normal';
     }
     // Who drafts FIRST in a given round. This is the real lever: you always
     // taking the first pick means you grab true-ranks {1,3,5} vs the AI's
@@ -7557,7 +7324,7 @@
         p.classList.toggle('draft-state--out', !DG.available.has(p.getAttribute('data-state')));
       });
       draftZoom.reset();
-      draftSet('draftRoundLabel', 'Round ' + (DG.round + 1) + ' · Best of 5');
+      draftSet('draftRoundLabel', 'Round ' + (DG.round + 1) + ' · Best of 5 · ' + draftDiffLabel());
       draftSet('draftCatTitle', cat.title);
       draftSet('draftCatDesc', cat.desc);
       draftSet('draftCatRule', cat.rule || (cat.inverted ? 'Lowest total wins' : 'Highest total wins'));
@@ -7783,6 +7550,24 @@
       }
     }
 
+    function draftTerrShareMatch() {
+      const diffQ = (DG.difficulty && DG.difficulty !== 'normal') ? '&diff=' + DG.difficulty : '';
+      const url = window.location.origin + '/games/draft/territory?seed=' + DT.seed + diffQ;
+      const you = DT.youCatWins, ai = DT.aiCatWins;
+      const result = you > ai ? 'won the map ' + you + '-' + ai
+        : you === ai ? 'split the map ' + you + '-' + ai + ' with the AI'
+        : 'lost the map ' + you + '-' + ai + ' to the AI';
+      const text = 'I ' + result + ' on Tappymaps Territory Draft — same hidden categories, your turn: ' + url;
+      const status = document.getElementById('draftTerrShareStatus');
+      const done = (msg) => { if (status) status.textContent = msg; };
+      if (navigator.share) {
+        navigator.share({ title: 'Tappymaps Territory Draft', text: text, url: url })
+          .then(() => done('Shared!')).catch(() => arcadeCopy(url, done));
+      } else {
+        arcadeCopy(url, done);
+      }
+    }
+
     // --- Practice ----------------------------------------------------------
     let _draftPracticeFilled = false;
     function draftShowPractice() {
@@ -7891,6 +7676,7 @@
 
     async function draftTerrStart(seed) {
       if (!draftTerrBuildMap()) { draftShowView('draftHub'); return; }
+      if (typeof draftTerrClearIdleGuard === 'function') draftTerrClearIdleGuard();
       draftShowView('draftTerritory');
       document.getElementById('draftTerrReveal').style.display = 'none';
       document.getElementById('draftTerrComplete').style.display = 'none';
@@ -7963,6 +7749,23 @@
       draftTerrSetTurn('you');
     }
 
+    // Territory is deliberately a NO-TIMER mode ("pure strategy"), so this is a
+    // stall-guard, not a gameplay clock: only a long inactivity window triggers
+    // a seeded-random auto-pick, so an idle player can't freeze the match
+    // forever. No countdown is shown — the no-timer feel is preserved.
+    function draftTerrClearIdleGuard() {
+      if (DT.idleId) { clearTimeout(DT.idleId); DT.idleId = null; }
+    }
+    function draftTerrArmIdleGuard() {
+      draftTerrClearIdleGuard();
+      DT.idleId = setTimeout(() => {
+        if (DT.phase === 'pick' && DT.turn === 'you' && DT.available && DT.available.size) {
+          const arr = Array.from(DT.available);
+          draftTerrCommit('you', arr[Math.floor(DT.rng() * arr.length)]);
+        }
+      }, 45000);
+    }
+
     function draftTerrSetTurn(turn) {
       DT.turn = turn;
       const total = DT.youPicks.length + DT.aiPicks.length;
@@ -7970,9 +7773,11 @@
       if (turn === 'you') {
         const left = 25 - DT.youPicks.length;
         draftSet('draftTerrTurnLabel', 'Your pick — ' + left + ' left');
-        draftSet('draftTerrRoundLabel', 'Territory Draft · Pick ' + (total + 1) + ' of 50');
+        draftSet('draftTerrRoundLabel', 'Territory Draft · Pick ' + (total + 1) + ' of 50 · ' + draftDiffLabel());
         if (grp) grp.classList.remove('is-locked');
+        draftTerrArmIdleGuard();
       } else {
+        draftTerrClearIdleGuard();
         draftSet('draftTerrTurnLabel', 'AI is picking…');
         if (grp) grp.classList.add('is-locked');
         DT.aiTimerId = setTimeout(draftTerrAiPick, 400 + Math.floor(DT.rng() * 400));
@@ -7982,6 +7787,7 @@
     function draftTerrOnTap(name) {
       if (DT.phase !== 'pick' || DT.turn !== 'you') return;
       if (!DT.available || !DT.available.has(name)) return;
+      draftTerrClearIdleGuard();
       draftTerrCommit('you', name);
     }
 
@@ -8000,6 +7806,7 @@
       draftTerrRenderRosters();
       if (DT.youPicks.length === 25 && DT.aiPicks.length === 25) {
         DT.phase = 'reveal';
+        draftTerrClearIdleGuard();
         setTimeout(draftTerrShowReveal, 500);
         return;
       }
@@ -8082,7 +7889,9 @@
       draftSet('draftTerrCompleteTitle', win ? 'You control the map!' : (tie ? 'Split territory — a draw.' : 'The AI claimed the map.'));
       // Territory is the longer draft — worth more XP than Category.
       const _xp = (typeof progAddXp === 'function') ? progAddXp(win ? 90 : tie ? 55 : 30) : null;
-      draftSet('draftTerrCompleteDetail', 'Categories: ' + you + (win ? ' — ' + ai + ' AI' : ' — ' + ai + ' AI') + '. 3-category territory draft.'
+      const tiedCats = 3 - you - ai;   // a tie category awards no point — say so
+      draftSet('draftTerrCompleteDetail', 'Categories: ' + you + ' — ' + ai + ' AI'
+        + (tiedCats > 0 ? ' · ' + tiedCats + ' tied (no point)' : '') + '. 3-category territory draft.'
         + (_xp ? ' · +' + _xp.gain + ' XP' + (_xp.leveledUp ? ' — Lvl ' + _xp.level + ' 🎉' : '') : ''));
       // Juice: fanfare + buzz + confetti on a map-control win.
       SFX.complete(win ? 'gold' : (tie ? 'bronze' : 'none'));
@@ -8131,10 +7940,12 @@
       onClick('draftTerrBackBtn', () => {
         DT.phase = 'idle';
         if (DT.aiTimerId) { clearTimeout(DT.aiTimerId); DT.aiTimerId = null; }
+        draftTerrClearIdleGuard();
         Router.navigate('/games/draft');
       });
       onClick('draftTerrToHub', () => Router.navigate('/games/draft'));
       onClick('draftTerrPlayAgain', () => { document.getElementById('draftTerrComplete').style.display = 'none'; draftTerrStart(); });
+      onClick('draftTerrShareBtn', draftTerrShareMatch);
       onClick('draftTerrRevealNext', draftTerrRevealNext);
       onClick('draftTerrSeeResult', draftTerrShowComplete);
       onClick('draftTerrZoomIn', () => draftTerrZoom.zoomBy(1.4));

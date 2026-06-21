@@ -2874,13 +2874,6 @@
         stroke: var(--arcade); stroke-width: 2;
         animation: arcadePulse .5s ease;
       }
-      /* Distance Duel: the anchor state glows and is not tappable */
-      .arcade-state--center {
-        fill: var(--arcade) !important;
-        stroke: #fff; stroke-width: 2;
-        pointer-events: none;
-        animation: arcadePulse .5s ease;
-      }
       /* Zoom controls — small states (Delaware, Rhode Island, Hawaii) need it.
          Top-right so they never sit over Florida or the AK/HI insets. */
       .arcade-zoom-controls {
@@ -5718,18 +5711,6 @@
         scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
         medals: { bronze: 150, silver: 280, gold: 400 },
       },
-      'state-capitals': {
-        id: 'state-capitals',
-        name: 'State Capitals',
-        tagline: 'We name a capital city. Tap the state it belongs to.',
-        playable: true,
-        kind: 'capitals',        // single-tap, but the target is derived from a capital
-        runLength: 10,
-        perPrompt: 9,
-        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
-        medals: { bronze: 150, silver: 280, gold: 400 },
-        generator: (rng) => arcadePickCapitals(10, rng),
-      },
       'speed-run': {
         id: 'speed-run',
         name: 'Speed Run',
@@ -5752,18 +5733,6 @@
         scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
         medals: { bronze: 150, silver: 280, gold: 400 },
         generator: (rng) => arcadePickAlphabet(10, rng),
-      },
-      'distance-duel': {
-        id: 'distance-duel',
-        name: 'Distance Duel',
-        tagline: 'Two states, one anchor. Tap whichever sits CLOSER to it on the map.',
-        playable: true,
-        kind: 'distance',        // two contestants + an anchor; tap the geographically closer one
-        runLength: 10,
-        perPrompt: 9,
-        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
-        medals: { bronze: 150, silver: 280, gold: 400 },
-        generator: (rng) => arcadePickDistanceRounds(10, rng),
       },
       'rank-it': {
         id: 'rank-it',
@@ -5791,11 +5760,6 @@
         steps: ['Two states glow and a stat is named (population, income, …).', 'Tap whichever one you think is higher.', 'The real values are revealed after each pick — 10 rounds.'],
         scoring: 'Speed and streaks boost your score. Needs live Census data to play.',
       },
-      'state-capitals': {
-        goal: 'Tap the state a capital city belongs to.',
-        steps: ['A capital city flashes — tap the state it’s the capital of.', 'Beat the timer; 10 capitals per run.', 'Zoom with +/− or pinch for the small states.'],
-        scoring: 'Faster answers and streaks score more — chase bronze / silver / gold.',
-      },
       'speed-run': {
         goal: 'Find all 50 states, as fast as you can.',
         steps: ['States are named one after another — tap each before its short timer.', 'One long 50-state run; misses just move you on.', 'Zoom for the tiny northeastern states.'],
@@ -5805,11 +5769,6 @@
         goal: 'Tap any state that starts with the letter we name.',
         steps: ['A letter flashes — tap ANY state whose name starts with it.', 'Each correct answer must be a NEW state; 10 letters per run.', 'Miss reveals the states that would have worked. Wrong taps cost the round.'],
         scoring: 'Faster answers and streaks score more — chase bronze / silver / gold. No data needed.',
-      },
-      'distance-duel': {
-        goal: 'Tap whichever of two states is CLOSER to the anchor state.',
-        steps: ['An anchor state is highlighted, plus two contestants.', 'Tap the contestant you think sits closer to the anchor on the map.', 'The closer one is revealed each round — 10 rounds. No data needed.'],
-        scoring: 'Speed and streaks boost your score — chase bronze / silver / gold.',
       },
       'rank-it': {
         goal: 'Tap four highlighted states in order, highest to lowest on a stat.',
@@ -5902,72 +5861,6 @@
       return letters.slice(0, Math.min(n, letters.length));
     }
 
-    // --- Distance Duel: per-state centroids from the cached topology --------
-    // AREA centroid of each state's LARGEST landmass (projected Albers units).
-    // A bounding-box center is visually wrong for irregular/multi-part states —
-    // Michigan's bbox-center lands in the lake between its peninsulas, Florida's
-    // and Maryland's sit off the visible mass — which made "which is closer"
-    // mark the shape-obviously-closer state wrong. The polygon centroid of the
-    // biggest piece tracks where a player actually sees the state. Cached; lazy
-    // (reads appState/fipsToState only at call time, TDZ-safe).
-    let _arcCentroids = null;
-    function arcadeStateCentroids() {
-      if (_arcCentroids) return _arcCentroids;
-      const topo = (typeof appState !== 'undefined') ? appState.topologyData : null;
-      if (!topo || typeof topojson === 'undefined') return null;
-      const feats = topojson.feature(topo, topo.objects.states).features;
-      const out = {};
-      // Signed area + area-centroid of one ring (shoelace).
-      const ringCentroid = (ring) => {
-        let a = 0, cx = 0, cy = 0;
-        for (let i = 0, len = ring.length; i < len; i++) {
-          const p0 = ring[i], p1 = ring[(i + 1) % len];
-          const cross = p0[0] * p1[1] - p1[0] * p0[1];
-          a += cross; cx += (p0[0] + p1[0]) * cross; cy += (p0[1] + p1[1]) * cross;
-        }
-        a *= 0.5;
-        if (Math.abs(a) < 1e-9) return null;
-        return { x: cx / (6 * a), y: cy / (6 * a), area: Math.abs(a) };
-      };
-      feats.forEach(f => {
-        const name = fipsToState[String(f.id).padStart(2, '0')];
-        if (!name) return;
-        const g = f.geometry;
-        const polys = g.type === 'Polygon' ? [g.coordinates]
-          : g.type === 'MultiPolygon' ? g.coordinates : [];
-        let best = null; // the largest-area outer ring = the visual mass
-        polys.forEach(poly => {
-          const c = poly[0] && ringCentroid(poly[0]);
-          if (c && (!best || c.area > best.area)) best = c;
-        });
-        if (best) out[name] = { x: best.x, y: best.y };
-      });
-      _arcCentroids = out;
-      return out;
-    }
-    function arcadeCentroidDist(cents, a, b) {
-      return Math.hypot(cents[a].x - cents[b].x, cents[a].y - cents[b].y);
-    }
-    // Build N rounds of { anchor, a, b }. Reject near-ties (closer/farther within
-    // ~18%) so every round has a defensibly correct answer. Seeded + deterministic.
-    function arcadePickDistanceRounds(n, rng) {
-      const cents = arcadeStateCentroids();
-      if (!cents) return [];
-      const names = Object.keys(cents).filter(nm => !nonColorable.has(nm));
-      const rounds = [];
-      let guard = 0;
-      while (rounds.length < n && guard++ < n * 60) {
-        const anchor = names[Math.floor(rng() * names.length)];
-        const a = names[Math.floor(rng() * names.length)];
-        const b = names[Math.floor(rng() * names.length)];
-        if (a === b || a === anchor || b === anchor) continue;
-        const da = arcadeCentroidDist(cents, anchor, a), db = arcadeCentroidDist(cents, anchor, b);
-        const hi = Math.max(da, db), lo = Math.min(da, db);
-        if (hi === 0 || lo / hi > 0.82) continue; // too close to call — skip
-        rounds.push({ anchor: anchor, a: a, b: b });
-      }
-      return rounds;
-    }
     // Sample N states WITH replacement (Shuffle mode). No immediate
     // back-to-back repeat, but a state can absolutely come up again later.
     function arcadePickShuffle(n, rng) {
@@ -6074,29 +5967,8 @@
     };
 
 
-    const STATE_CAPITALS = {
-      'Alabama':'Montgomery','Alaska':'Juneau','Arizona':'Phoenix','Arkansas':'Little Rock',
-      'California':'Sacramento','Colorado':'Denver','Connecticut':'Hartford','Delaware':'Dover',
-      'Florida':'Tallahassee','Georgia':'Atlanta','Hawaii':'Honolulu','Idaho':'Boise',
-      'Illinois':'Springfield','Indiana':'Indianapolis','Iowa':'Des Moines','Kansas':'Topeka',
-      'Kentucky':'Frankfort','Louisiana':'Baton Rouge','Maine':'Augusta','Maryland':'Annapolis',
-      'Massachusetts':'Boston','Michigan':'Lansing','Minnesota':'Saint Paul','Mississippi':'Jackson',
-      'Missouri':'Jefferson City','Montana':'Helena','Nebraska':'Lincoln','Nevada':'Carson City',
-      'New Hampshire':'Concord','New Jersey':'Trenton','New Mexico':'Santa Fe','New York':'Albany',
-      'North Carolina':'Raleigh','North Dakota':'Bismarck','Ohio':'Columbus','Oklahoma':'Oklahoma City',
-      'Oregon':'Salem','Pennsylvania':'Harrisburg','Rhode Island':'Providence','South Carolina':'Columbia',
-      'South Dakota':'Pierre','Tennessee':'Nashville','Texas':'Austin','Utah':'Salt Lake City',
-      'Vermont':'Montpelier','Virginia':'Richmond','Washington':'Olympia','West Virginia':'Charleston',
-      'Wisconsin':'Madison','Wyoming':'Cheyenne',
-    };
-
-
-    // n distinct {state, capital} prompts (State Capitals game).
-    function arcadePickCapitals(n, rng) {
-      return arcadePickStates(n, rng).map(s => ({ state: s, capital: STATE_CAPITALS[s] }));
-    }
     // The state the player must tap for a single-target prompt: find/speed-run
-    // prompts are plain strings; capitals prompts are { state, capital }.
+    // prompts are plain strings.
     function arcadeSingleTarget(entry) {
       return (typeof entry === 'string') ? entry : entry.state;
     }
@@ -6199,7 +6071,7 @@
     }
     function arcadeClearMarks() {
       document.querySelectorAll('#arcadeStatesGroup .arcade-state')
-        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal', 'arcade-state--duel', 'arcade-state--center'));
+        .forEach(p => p.classList.remove('arcade-state--correct', 'arcade-state--wrong', 'arcade-state--reveal', 'arcade-state--duel'));
     }
     // Strip the persistent paint fills — run start only, NOT between prompts.
     function arcadeClearPaint() {
@@ -6395,13 +6267,6 @@
       } else {
         const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
         AG.prompts = gen(rng);
-        // Distance Duel needs the cached topology to compute centroids; if it's
-        // not ready yet, fail soft back to the hub rather than start an empty run.
-        if (game.kind === 'distance' && AG.prompts.length < game.runLength) {
-          arcadeShowToast('Map still loading — try again in a moment', 'wrong');
-          arcadeShowHub();
-          return;
-        }
       }
 
       AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
@@ -6411,7 +6276,7 @@
       document.getElementById('arcadeGame').style.display = 'flex';
       document.getElementById('arcadeComplete').style.display = 'none';
       const group = document.getElementById('arcadeStatesGroup');
-      if (group) group.classList.toggle('is-duel', game.kind === 'duel' || game.kind === 'distance' || game.kind === 'rank');
+      if (group) group.classList.toggle('is-duel', game.kind === 'duel' || game.kind === 'rank');
       arcadeClearMarks();
       arcadeClearPaint();
       arcadeResetZoom();
@@ -6443,25 +6308,12 @@
         const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
         if (pa) pa.classList.add('arcade-state--duel');
         if (pb) pb.classList.add('arcade-state--duel');
-      } else if (kind === 'capitals') {
-        const entry = AG.prompts[AG.idx];
-        if (prompt) prompt.textContent = 'Capital: ' + entry.capital + ' — tap the state';
-        popText = entry.capital + '?';
       } else if (kind === 'alpha') {
         const letter = AG.prompts[AG.idx];
         // Unused states that satisfy this letter — cached for scoring + reveal.
         AG.alphaValid = arcadeStatesByLetter(letter).filter(s => !AG.alphaUsed.has(s));
         if (prompt) prompt.textContent = 'Tap a state starting with “' + letter + '”';
         popText = letter;
-      } else if (kind === 'distance') {
-        const r = AG.prompts[AG.idx];
-        if (prompt) prompt.textContent = 'Closer to ' + r.anchor + ' — tap your pick';
-        popText = r.a + ' or ' + r.b + '?';
-        const pa = arcadeStatePath(r.a), pb = arcadeStatePath(r.b);
-        if (pa) pa.classList.add('arcade-state--duel');
-        if (pb) pb.classList.add('arcade-state--duel');
-        const anc = arcadeStatePath(r.anchor);   // anchor glows but isn't tappable (not --duel)
-        if (anc) anc.classList.add('arcade-state--center');
       } else if (kind === 'rank') {
         arcadeClearPaint();          // wipe last round's order colors
         AG.rankPicked = [];
@@ -6483,12 +6335,11 @@
       }
       // On touch devices, auto-frame the contenders so small states are tappable.
       // ONLY for modes whose relevant states are already highlighted on the map
-      // (duel / distance / rank) — never find/capitals, where zooming
-      // to the target would give away the answer.
+      // (duel / rank) — never find/alpha, where zooming to the target would
+      // give away the answer.
       if (window.matchMedia('(hover: none) and (pointer: coarse)').matches) {
         let focus = null;
         if (kind === 'duel') { const p = AG.prompts[AG.idx]; focus = [p.a, p.b]; }
-        else if (kind === 'distance') { const p = AG.prompts[AG.idx]; focus = [p.a, p.b, p.anchor]; }
         else if (kind === 'rank') { focus = AG.prompts[AG.idx].states || []; }
         if (focus) {
           const fp = focus.map(arcadeStatePath).filter(Boolean);
@@ -6530,7 +6381,7 @@
       if (AG.answered || !AG.game || AG.idx >= AG.game.runLength) return;
       SFX.unlock();  // first tap satisfies the browser audio-gesture requirement
       const kind = AG.game.kind;
-      if (kind === 'duel' || kind === 'distance') {
+      if (kind === 'duel') {
         const r = AG.prompts[AG.idx];
         if (name !== r.a && name !== r.b) return; // belt + CSS pointer-events braces
         arcadeResolve(name);
@@ -6599,7 +6450,6 @@
 
       const isDuel = AG.game.kind === 'duel';
       const isAlpha = AG.game.kind === 'alpha';
-      const isDistance = AG.game.kind === 'distance';
       let target, correct, valueLine = '';
       if (isDuel) {
         const pair = AG.prompts[AG.idx];
@@ -6608,13 +6458,6 @@
         correct = tapped === target || (tapped && AG.duelData[tapped] !== undefined && va === vb);
         const fmt = AG.duelDataset.format;
         valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
-      } else if (isDistance) {
-        const r = AG.prompts[AG.idx];
-        const cents = arcadeStateCentroids();
-        const da = arcadeCentroidDist(cents, r.anchor, r.a), db = arcadeCentroidDist(cents, r.anchor, r.b);
-        target = (da <= db) ? r.a : r.b;   // the closer contestant wins
-        correct = tapped === target;
-        valueLine = target + ' is closer to ' + r.anchor;
       } else if (isAlpha) {
         // Many valid answers: any UNUSED state starting with the prompt letter.
         const letter = AG.prompts[AG.idx];
@@ -6665,7 +6508,7 @@
             const wp = arcadeStatePath(tapped);
             if (wp) wp.classList.add('arcade-state--wrong');
           }
-          if (isDuel || isDistance) {
+          if (isDuel) {
             arcadeShowToast((tapped ? '' : 'Time! ') + valueLine, 'wrong', 1500);
           } else {
             arcadeShowToast(tapped ? 'That was ' + tapped : "Time! It's " + target, 'wrong');
@@ -6678,7 +6521,7 @@
       AG.idx += 1;
       // Duel reveals show real values, Alpha reveals a list — give misses a
       // beat longer to read.
-      const advance = (isDuel || isDistance) ? (correct ? 1100 : 1600)
+      const advance = isDuel ? (correct ? 1100 : 1600)
         : isAlpha ? (correct ? 750 : 1600)
         : (correct ? 650 : 1150);
       AG.advanceId = setTimeout(arcadeNextPrompt, advance);
@@ -6860,7 +6703,7 @@
     // plus a play streak in localStorage. The retention loop — come back daily,
     // keep the 🔥 alive. Pool excludes the two Census-dependent games so the
     // daily can never fail on a data outage.
-    const ARCADE_DAILY_POOL = ['find-state', 'state-capitals', 'speed-run', 'alphabet-race', 'distance-duel'];
+    const ARCADE_DAILY_POOL = ['find-state', 'speed-run', 'alphabet-race'];
     function arcadeDailyKey(d) {
       const now = d || new Date();
       return now.getUTCFullYear() + '-' + String(now.getUTCMonth() + 1).padStart(2, '0') + '-' + String(now.getUTCDate()).padStart(2, '0');

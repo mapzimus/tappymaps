@@ -6422,7 +6422,7 @@
       const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
       const timeBonus = perfect ? Math.round(remainFrac * s.timeBonusMax) : 0;
       if (perfect) { AG.streak += 1; AG.bestStreak = Math.max(AG.bestStreak, AG.streak); AG.correct += 1; }
-      else { AG.streak = 0; }
+      else { AG.streak = Math.floor(AG.streak / 2); } // soften the cliff: halve, don't zero
       const streakBonus = perfect && AG.streak >= s.streakThreshold
         ? Math.min(s.streakCap, (AG.streak - s.streakThreshold + 1) * s.streakStep) : 0;
       const gained = correctPositions * s.perPosition + (perfect ? s.perfect + timeBonus + streakBonus : 0);
@@ -6494,7 +6494,7 @@
         if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak);
         Haptic.ok();
       } else {
-        AG.streak = 0;
+        AG.streak = Math.floor(AG.streak / 2); // soften the cliff: halve, don't zero
         if (isAlpha) {
           // No single answer — reveal every state that WOULD have worked.
           (AG.alphaValid || []).forEach(n => { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); });

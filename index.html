@@ -5706,7 +5706,10 @@
         playable: true,
         runLength: 10,
         perPrompt: 8,            // seconds per prompt
-        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
+        // timeCurve > 1 makes the time bonus reward genuinely fast taps: the
+        // max (instant answer) is unchanged, but knowing-it-but-slow no longer
+        // banks near-max — so the clock is a speed skill, not a flat tax.
+        scoring: { base: 20, timeBonusMax: 15, timeCurve: 1.7, streakThreshold: 3, streakStep: 4, streakCap: 20 },
         medals: { bronze: 150, silver: 280, gold: 400 },
         // Run variants. Classic = 10 distinct states, paint as you go.
         // Shuffle = sampled with replacement (no back-to-back repeats), so a
@@ -5735,7 +5738,7 @@
         playable: true,
         runLength: 50,
         perPrompt: 5,
-        scoring: { base: 10, timeBonusMax: 12, streakThreshold: 5, streakStep: 3, streakCap: 40 },
+        scoring: { base: 10, timeBonusMax: 12, timeCurve: 1.7, streakThreshold: 5, streakStep: 3, streakCap: 40 },
         medals: { bronze: 500, silver: 1100, gold: 1600 },
         generator: (rng) => arcadePickStates(50, rng),
       },
@@ -6526,7 +6529,9 @@
 
       if (correct) {
         const remainFrac = Math.max(0, (AG.deadline - Date.now()) / (AG.game.perPrompt * 1000));
-        const timeBonus = Math.round(remainFrac * s.timeBonusMax);
+        // Optional non-linear curve (locate games): pow keeps the instant-answer
+        // ceiling but makes slow-but-correct bank less, so speed actually counts.
+        const timeBonus = Math.round(Math.pow(remainFrac, s.timeCurve || 1) * s.timeBonusMax);
         AG.streak += 1;
         AG.bestStreak = Math.max(AG.bestStreak, AG.streak);
         const streakBonus = AG.streak >= s.streakThreshold

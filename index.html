@@ -699,13 +699,41 @@
       .create-map-nav button,
       .arcade-back-btn,
       .arcade-help-btn,
-      .arcade-zoom-btn {
+      .arcade-zoom-btn,
+      .draft-help-btn,
+      .draft-diff-chip,
+      .gallery-tab,
+      .gallery-card-btn {
         min-width: 44px;
         min-height: 44px;
       }
       .color-swatch {
         min-width: 36px;
         min-height: 36px;
+      }
+      /* The per-entry legend delete "×" and the panel-close "×" aren't in the
+         list above; give them a full finger target too. */
+      .legend-remove,
+      .create-panel-iconbtn {
+        min-width: 44px;
+        min-height: 44px;
+      }
+    }
+
+    /* iOS Safari zooms the whole page when you focus an input whose font-size
+       is < 16px (the viewport allows user zoom). Every editable field in the
+       Create rail is smaller than that by design, so on touch layouts force
+       16px — the render size barely changes but the zoom-on-focus stops. */
+    @media (max-width: 900px) {
+      /* !important: #legendTitleInput and #sourceInput carry an inline
+         font-size:11px, which a plain rule can't beat. 16px stops iOS zoom. */
+      #createMapTitleInput,
+      .legend-label-input,
+      #legendTitleInput,
+      #sourceInput,
+      .panel-color-grid input[type="text"],
+      .hex-input {
+        font-size: 16px !important;
       }
     }
 
@@ -915,6 +943,10 @@
       transition: background-color var(--duration-slow) ease;
       display: flex;
       flex-direction: column;
+      /* Own all touch gestures: the pinch/pan handler drives zoom itself and
+         calls preventDefault, so tell the browser not to also page-zoom or
+         scroll here. Tap-to-color still fires a click. */
+      touch-action: none;
     }
 
     .map-container.ocean-on {
@@ -1925,7 +1957,8 @@
       .sheet-handle { display: none; }
     }
 
-    /* Pinch-zoom states - touch-action set via JS on mobile only */
+    /* Pinch-zoom: the map containers declare touch-action:none so the browser
+       hands all gestures to the custom pan/zoom handler (see makeMapZoom). */
     .map-container.zoomed {
       cursor: grab;
     }
@@ -2851,6 +2884,7 @@
         flex: 1; position: relative;
         display: flex; flex-direction: column;
         min-height: 0; overflow: hidden;
+        touch-action: none; /* custom pinch/pan owns gestures — no native page-zoom */
         background: var(--bg, #0F172A);
       }
       #arcadeMapSvg { width: 100%; }
@@ -3061,6 +3095,7 @@
         flex: 1; position: relative;
         display: flex; flex-direction: column;
         min-height: 0; overflow: hidden;
+        touch-action: none; /* custom pinch/pan owns gestures — no native page-zoom */
         background: var(--bg, #0F172A);
       }
       #draftMapSvg { width: 100%; }
@@ -3197,6 +3232,7 @@
       .draft-terr-map-wrap {
         flex: 1; position: relative; min-width: 0; min-height: 0;
         display: flex; flex-direction: column;
+        touch-action: none; /* custom pinch/pan owns gestures — no native page-zoom */
       }
       .draft-terr-sidebar {
         width: 180px; flex: none; overflow-y: auto; padding: 14px 12px;
@@ -3375,7 +3411,10 @@
       .gallery-card:hover { transform: translateY(-2px); border-color: var(--gal); }
       .gallery-thumb {
         width: 100%; aspect-ratio: 1200 / 986; object-fit: cover;
-        background: #fff; display: block; border-bottom: 1px solid var(--border, #334155);
+        /* Dark placeholder, not white: no bright flash while the /api/render
+           PNG loads, and a failed render leaves a themed card, not a white slab. */
+        background: var(--surface-raised, #243044); display: block;
+        border-bottom: 1px solid var(--border, #334155);
       }
       .gallery-card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; }
       .gallery-card-title { font-size: 15px; font-weight: 700; margin: 0 0 2px; }
@@ -3767,6 +3806,9 @@
           transform: translateY(110%);
           transition: transform 0.24s ease;
           will-change: transform;
+          /* Keep the last controls (Export / Clear All) clear of the iOS home
+             indicator when the sheet is scrolled to the bottom. */
+          padding-bottom: env(safe-area-inset-bottom);
         }
         #createBody.panel-open #createPanel { transform: none; }
         /* Backdrop behind the sheet; tap it (or the exposed map strip above the
@@ -5652,7 +5694,12 @@
       html += '</div>';
       body.innerHTML = html;
       body.querySelectorAll('[data-remove]').forEach(btn => {
-        btn.addEventListener('click', () => { galleryRemoveMine(btn.getAttribute('data-remove')); galleryRenderMine(body); });
+        btn.addEventListener('click', () => {
+          // Removal is permanent (localStorage) and the button is a small mobile
+          // target next to Open — confirm so a mis-tap doesn't drop a saved map.
+          if (!confirm('Remove this map from My Maps? This can’t be undone.')) return;
+          galleryRemoveMine(btn.getAttribute('data-remove')); galleryRenderMine(body);
+        });
       });
     }
     function galleryRenderComingSoon(body, label) {

@@ -57,7 +57,9 @@ export default async function handler(req, res) {
     .single();
 
   if (sub) {
-    return res.status(200).json({ allowed: true, isPro: true, remaining: Infinity });
+    // NB: not Infinity — JSON.stringify(Infinity) serializes to null, which the
+    // client's `remaining - 1` math would turn into "0 exports remaining".
+    return res.status(200).json({ allowed: true, isPro: true, remaining: null });
   }
 
   // Free user — check/increment monthly export count

@@ -46,6 +46,15 @@ function escapeXml(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 }
 
+// The decoded state is attacker-controlled (it's just a base64 URL param), and
+// color values are interpolated into SVG attributes — which this endpoint also
+// serves as image/svg+xml on the site origin. Only let through values that are
+// unambiguously colors: hex, or a bare CSS color keyword.
+function safeColor(c, fallback) {
+  const s = String(c == null ? '' : c).trim();
+  return /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{1,30})$/.test(s) ? s : fallback;
+}
+
 // Decode the share-state param. Tolerant of URL-encoding quirks (a literal '+'
 // that got turned into a space) and of base64url.
 export function decodeState(m) {
@@ -88,7 +97,7 @@ export function buildMapSVG(state, topology) {
   for (const f of features) {
     const fips = String(f.id).padStart(2, '0');
     const name = FIPS_TO_STATE[fips] || '';
-    const fill = (name && colors[name]) ? colors[name] : UNCOLORED;
+    const fill = (name && colors[name]) ? safeColor(colors[name], UNCOLORED) : UNCOLORED;
     paths += '<path d="' + geomToPath(f.geometry) + '" fill="' + fill + '" stroke="' + STROKE + '" stroke-width="1"/>';
   }
 
@@ -121,7 +130,7 @@ export function buildMapSVG(state, topology) {
     legend.forEach((e, i) => {
       const ly = by + padTop + i * rowH;
       legendSvg += '<rect x="' + (bx + padX) + '" y="' + ly + '" width="20" height="20" rx="4" fill="'
-        + escapeXml(e.color || '#999') + '" stroke="' + STROKE + '" stroke-width="0.75"/>'
+        + safeColor(e.color, '#999') + '" stroke="' + STROKE + '" stroke-width="0.75"/>'
         + '<text x="' + (bx + padX + 30) + '" y="' + (ly + 16) + '" font-family="Arial, Helvetica, sans-serif" '
         + 'font-size="17" fill="' + INK + '">' + escapeXml(String(e.label || '').slice(0, 26)) + '</text>';
     });

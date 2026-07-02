@@ -90,8 +90,10 @@ export default async function handler(req, res) {
     const origin = allowedOrigins.includes(req.headers.origin)
       ? req.headers.origin
       : 'https://tappymaps.com';
-    const successUrl = `${origin}/?checkout=success`;
-    const cancelUrl = `${origin}/?checkout=cancel`;
+    // Land back in the editor (where the upgrade was started), not the Hub —
+    // handleCheckoutReturn() polls for Pro activation on whatever route loads.
+    const successUrl = `${origin}/design/make?checkout=success`;
+    const cancelUrl = `${origin}/design/make?checkout=cancel`;
 
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({

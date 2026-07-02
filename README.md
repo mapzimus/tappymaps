@@ -21,7 +21,7 @@ Designed to be the fastest way to go from "I need a colored US map for my report
 
 | Layer | Choice | Why |
 |---|---|---|
-| Frontend | Vanilla JS, single-file HTML (~4,200 lines) | Zero build step. Loads fast, deploys anywhere static. |
+| Frontend | Vanilla JS, single-file HTML (~13,600 lines) | Zero build step. Loads fast, deploys anywhere static. |
 | Map data | TopoJSON via `us-atlas@3` (Albers USA) | Pre-projected, small enough to ship inline. |
 | Hosting | Vercel + custom domain | Auto-deploy on push to `master`. |
 | Auth | Supabase (email/password, JS client via CDN) | RLS-secured `user_subscriptions` and `analytics` tables. |

@@ -2,7 +2,7 @@
 // Tappymaps JS-block validator — cross-platform, zero-dependency.
 //
 // The entire app is one file (index.html) with TWO inline <script> blocks:
-//   Block 0 — the main app (router, editor, games, ~350k chars)
+//   Block 0 — the main app (router, editor, games, ~385k chars)
 //   Block 1 — the Mobile-UX IIFE (~34k chars)
 // A syntax error in Block 0 silently kills init() while Block 1 still runs,
 // producing partial breakage that's painful to diagnose. This script extracts

@@ -71,7 +71,11 @@ const server = spawn('python3', ['-m', 'http.server', String(PORT)], { cwd: root
 let exitCode = 0;
 try {
   await waitForPort(PORT);
-  const browser = await chromium.launch();
+  // Remote/CI sandboxes often ship a system Chromium build that doesn't match
+  // the exact browser revision this Playwright version downloads. SMOKE_CHROMIUM
+  // lets those environments point at their pre-installed binary.
+  const execPath = process.env.SMOKE_CHROMIUM;
+  const browser = await chromium.launch(execPath ? { executablePath: execPath } : {});
   const page = await browser.newPage();
   const errors = [];
   page.on('console', (msg) => {

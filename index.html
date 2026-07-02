@@ -4997,11 +4997,11 @@
         if (pathname === '/' || pathname === '') return { mode: '__hub__' };
         const trimmed = pathname.replace(/^\/+|\/+$/g, '');
         const parts = trimmed.split('/');
-        // 1-segment routes ('/tap-in', '/pro', '/about', '/pricing')
+        // 1-segment routes ('/tap-in', '/about', '/pricing', '/embed' — its state rides the #fragment)
         if (parts.length === 1) {
           return { mode: parts[0], sub: null };
         }
-        // 2-segment routes ('/design/make', '/design/gallery', '/games/arcade', '/games/draft', '/embed/<hash>')
+        // 2-segment routes ('/design/make', '/design/gallery', '/games/arcade', '/games/draft')
         if (parts.length === 2) {
           return { mode: parts[0] + '/' + parts[1], sub: null };
         }
@@ -5416,22 +5416,26 @@
     // --- THE CUTOVER: relocate legacy editor nodes into the Create shell -----
     // Runtime re-parenting. Moving a live DOM node with appendChild preserves
     // its already-attached event listeners, so every legacy control keeps
-    // working in its new panel home with NO re-wiring. Runs exactly once
-    // (guarded), the first time Create mode is entered. The legacy .container
+    // working in its new panel home with NO re-wiring. The control slotting
+    // runs exactly once (guarded); the #mapContainer move re-runs on every
+    // Create entry because Embed mode can claim it. The legacy .container
     // is hidden by CSS (body[data-mode] .container{display:none}); we move the
     // nodes Create needs OUT of it first. #mapContainer moves wholesale, so
     // captureMapImage() and the ~12 #mapTitle write sites are untouched.
     let _createCutoverDone = false;
     function setupCreateCutover() {
-      if (_createCutoverDone) return;
       const createMap = document.getElementById('createMap');
       const mapContainer = document.getElementById('mapContainer');
       if (!createMap || !mapContainer) return; // shell missing — leave legacy up
-      _createCutoverDone = true;
 
       // 1) Map canvas — move the whole #mapContainer (on-map title/subtitle/SVG/
-      //    watermark) into #createMap. Export path is byte-identical.
-      createMap.appendChild(mapContainer);
+      //    watermark) into #createMap. Export path is byte-identical. Re-homed
+      //    on EVERY entry (not latched): Embed mode also claims #mapContainer,
+      //    so a client-side Embed→Create round trip must reclaim it here.
+      if (mapContainer.parentElement !== createMap) createMap.appendChild(mapContainer);
+
+      if (_createCutoverDone) return;
+      _createCutoverDone = true;
 
       // 2) Controls — slot legacy sections into their panels (listeners ride along).
       const slot = function(childId, panelId) {
@@ -5535,12 +5539,12 @@
     // legend anchoring, logo, source line) and decodes the fragment with the
     // same loadStateFromURL the editor uses. Always-on footer except when the
     // host opts out (?chrome=0 or ?source=devvit, e.g. Reddit's own frame).
-    let _embedDone = false;
     function setupEmbed() {
-      if (_embedDone) return;
+      // Not latched: Create mode reclaims #mapContainer on entry, so an
+      // Embed→Create→Embed client-side round trip must re-claim it here too.
       const host = document.getElementById('embedMapHost');
       const mc = document.getElementById('mapContainer');
-      if (host && mc) { host.appendChild(mc); _embedDone = true; }
+      if (host && mc && mc.parentElement !== host) host.appendChild(mc);
     }
     Modes.Embed = {
       enter(route) {
@@ -6526,7 +6530,7 @@
         correct = !!(tapped && tapped.charAt(0) === letter && !AG.alphaUsed.has(tapped));
         target = tapped; // on a correct tap, paint the state they chose
       } else {
-        target = arcadeSingleTarget(AG.prompts[AG.idx]); // string, or {state,capital}.state
+        target = arcadeSingleTarget(AG.prompts[AG.idx]);
         correct = tapped === target;
       }
       const s = AG.game.scoring;
@@ -8368,7 +8372,16 @@
         if (data.count > 0) {
           const itemEl = document.createElement('div');
           itemEl.className = 'stats-item';
-          itemEl.innerHTML = `<div class="stats-color" style="background-color: ${data.color};"></div><span>${escapeHTML(label)}: ${data.count}</span>`;
+          // Built via DOM setters, not an innerHTML template — data.color comes
+          // from the URL-hash state (attacker-controlled in a shared link) and
+          // must never be string-interpolated into markup.
+          const swatch = document.createElement('div');
+          swatch.className = 'stats-color';
+          swatch.style.backgroundColor = data.color;
+          const labelEl = document.createElement('span');
+          labelEl.textContent = `${label}: ${data.count}`;
+          itemEl.appendChild(swatch);
+          itemEl.appendChild(labelEl);
           breakdownEl.appendChild(itemEl);
         }
       });
@@ -9511,6 +9524,28 @@
       }
     }
 
+    // Shared-state sanitizers. The decoded hash (and imported config files) are
+    // untrusted input; colors get interpolated into style properties and the
+    // server-side renderer, so only unambiguous color strings pass through.
+    function isSafeColor(c) {
+      return typeof c === 'string' && /^(#[0-9a-fA-F]{3,8}|[a-zA-Z]{1,30})$/.test(c.trim());
+    }
+    function sanitizeColorMap(colors) {
+      const out = {};
+      if (colors && typeof colors === 'object') {
+        Object.entries(colors).forEach(([name, color]) => {
+          if (typeof name === 'string' && isSafeColor(color)) out[name] = color.trim();
+        });
+      }
+      return out;
+    }
+    function sanitizeLegendEntries(legend) {
+      if (!Array.isArray(legend)) return [];
+      return legend
+        .filter(e => e && typeof e === 'object' && isSafeColor(e.color))
+        .map(e => ({ color: e.color.trim(), label: String(e.label == null ? '' : e.label) }));
+    }
+
     function updateURL() {
       clearTimeout(appState.urlUpdateTimeout);
       appState.urlUpdateTimeout = setTimeout(() => {
@@ -9528,8 +9563,8 @@
       if (hash) {
         const state = decodeStateFromURL(hash);
         if (state) {
-          appState.stateColors = state.colors || {};
-          appState.legendEntries = (state.legend || []).slice(0, MAX_LEGEND_ENTRIES);
+          appState.stateColors = sanitizeColorMap(state.colors);
+          appState.legendEntries = sanitizeLegendEntries(state.legend).slice(0, MAX_LEGEND_ENTRIES);
           appState.mapTitle = state.title || 'My US Map';
           appState.mapSubtitle = state.subtitle || '';
           appState.mapSource = state.source || '';
@@ -9776,11 +9811,9 @@
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + session.access_token
           },
-          body: JSON.stringify({
-            priceId: priceId,
-            successUrl: window.location.origin + '?checkout=success',
-            cancelUrl: window.location.origin + '?checkout=cancel'
-          })
+          // successUrl/cancelUrl are computed server-side from the validated
+          // request origin; anything sent here would be ignored.
+          body: JSON.stringify({ priceId: priceId })
         });
         if (!res.ok) {
           showMessage('Checkout error: server returned ' + res.status, 'error');
@@ -10278,7 +10311,7 @@
 
       if (!isPro()) {
         await recordExport();
-        if (perm.remaining !== undefined && perm.remaining !== Infinity) {
+        if (typeof perm.remaining === 'number' && isFinite(perm.remaining)) {
           appState._cachedRemaining = Math.max(0, (perm.anonymous ? 0 : perm.remaining - 1));
         }
       }
@@ -10383,7 +10416,7 @@
       const cleanExport = perm.anonymous || isPro();
       if (!isPro()) {
         await recordExport();
-        if (perm.remaining !== undefined && perm.remaining !== Infinity) {
+        if (typeof perm.remaining === 'number' && isFinite(perm.remaining)) {
           appState._cachedRemaining = Math.max(0, (perm.anonymous ? 0 : perm.remaining - 1));
         }
       }
@@ -10475,7 +10508,7 @@
 
       if (!isPro()) {
         await recordExport();
-        if (perm.remaining !== undefined && perm.remaining !== Infinity) {
+        if (typeof perm.remaining === 'number' && isFinite(perm.remaining)) {
           appState._cachedRemaining = Math.max(0, (perm.anonymous ? 0 : perm.remaining - 1));
         }
       }
@@ -10611,8 +10644,8 @@
             // saveHistory before mutating so the user can undo a load that
             // turned out to be the wrong file. Audit §4.
             saveHistory();
-            appState.stateColors = config.stateColors || {};
-            appState.legendEntries = (config.legendEntries || []).slice(0, MAX_LEGEND_ENTRIES);
+            appState.stateColors = sanitizeColorMap(config.stateColors);
+            appState.legendEntries = sanitizeLegendEntries(config.legendEntries).slice(0, MAX_LEGEND_ENTRIES);
             appState.mapTitle = config.mapTitle || 'My US Map';
             appState.mapSubtitle = config.mapSubtitle || '';
 

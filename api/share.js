@@ -26,7 +26,12 @@ function esc(s) {
 }
 
 export default function handler(req, res) {
-  const h = (req.query && (req.query.h || req.query.m)) || '';
+  let h = (req.query && (req.query.h || req.query.m)) || '';
+  // The hash is base64url (or standard base64 from older links). Reject
+  // anything outside that charset before it reaches the inline <script> /
+  // meta-refresh below — JSON.stringify escapes quotes but not "</script>",
+  // so an unvalidated h would be a reflected XSS.
+  if (!/^[A-Za-z0-9+/=_-]*$/.test(h)) h = '';
   const stdB64 = padBase64(fromBase64Url(h));
 
   let title = 'A US map', subtitle = '';
@@ -62,7 +67,7 @@ export default function handler(req, res) {
     + '<meta name="twitter:description" content="' + esc(desc) + '">'
     + '<meta name="twitter:image" content="' + esc(img) + '">'
     + '<link rel="canonical" href="' + esc(canonical) + '">'
-    + '<script>location.replace(' + JSON.stringify(editor) + ');</script>'
+    + '<script>location.replace(' + JSON.stringify(editor).replace(/</g, '\\u003c') + ');</script>'
     + '<meta http-equiv="refresh" content="0; url=' + esc(editor) + '">'
     + '</head><body style="font-family:system-ui,-apple-system,sans-serif;background:#0F172A;color:#fff;text-align:center;padding:48px 20px">'
     + '<p style="font-size:18px">Opening this map on Tappymaps…</p>'

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What It Is
 
-Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in **one file (`index.html`, ~9,400 lines; grew to ~9,900 during the rebrand era, trimmed by Phase 0, then Phase 1 added a client-side mode router + Hub + Create rail)**. No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
+Tappymaps is a single-file HTML/CSS/JS web app for creating and exporting colored US state and county maps. Tap a color, tap a state, build a legend, export. The entire application lives in **one file (`index.html`, ~13,600 lines; Phase 1 added a client-side mode router + Hub + Create rail, Phase 2+ added the games modes)**. No build step. Push to `master` auto-deploys to tappymaps.com via Vercel.
 
 **Status as of 2026-05-29:** Phase 1 of the Reimagining SHIPPED (cutover commit `619e309`) — a client-side **mode router**, a **Hub** landing page at `/`, and the **Create-mode 5-panel rail** rebuild. The editor now lives at `/design/make`; `/` is the Hub. Phase 0 (audit fixes, brand polish, autofill defeat) shipped 2026-05-24. **Tester mode was REMOVED pre-launch** — real auth + Stripe + the `ADMIN_EMAILS` gate are the only paths to Pro again. See the **"Mode Router (Phase 1)"** section below and `HANDOVER.md` for the canonical "where we are, what's next" summary.
 
@@ -26,7 +26,7 @@ Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella over thre
 ## Repository Layout
 
 ```
-index.html               # The entire app (~9,400 lines, two <script> blocks + mode router)
+index.html               # The entire app (~13,600 lines, two <script> blocks + mode router)
 api/stripe/              # Vercel serverless functions
   ├── webhook.js         # Stripe webhook (signature-verified)
   ├── create-checkout.js # Creates checkout session (JWT-auth'd)
@@ -53,7 +53,7 @@ npm run validate
 
 Expected output: `Block 0 (NNN chars): PASS` + `Block 1 (NNN chars): PASS` + `validate: all 2 block(s) OK.` Non-zero exit if either fails.
 
-**Parse-check is not enough for runtime breakage.** `validate` only catches syntax errors; it can't catch a runtime TDZ (see the Arcade/GeoDraft gotcha below) or a broken mode handler. For that, run **`npm run smoke`** (`scripts/smoke.mjs`) — a Playwright harness that boots every router mode and fails on any console/page error. It skips cleanly when Playwright isn't installed; run it where it is (or set `NODE_PATH` to a global install). House rule: don't claim a fix works from static analysis alone — smoke it.
+**Parse-check is not enough for runtime breakage.** `validate` only catches syntax errors; it can't catch a runtime TDZ (see the Arcade/GeoDraft gotcha below) or a broken mode handler. For that, run **`npm run smoke`** (`scripts/smoke.mjs`) — a Playwright harness that boots every router mode and fails on any console/page error. It skips cleanly when Playwright isn't installed; run it where it is (or set `NODE_PATH` to a global install). If the sandbox has a system Chromium that doesn't match Playwright's expected browser revision, point at it with `SMOKE_CHROMIUM=/path/to/chromium npm run smoke`. House rule: don't claim a fix works from static analysis alone — smoke it.
 
 **CI:** `.github/workflows/ci.yml` runs `validate` on every push/PR. It's **advisory** (reports red/green, does not block merges) and validate-only (smoke stays local) to keep it to a few seconds.
 
@@ -85,8 +85,8 @@ Validate editor edits with `npm run validate`. Block 1 (Mobile-UX IIFE) was a st
 **Key architecture decision: Arcade renders its OWN independent SVG, it does NOT share the editor's map.** The master spec imagined a shared `onStateTap` dispatcher across all modes, but Phase 1 never built it (the editor still calls `onStateClick` directly and re-parents the single `#mapContainer`). Rather than refactor the export-critical `#mapContainer` / `captureMapImage` path to be mode-shared, Arcade builds a second SVG (`#arcadeStatesGroup`) from the already-cached `appState.topologyData`. So **Arcade touches none of**: `#mapContainer`, `captureMapImage`, `onStateClick`, `appState.stateColors`, or the Mobile IIFE (Block 1). The two maps share TopoJSON data, not DOM.
 
 - All Arcade code is in the main script block (Block 0). Grep anchors: `id="modeArcade"` (markup), `#modeArcade {` (CSS), `const ARCADE_GAMES` (manifest registry), `Modes.Arcade` (mode), `arcadeBuildMap` (one-time SVG build), `arcadeStartRun`/`arcadeResolve`/`arcadeComplete` (run lifecycle), `arcadeMakeRng` (seeded RNG).
-- **Five playable games** (2026-06-10): **Find the State** (Classic/Shuffle), **Stat Duel** (`kind:'duel'`), **State Capitals** (`kind:'capitals'`), **Neighbor Challenge** (`kind:'neighbors'`), **Speed Run** (50-state find). The engine dispatches on `game.kind` in `arcadeNextPrompt` / `arcadeOnTap` / the timeout path; absence of `kind` = the default single-tap find.
-- **Game kinds**: *find* (string prompts, single tap), *capitals* (prompt entries are `{state, capital}`, target is the state — see `arcadeSingleTarget`), *duel* (async, two states, tap higher), *neighbors* (multi-tap: tap every borderer; `arcadeNeighborTap` accumulates, `arcadeResolveNeighbors` ends the round). Data: `STATE_CAPITALS` (50) and `STATE_ADJACENCY` (50, length-verified against `DRAFT_BORDERS` + symmetric).
+- **Five playable games** (roster after the 2026-07 cleanup): **Find the State** (Classic/Shuffle), **Stat Duel** (`kind:'duel'`), **Speed Run** (50-state find), **Alphabet Race** (`kind:'alpha'`), **Rank It** (`kind:'rank'`). State Capitals, Neighbor Challenge, and Distance Duel were CUT (weak roster — commits `21fd5ce`/`5dae9af`); their data tables (`STATE_CAPITALS`, `STATE_ADJACENCY`) and dispatch branches are fully deleted. The engine dispatches on `game.kind` in `arcadeNextPrompt` / `arcadeOnTap` / the timeout path; absence of `kind` = the default single-tap find.
+- **Game kinds**: *find* (string prompts, single tap), *duel* (async, two states, tap higher on a real ACS stat), *alpha* (tap any unused state starting with the prompt letter), *rank* (order states highest-to-lowest on a stat).
 - **Add a game** = add a `playable:true` entry to `ARCADE_GAMES`. Single-tap games just need `{ runLength, perPrompt, scoring, medals, generator(rng) }`; new interaction types add a `kind` + a branch in the three engine dispatch points. `playable:false` entries render as "Coming soon" tiles.
 - **Seeded share:** `?seed=<seed>` reproduces the same run (mulberry32 + string hash). Rides in `window.location.search` (parseRoute only reads pathname), so it survives the Vercel SPA rewrite.
 - **Scores:** anonymous localStorage only (`tappymaps_arcade_<id>_best`). Sign-in cross-device sync is DEFERRED (needs a Supabase `game_scores` table + the analytics rewire — pairs with Phase 4).

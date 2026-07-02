@@ -20,12 +20,12 @@
 - **Tester mode** — REMOVED pre-launch. Pro is real Stripe + the `ADMIN_EMAILS` gate only. (`/tap-in` + the Create Upgrade access-code form are inert vestiges to retire when convenient.)
 - **Source field autofill defeat** — LIVE (three-layer HTML+CSS+JS).
 - **Phase 1 (Mode router + Hub + Create rebuild)** — SHIPPED 2026-05-29 (cutover `619e309`). Editor at `/design/make`; `/` is the Hub.
-- **Phase 2 (Arcade)** — SHIPPED. `/games/arcade`: 5 playable games (Find the State, Stat Duel, State Capitals, Neighbor Challenge, Speed Run) + per-game How-to-play. Manifest-driven, seeded-share, anon localStorage scores.
+- **Phase 2 (Arcade)** — SHIPPED, then curated. `/games/arcade`: 5 playable games (Find the State, Stat Duel, Speed Run, Alphabet Race, Rank It) + per-game How-to-play. State Capitals, Neighbor Challenge, and Distance Duel were CUT in the 2026-07 games cleanup (PR #27). Manifest-driven, seeded-share, anon localStorage scores.
 - **Phase 2b (GeoDraft)** — SHIPPED + enhanced. `/games/draft`: Category Draft (best-of-5 vs AI), **Territory Draft** (claim all 50, 3 hidden categories score it), Practice. 50 categories, **difficulty selector** (Easy/Normal/Hard), tiered rounds, reputation-biased AI, dramatic reveal + clinch burst (PR #17).
 - **Phase 3 (Distribution)** — Embed mode shipped. `/embed#<state>` (read-only map) + `/api/render` OG renderer. **Editor embed (PR #18):** `/design/make?embed=1` (or any cross-origin iframe) → clean self-contained editor; link-lock keeps the frame on the editor. First external consumer: maxwellhowegis.com (their PR #36).
 - **Phase 4 (Gallery)** — MVP shipped. `/design/gallery` "My Maps" from localStorage with `/api/render` thumbnails; Recent/Featured await the Supabase backend.
 
-**Your next action:** Foundation is in place — feature work can now lean on `npm run validate` + `npm run smoke` before every push. Open enhancement tracks: more Arcade games (Alphabet Race, Distance Duel, Rank It — see `docs/superpowers/specs/2026-06-11-games-design.md`), GeoDraft Bucket-C categories, Gallery backend (Supabase `user_maps` + publish/moderation), and crawler-facing OG share routes. Each gets its own spec → plan → build.
+**Your next action:** Foundation is in place — feature work can now lean on `npm run validate` + `npm run smoke` before every push. Open enhancement tracks: GeoDraft Bucket-C categories, Gallery backend (Supabase `user_maps` + publish/moderation), and the Devvit Reddit app. (Alphabet Race and Rank It SHIPPED; Distance Duel was cut, not built; crawler-facing OG shipped as `/s/<hash>` + `/api/share`.) Each new track gets its own spec → plan → build.
 
 ---
 
@@ -126,10 +126,10 @@ The cutover did NOT delete the legacy markup. It **re-parents** live DOM nodes a
 2. **Brainstorm** if there are open architectural questions (invoke `superpowers:brainstorming`)
 3. **Plan** via `superpowers:writing-plans` — produces task-by-task plan in `docs/superpowers/plans/`
 4. **Execute** via `superpowers:subagent-driven-development` — dispatches fresh subagent per task with two-stage review (spec compliance, then code quality)
-5. **Validate** every JS edit with `python _validate.py` before commit
+5. **Validate** every JS edit with `npm run validate` before commit (and `npm run smoke` where Playwright is available)
 6. **Push** to `master` triggers Vercel auto-deploy in ~30s
 
-The `_validate.py` helper extracts both inline `<script>` blocks and runs `node --check` on each. Non-zero exit if either fails. Use it.
+`scripts/validate.mjs` (committed, cross-platform — it superseded the old gitignored `_validate.py`) extracts both inline `<script>` blocks and compiles each. Non-zero exit if either fails. Use it.
 
 **Subagent dispatch rules from Phase 0:**
 - Each subagent prompt is self-contained — they don't inherit session context
@@ -178,11 +178,11 @@ git push origin master
 
 Tappymaps is a single-file HTML/CSS/JS web app at https://tappymaps.com. Users tap US states, build legends, and export publication-ready maps. Free tier with watermark + 3 exports/month; Pro tier at $5/mo or $48/yr unlocks unlimited exports + 22 Census ACS data maps + 10 color ramps + county view + custom labels.
 
-**Stack:** Vanilla JS (no framework, no build step), Vercel + Supabase + Stripe backend, single `index.html` (~9,400 lines, plus a client-side mode router as of Phase 1). See `.claude/CLAUDE.md` for the full technical context including the Mode Router (Phase 1), Critical Patterns (captureMapImage, updateLegendPosition, history/undo), Mobile UX architecture, Theme system, Data maps, Templates.
+**Stack:** Vanilla JS (no framework, no build step), Vercel + Supabase + Stripe backend, single `index.html` (~13,600 lines, plus a client-side mode router as of Phase 1). See `.claude/CLAUDE.md` for the full technical context including the Mode Router (Phase 1), Critical Patterns (captureMapImage, updateLegendPosition, history/undo), Mobile UX architecture, Theme system, Data maps, Templates.
 
 **Brand:** Part of Mapparatus Organization. Tappymaps (consumer, casual) ↔ Mapzimus (editorial brand for viral content) ↔ Mapparatus (future pro GIS tool). Primary turquoise `#0EA5E9` for Design contexts, orange `#F97316` for Games. Outfit Bold headings, Instrument Sans body, Geist Mono code.
 
-**The reimagining:** A full product reimagining was designed + spec'd 2026-05-23. Phase 0 (audit fixes) shipped. Phase 1 (mode router + Hub + Create rebuild) designed + ready to plan. Phases 2-5 (Arcade games / GeoDraft / Gallery / Distribution) are scoped in the spec but not yet planned in detail. Each phase's design spec is at `docs/superpowers/specs/`; each phase's implementation plan lands at `docs/superpowers/plans/` when ready.
+**The reimagining:** A full product reimagining was designed + spec'd 2026-05-23. Phases 0-4 have all SHIPPED (see the status list at the top of this file): Phase 0 audit fixes, Phase 1 mode router + Hub + Create rebuild, Phase 2/2b Arcade + GeoDraft, Phase 3 Embed + `/api/render` + `/s/` share route, Phase 4 Gallery MVP. Each phase's design spec is at `docs/superpowers/specs/`; each phase's implementation plan is at `docs/superpowers/plans/`.
 
 ---
 

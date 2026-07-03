@@ -5852,13 +5852,16 @@
       'alphabet-race': {
         id: 'alphabet-race',
         name: 'Alphabet Race',
-        tagline: 'We name a letter. Tap any state that starts with it — no data, pure recall.',
+        tagline: 'We name a letter. Tap as MANY states as you can before the clock — combos build.',
         playable: true,
-        kind: 'alpha',           // single tap, MANY valid targets (any unused state for the letter)
+        kind: 'alpha',           // multi-tap: claim as many valid states as you can per letter
         runLength: 10,
-        perPrompt: 8,
-        scoring: { base: 20, timeBonusMax: 15, streakThreshold: 3, streakStep: 4, streakCap: 20 },
-        medals: { bronze: 150, silver: 280, gold: 400 },
+        perPrompt: 10,           // round 1 length; the ramp shortens later rounds
+        // base = first claim; each further claim in the same letter adds comboStep
+        // (combo); clearing every state for a letter adds clearBonus. Later
+        // letters pay a round multiplier (see arcadeAlphaTap).
+        scoring: { base: 12, comboStep: 6, clearBonus: 25, timeBonusMax: 12, streakThreshold: 3, streakStep: 5, streakCap: 24 },
+        medals: { bronze: 350, silver: 650, gold: 950 },
         generator: (rng) => arcadePickAlphabet(10, rng),
       },
       'rank-it': {
@@ -5893,9 +5896,9 @@
         scoring: 'Keep your streak alive for big bonuses; chase your personal best.',
       },
       'alphabet-race': {
-        goal: 'Tap any state that starts with the letter we name.',
-        steps: ['A letter flashes — tap ANY state whose name starts with it.', 'Each correct answer must be a NEW state; 10 letters per run.', 'Miss reveals the states that would have worked. Wrong taps cost the round.'],
-        scoring: 'Faster answers and streaks score more — chase bronze / silver / gold. No data needed.',
+        goal: 'For each letter, tap as MANY states as you can before the clock runs out.',
+        steps: ['A letter is named — tap every state whose name starts with it.', 'Each state builds a combo (worth more than the last); clear them all for a bonus.', '10 letters per run, and the clock gets shorter — early letters are the easy, many-answer ones.'],
+        scoring: 'Combo points per state + a clear-the-letter bonus + streaks. Later letters pay more. No data needed.',
       },
       'rank-it': {
         goal: 'Tap four highlighted states in order, highest to lowest on a stat.',
@@ -5987,7 +5990,12 @@
       arcadeStateNames().forEach(s => { const c = s.charAt(0); counts[c] = (counts[c] || 0) + 1; });
       const keyed = Object.keys(counts).map(L => ({ L: L, k: Math.pow(rng(), 1 / counts[L]) }));
       keyed.sort((a, b) => b.k - a.k);
-      return keyed.slice(0, Math.min(n, keyed.length)).map(o => o.L);
+      const chosen = keyed.slice(0, Math.min(n, keyed.length)).map(o => o.L);
+      // Difficulty ramp: order the run easy→hard — letters with MANY states
+      // first (rack up combos), single-answer letters last (precise recall
+      // under a shorter clock). Pairs with the per-round timer shortening.
+      chosen.sort((a, b) => counts[b] - counts[a]);
+      return chosen;
     }
 
     // Sample N states WITH replacement (Shuffle mode). No immediate
@@ -6464,6 +6472,7 @@
 
       AG.idx = 0; AG.score = 0; AG.streak = 0; AG.bestStreak = 0; AG.correct = 0; AG.paintIdx = 0;
       AG.alphaUsed = new Set();   // Alphabet Race: states already claimed this run
+      AG.alphaClaimed = []; AG.promptSecs = null;
 
       document.getElementById('arcadeHub').style.display = 'none';
       document.getElementById('arcadeGame').style.display = 'flex';
@@ -6508,7 +6517,11 @@
         const letter = AG.prompts[AG.idx];
         // Unused states that satisfy this letter — cached for scoring + reveal.
         AG.alphaValid = arcadeStatesByLetter(letter).filter(s => !AG.alphaUsed.has(s));
-        promptText = 'Tap a state starting with “' + letter + '”';
+        AG.alphaClaimed = [];   // states claimed THIS letter (name-as-many)
+        // Difficulty ramp: shorten the clock as the run progresses (10s → ~5s).
+        AG.promptSecs = Math.max(5, AG.game.perPrompt - AG.idx);
+        promptText = 'Tap every state starting with “' + letter + '”';
+        bannerSub = '0 of ' + AG.alphaValid.length + ' found';
         popText = 'Letter: ' + letter; // labelled so a flashed I/1 or U/V isn't misread
       } else if (kind === 'rank') {
         arcadeClearPaint();          // wipe last round's order colors
@@ -6585,7 +6598,7 @@
     function arcadeStartTimer() {
       const fill = document.getElementById('arcadeTimerFill');
       const num = document.getElementById('arcadeTimerNum');
-      const dur = AG.game.perPrompt * 1000;
+      const dur = (AG.promptSecs || AG.game.perPrompt) * 1000;   // ramp override (alpha)
       AG.deadline = Date.now() + dur;
       if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
       let lastTick = 0;  // throttles the urgency tick to ~once/second in the low zone
@@ -6601,9 +6614,10 @@
       paint();  // show the full time immediately, not after the first 90ms tick
       AG.timerId = setInterval(paint, 90);
     }
-    // Timeout dispatch — rank scores whatever's placed so far; others resolve.
+    // Timeout dispatch — rank/alpha score whatever's claimed so far; others resolve.
     function arcadeTimeout() {
       if (AG.game.kind === 'rank') arcadeResolveRank(); // score whatever's placed so far
+      else if (AG.game.kind === 'alpha') arcadeResolveAlpha(false);
       else arcadeResolve(null);
     }
 
@@ -6619,7 +6633,85 @@
         return;
       }
       if (kind === 'rank') { arcadeRankTap(name); return; }
+      if (kind === 'alpha') { arcadeAlphaTap(name); return; }
       arcadeResolve(name);
+    }
+
+    // Alphabet Race (name-as-many): each valid, not-yet-claimed state for the
+    // current letter scores immediately and builds a combo. Invalid taps flash
+    // but don't end the round. The round ends on timeout or when every state
+    // for the letter is claimed.
+    function arcadeAlphaTap(name) {
+      if (AG.answered) return;
+      const letter = AG.prompts[AG.idx];
+      const s = AG.game.scoring;
+      if (name.charAt(0) !== letter || AG.alphaClaimed.indexOf(name) !== -1) {
+        // Wrong letter or already claimed — gentle nope, round continues.
+        const wp = arcadeStatePath(name);
+        if (wp) { wp.classList.add('arcade-state--wrong'); setTimeout(() => wp.classList.remove('arcade-state--wrong'), 400); }
+        SFX.wrong(); Haptic.err();
+        return;
+      }
+      AG.alphaClaimed.push(name);
+      AG.alphaUsed.add(name);
+      const comboN = AG.alphaClaimed.length;                 // 1-indexed claim in this letter
+      const roundMul = 1 + AG.idx * 0.12;                    // later letters pay more
+      const pts = Math.round((s.base + (comboN - 1) * s.comboStep) * roundMul);
+      AG.score += pts;
+      const p = arcadeStatePath(name);
+      if (p) {
+        p.classList.add('arcade-state--correct', 'arcade-state--painted');
+        p.style.fill = ARCADE_PAINT_COLORS[AG.paintIdx % ARCADE_PAINT_COLORS.length];
+        AG.paintIdx += 1;
+      }
+      arcadeUpdateHud();
+      arcadeSetAlphaBanner();
+      arcadeShowToast(name + '!  +' + pts + (comboN > 1 ? '  ×' + comboN + ' combo' : ''), 'correct', 700);
+      if (comboN >= 3) SFX.streak(comboN); else SFX.correct(comboN);
+      Haptic.ok();
+      if (AG.alphaClaimed.length >= AG.alphaValid.length) arcadeResolveAlpha(true); // cleared the letter
+    }
+    // Live "N of M found" line in the persistent banner.
+    function arcadeSetAlphaBanner() {
+      const banner = document.getElementById('arcadeBanner');
+      if (!banner) return;
+      let sub = banner.querySelector('.arcade-banner-sub');
+      if (!sub) { sub = document.createElement('span'); sub.className = 'arcade-banner-sub'; banner.appendChild(sub); }
+      sub.textContent = AG.alphaClaimed.length + ' of ' + AG.alphaValid.length + ' found';
+    }
+
+    function arcadeResolveAlpha(cleared) {
+      if (AG.answered) return;
+      AG.answered = true;
+      arcadeStopTimers();
+      const group = document.getElementById('arcadeStatesGroup');
+      if (group) group.classList.add('is-locked');
+      const s = AG.game.scoring;
+      const got = AG.alphaClaimed.length, total = AG.alphaValid.length;
+      let bonus = 0;
+      if (cleared && total > 0) {
+        const dur = (AG.promptSecs || AG.game.perPrompt) * 1000;
+        const remainFrac = Math.max(0, (AG.deadline - Date.now()) / dur);
+        bonus = s.clearBonus + Math.round(remainFrac * s.timeBonusMax);
+        AG.score += bonus;
+      }
+      // Streak builds while you're scoring at least one; clearing is a bonus.
+      if (got > 0) { AG.streak += 1; AG.bestStreak = Math.max(AG.bestStreak, AG.streak); AG.correct += 1; }
+      else { AG.streak = Math.floor(AG.streak / 2); }
+      // Reveal any states you missed for this letter (learn them).
+      AG.alphaValid.filter(n => AG.alphaClaimed.indexOf(n) === -1)
+        .forEach(n => { const p = arcadeStatePath(n); if (p) p.classList.add('arcade-state--reveal'); });
+      const letter = AG.prompts[AG.idx];
+      arcadeShowToast(
+        (cleared ? 'Cleared “' + letter + '”! ' + got + '/' + total + (bonus ? ' · +' + bonus : '')
+          : (got > 0 ? got + '/' + total + ' for “' + letter + '”' : 'Time! — 0 for “' + letter + '”'))
+        + (AG.streak >= s.streakThreshold ? '  🔥' + AG.streak : ''),
+        got > 0 ? 'correct' : 'wrong', 1600);
+      if (got > 0) { if (AG.streak >= s.streakThreshold) SFX.streak(AG.streak); else SFX.correct(AG.streak); Haptic.ok(); }
+      else { SFX.wrong(); Haptic.err(); }
+      arcadeUpdateHud();
+      AG.idx += 1;
+      AG.advanceId = setTimeout(arcadeNextPrompt, cleared ? 900 : 1500);
     }
 
     // Rank It: accumulate ordered taps (highest→lowest). Each pick paints in a

@@ -3270,6 +3270,24 @@
       .draft-terr-cat-winner.tie { background: color-mix(in srgb, var(--border) 35%, transparent); opacity: 0.7; }
       #draftTerrRevealList { opacity: 0; transition: opacity .3s ease; }
       #draftTerrRevealList.is-in { opacity: 1; }
+      /* Territory per-round reveal card bits */
+      .draft-terr-round-eyebrow {
+        font-size: 12px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.6px; color: var(--arcade); margin-bottom: 6px;
+      }
+      #draftTerrRoundCat { margin: 0 0 4px; font-size: 26px; font-weight: 800; }
+      .draft-terr-tally {
+        display: flex; flex-direction: column; align-items: center; gap: 6px;
+      }
+      .draft-terr-tally-label { font-size: 12.5px; font-weight: 700; opacity: 0.85; }
+      .draft-terr-tally-dots { display: flex; gap: 6px; }
+      .draft-terr-tally-dot {
+        width: 12px; height: 12px; border-radius: 50%;
+        background: color-mix(in srgb, var(--border, #334155) 60%, transparent);
+      }
+      .draft-terr-tally-dot.you { background: #F97316; }
+      .draft-terr-tally-dot.ai { background: #8b5cf6; }
+      .draft-terr-tally-dot.tie { background: #64748b; }
 
       /* GeoDraft how-to overlay */
       .draft-howto {
@@ -4193,7 +4211,7 @@
         </a>
         <a class="draft-card" href="/games/draft/territory" data-route>
           <div class="draft-card-name">Territory Draft</div>
-          <p class="draft-card-tag">25 picks each — claim the whole map blind. Then 3 hidden categories score your territory. No timer. Pure strategy.</p>
+          <p class="draft-card-tag">5 rounds, 5 picks each. After every round a hidden category scores that round’s picks. Win the most rounds to take the map.</p>
           <span class="draft-card-cta">Claim the map →</span>
         </a>
       </div>
@@ -4301,19 +4319,20 @@
         </aside>
       </div>
 
-      <!-- Reveal overlay: shown after all 50 claimed -->
+      <!-- Round reveal overlay: shown after each round's 10 picks -->
       <div class="draft-reveal" id="draftTerrReveal" style="display:none">
         <div class="draft-reveal-card">
-          <h3>The Score</h3>
-          <p style="font-size:13px;opacity:0.7;margin:0 0 16px">3 hidden categories decide who wins</p>
-          <ol id="draftTerrRevealList" style="list-style:none;padding:0;margin:0 0 14px"></ol>
-          <div class="draft-scoreline" id="draftTerrFinalScore" style="opacity:0;transition:opacity .4s ease;margin-bottom:14px">
-            <span class="dsl dsl-you"><span class="you" style="font-size:13px">You</span> <b id="dslTerrYou">0</b></span>
+          <div class="draft-terr-round-eyebrow" id="draftTerrRoundEyebrow">Round 1 of 5</div>
+          <h3 id="draftTerrRoundCat">Category</h3>
+          <p id="draftTerrRoundDesc" style="font-size:13px;opacity:0.75;margin:0 0 14px"></p>
+          <div class="draft-scoreline" id="draftTerrRoundScore" style="margin-bottom:10px">
+            <span class="dsl dsl-you"><span class="you" style="font-size:13px">You</span> <b id="dslTerrRoundYou">0</b></span>
             <span class="dsl-vs">vs</span>
-            <span class="dsl dsl-ai"><span class="ai" style="font-size:13px">AI</span> <b id="dslTerrAi">0</b></span>
+            <span class="dsl dsl-ai"><span class="ai" style="font-size:13px">AI</span> <b id="dslTerrRoundAi">0</b></span>
           </div>
-          <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrRevealNext" style="width:100%;display:none">Next →</button>
-          <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrSeeResult" style="width:100%;display:none">See result</button>
+          <p class="draft-terr-round-verdict" id="draftTerrRoundVerdict" style="margin:0 0 12px;font-weight:700"></p>
+          <div class="draft-terr-tally" id="draftTerrTally" style="margin:0 0 14px"></div>
+          <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrRevealNext" style="width:100%">Next round →</button>
         </div>
       </div>
 
@@ -4337,19 +4356,19 @@
           <h3>Territory Draft</h3>
           <div class="draft-howto-sec">
             <h4>The Setup</h4>
-            <p>You and the AI alternate picks until all 50 states are claimed — 25 each. You pick first. No timer.</p>
+            <p>5 rounds. In each round you and the AI alternate picks — 5 states each. You pick first. No timer.</p>
           </div>
           <div class="draft-howto-sec">
             <h4>The Categories</h4>
-            <p>3 scoring categories are chosen at random before you start — but kept secret until the reveal. You don't know what's being measured while you pick.</p>
+            <p>Each round has its own hidden scoring category, kept secret while you pick. You're drafting blind — grab states you think are strong all-round.</p>
           </div>
           <div class="draft-howto-sec">
             <h4>The Reveal</h4>
-            <p>Once all 50 states are claimed, the 3 categories are revealed one by one. For each, your 25 states are totaled against the AI's. Highest total wins the category.</p>
+            <p>At the end of each round its category is revealed and your 5 picks are totaled against the AI's 5. Higher total takes the round (lowest wins for a few categories, like poverty).</p>
           </div>
           <div class="draft-howto-sec">
             <h4>Winning</h4>
-            <p>Win 2 of 3 categories to control the map. Ties on individual categories go to whoever has the higher total.</p>
+            <p>Win the most of the 5 rounds to control the map. A tied round awards no point to either side.</p>
           </div>
           <button type="button" class="arcade-btn arcade-btn--primary" id="draftTerrHowtoClose" style="width:100%;margin-top:8px">Got it — let's draft</button>
         </div>
@@ -7725,11 +7744,19 @@
     }
 
     // --- Territory Draft ----------------------------------------------------
+    // Territory Draft = 5 themed rounds. Each round both sides claim 5 states,
+    // then that round's hidden category is revealed and scored on THAT round's
+    // picks. First to the most round wins takes the map.
+    const TERR_ROUNDS = 5;
+    const TERR_PICKS_PER_ROUND = 5;   // per side, so 10 picks/round, 50 total
     const DT = {
       phase: 'idle', seed: '', rng: null,
       cats: [], vals: [], youPicks: [], aiPicks: [],
       turn: 'you', available: null,
-      revealIdx: 0, youCatWins: 0, aiCatWins: 0,
+      round: 0,                        // 0-based current round
+      youRoundPicks: [], aiRoundPicks: [],   // states claimed THIS round
+      youRoundWins: 0, aiRoundWins: 0,       // running rounds-won tally
+      roundResults: [],                // per-round {title, youTotal, aiTotal, format, winner, mvp}
       aiTimerId: null,
     };
 
@@ -7797,10 +7824,11 @@
       DT.seed = seed || Math.random().toString(36).slice(2, 8);
       DT.rng = arcadeMakeRng('terr:' + DT.seed);
       DT.youPicks = []; DT.aiPicks = []; DT.phase = 'pick'; DT.turn = 'you';
-      DT.revealIdx = 0; DT.youCatWins = 0; DT.aiCatWins = 0;
+      DT.round = 0; DT.youRoundPicks = []; DT.aiRoundPicks = [];
+      DT.youRoundWins = 0; DT.aiRoundWins = 0; DT.roundResults = [];
 
-      // Pick 3 hidden scoring categories (weighted toward Tier 1 — avoids tiny
-      // pool categories that make territory strategy incoherent)
+      // One hidden scoring category PER ROUND (5 total). Near-full-pool only, so
+      // every state can contribute — tiny-pool categories break territory math.
       const allCats = draftCategories().slice();
       for (let i = allCats.length - 1; i > 0; i--) {
         const j = Math.floor(DT.rng() * (i + 1));
@@ -7810,7 +7838,7 @@
       draftSet('draftTerrRoundLabel', 'Loading categories…');
       draftSet('draftTerrTurnLabel', 'Setting up…');
       for (const cat of allCats) {
-        if (DT.cats.length >= 3) break;
+        if (DT.cats.length >= TERR_ROUNDS) break;
         try {
           const v = await draftLoadValues(cat);
           const pool = arcadeStateNames().filter(n => isFinite(v[n])).length;
@@ -7818,7 +7846,7 @@
           DT.cats.push(cat); DT.vals.push(v);
         } catch (_) { continue; }
       }
-      if (DT.cats.length < 3) {
+      if (DT.cats.length < TERR_ROUNDS) {
         draftSet('draftTerrRoundLabel', 'Data unavailable — try again.');
         setTimeout(() => draftShowView('draftHub'), 1600);
         return;
@@ -7857,7 +7885,16 @@
       document.querySelectorAll('#draftTerrStatesGroup .draft-state:not(.draft-state--dc)').forEach(p => {
         p.style.fill = ''; p.classList.remove('draft-state--taken');
       });
+      DT.round = 0;
       draftTerrRenderRosters();
+      draftTerrStartRound();
+    }
+    // Begin a fresh round: reset this round's pick buckets, you pick first.
+    function draftTerrStartRound() {
+      DT.phase = 'pick';
+      DT.youRoundPicks = []; DT.aiRoundPicks = [];
+      const rev = document.getElementById('draftTerrReveal');
+      if (rev) rev.style.display = 'none';
       draftTerrSetTurn('you');
     }
 
@@ -7880,12 +7917,12 @@
 
     function draftTerrSetTurn(turn) {
       DT.turn = turn;
-      const total = DT.youPicks.length + DT.aiPicks.length;
       const grp = document.getElementById('draftTerrStatesGroup');
+      const roundNo = DT.round + 1;
       if (turn === 'you') {
-        const left = 25 - DT.youPicks.length;
-        draftSet('draftTerrTurnLabel', 'Your pick — ' + left + ' left');
-        draftSet('draftTerrRoundLabel', 'Territory Draft · Pick ' + (total + 1) + ' of 50 · ' + draftDiffLabel());
+        const left = TERR_PICKS_PER_ROUND - DT.youRoundPicks.length;
+        draftSet('draftTerrTurnLabel', 'Your pick — ' + left + ' left this round');
+        draftSet('draftTerrRoundLabel', 'Round ' + roundNo + ' of ' + TERR_ROUNDS + ' · category hidden · ' + draftDiffLabel());
         if (grp) grp.classList.remove('is-locked');
         draftTerrArmIdleGuard();
       } else {
@@ -7912,98 +7949,88 @@
       if (!name || DT.phase !== 'pick') return;
       DT.available.delete(name);
       (who === 'you' ? DT.youPicks : DT.aiPicks).push(name);
+      (who === 'you' ? DT.youRoundPicks : DT.aiRoundPicks).push(name);
       const p = draftTerrStatePath(name);
       if (p) { p.style.fill = (who === 'you') ? DRAFT_YOU_COLOR : DRAFT_AI_COLOR; p.classList.add('draft-state--taken'); }
       if (who === 'you') { SFX.unlock(); SFX.tap(); Haptic.light(); }
       draftTerrRenderRosters();
-      if (DT.youPicks.length === 25 && DT.aiPicks.length === 25) {
+      // Round over once both sides have claimed their 5 for the round.
+      if (DT.youRoundPicks.length === TERR_PICKS_PER_ROUND && DT.aiRoundPicks.length === TERR_PICKS_PER_ROUND) {
         DT.phase = 'reveal';
         draftTerrClearIdleGuard();
-        setTimeout(draftTerrShowReveal, 500);
+        setTimeout(draftTerrRevealRound, 450);
         return;
       }
       draftTerrSetTurn(who === 'you' ? 'ai' : 'you');
     }
 
-    function draftTerrShowReveal() {
-      DT.revealIdx = 0; DT.youCatWins = 0; DT.aiCatWins = 0;
+    // Reveal the just-finished round: score THIS round's 5v5 picks on the
+    // round's hidden category, update the running rounds-won tally, and show
+    // the result card. The single button advances to the next round (or, after
+    // the last round, to the final result).
+    function draftTerrRevealRound() {
       const grp = document.getElementById('draftTerrStatesGroup');
       if (grp) grp.classList.add('is-locked');
-      const list = document.getElementById('draftTerrRevealList');
-      if (list) list.innerHTML = '';
-      const fs = document.getElementById('draftTerrFinalScore');
-      if (fs) fs.style.opacity = '0';
+      const r = DT.round;
+      const cat = DT.cats[r], vals = DT.vals[r];
+      const sum = (picks) => picks.reduce((s, n) => s + (isFinite(vals[n]) ? vals[n] : 0), 0);
+      const youTotal = sum(DT.youRoundPicks), aiTotal = sum(DT.aiRoundPicks);
+      const youWon = cat.inverted ? youTotal < aiTotal : youTotal > aiTotal;
+      const aiWon = cat.inverted ? aiTotal < youTotal : aiTotal > youTotal;
+      if (youWon) DT.youRoundWins++; else if (aiWon) DT.aiRoundWins++;
+      // Your strongest contributor this round (MVP), for a bit of feedback.
+      const best = (picks) => picks.slice().filter(n => isFinite(vals[n]))
+        .sort((a, b) => cat.inverted ? vals[a] - vals[b] : vals[b] - vals[a])[0];
+      const mvp = best(DT.youRoundPicks);
+      DT.roundResults.push({ title: cat.title, youTotal: youTotal, aiTotal: aiTotal, format: cat.format, winner: youWon ? 'you' : (aiWon ? 'ai' : 'tie'), mvp: mvp });
+
+      draftSet('draftTerrRoundEyebrow', 'Round ' + (r + 1) + ' of ' + TERR_ROUNDS + ' · scored on this round’s 5 picks');
+      draftSet('draftTerrRoundCat', cat.title);
+      draftSet('draftTerrRoundDesc', (cat.desc || '') + ' — ' + (cat.rule || (cat.inverted ? 'lowest total wins' : 'highest total wins')));
+      draftSet('dslTerrRoundYou', arcadeFormatVal(youTotal, cat.format));
+      draftSet('dslTerrRoundAi', arcadeFormatVal(aiTotal, cat.format));
+      const verdict = document.getElementById('draftTerrRoundVerdict');
+      if (verdict) {
+        const margin = arcadeFormatVal(Math.abs(youTotal - aiTotal), cat.format);
+        verdict.textContent = youWon ? ('You win the round by ' + margin + (mvp ? ' · MVP: ' + mvp : ''))
+          : aiWon ? ('AI wins the round by ' + margin) : 'Round tied — no point';
+        verdict.style.color = youWon ? DRAFT_YOU_COLOR : (aiWon ? DRAFT_AI_COLOR : 'var(--text)');
+      }
+      const tally = document.getElementById('draftTerrTally');
+      if (tally) {
+        let dots = '';
+        for (let i = 0; i < TERR_ROUNDS; i++) {
+          const res = DT.roundResults[i];
+          const cls = !res ? 'pending' : res.winner;
+          dots += '<span class="draft-terr-tally-dot ' + cls + '"></span>';
+        }
+        tally.innerHTML = '<span class="draft-terr-tally-label">Rounds — You ' + DT.youRoundWins + ' · ' + DT.aiRoundWins + ' AI</span><span class="draft-terr-tally-dots">' + dots + '</span>';
+      }
       const nextBtn = document.getElementById('draftTerrRevealNext');
-      const resultBtn = document.getElementById('draftTerrSeeResult');
-      if (nextBtn) nextBtn.style.display = 'none';
-      if (resultBtn) resultBtn.style.display = 'none';
+      if (nextBtn) nextBtn.textContent = (r + 1 >= TERR_ROUNDS) ? 'See final result →' : 'Next round →';
       document.getElementById('draftTerrReveal').style.display = 'flex';
-      setTimeout(draftTerrRevealNext, 600);
+      SFX.complete(youWon ? 'bronze' : 'none');
     }
 
-    function draftTerrRevealNext() {
-      if (DT.revealIdx >= DT.cats.length) {
-        // All cats revealed — show final score
-        const youWins = DT.youCatWins, aiWins = DT.aiCatWins;
-        const fs = document.getElementById('draftTerrFinalScore');
-        const yb = document.getElementById('dslTerrYou');
-        const ab = document.getElementById('dslTerrAi');
-        if (yb) yb.textContent = youWins;
-        if (ab) ab.textContent = aiWins;
-        if (fs) fs.style.opacity = '1';
-        const resultBtn = document.getElementById('draftTerrSeeResult');
-        if (resultBtn) resultBtn.style.display = 'block';
-        return;
-      }
-      const ci = DT.revealIdx++;
-      const cat = DT.cats[ci];
-      const vals = DT.vals[ci];
-      const youTotal = DT.youPicks.reduce((s, n) => s + (isFinite(vals[n]) ? vals[n] : 0), 0);
-      const aiTotal = DT.aiPicks.reduce((s, n) => s + (isFinite(vals[n]) ? vals[n] : 0), 0);
-      const youWinsCat = cat.inverted ? youTotal < aiTotal : youTotal > aiTotal;
-      const aiWinsCat = cat.inverted ? aiTotal < youTotal : aiTotal > youTotal;
-      if (youWinsCat) DT.youCatWins++; else if (aiWinsCat) DT.aiCatWins++;
-
-      // Light up the map by territory owner's value
-      // Show whose states were stronger by briefly tinting dominant side
-      const list = document.getElementById('draftTerrRevealList');
-      if (list) {
-        const row = document.createElement('li');
-        const winClass = youWinsCat ? 'you' : (aiWinsCat ? 'ai' : 'tie');
-        const winLabel = youWinsCat ? 'You' : (aiWinsCat ? 'AI' : 'Tie');
-        row.className = 'draft-terr-cat-row';
-        row.innerHTML = '<span class="draft-terr-cat-name">' + escapeHTML(cat.title) + '</span>'
-          + '<span class="draft-terr-cat-score"><span class="you">' + arcadeFormatVal(youTotal, cat.format) + '</span><span style="opacity:0.4">vs</span><span class="ai">' + arcadeFormatVal(aiTotal, cat.format) + '</span></span>'
-          + '<span class="draft-terr-cat-winner ' + winClass + '">' + winLabel + '</span>';
-        row.style.opacity = '0';
-        list.appendChild(row);
-        setTimeout(() => { row.style.transition = 'opacity .35s ease'; row.style.opacity = '1'; }, 30);
-        const rl = document.getElementById('draftTerrRevealList');
-        if (rl) rl.classList.add('is-in');
-      }
-
-      const nextBtn = document.getElementById('draftTerrRevealNext');
-      const resultBtn = document.getElementById('draftTerrSeeResult');
-      const isLast = DT.revealIdx >= DT.cats.length;
-      if (nextBtn) nextBtn.style.display = isLast ? 'none' : 'block';
-      if (resultBtn) resultBtn.style.display = 'none';
-      if (isLast) {
-        // Delay final score display
-        setTimeout(draftTerrRevealNext, 800);
-      }
+    // Advance from a round reveal: start the next round, or finish the match.
+    function draftTerrNextRound() {
+      if (DT.round + 1 >= TERR_ROUNDS) { draftTerrShowComplete(); return; }
+      DT.round++;
+      draftTerrStartRound();
     }
 
     function draftTerrShowComplete() {
       document.getElementById('draftTerrReveal').style.display = 'none';
       document.getElementById('draftTerrComplete').style.display = 'flex';
-      const you = DT.youCatWins, ai = DT.aiCatWins;
+      const you = DT.youRoundWins, ai = DT.aiRoundWins;
       const win = you > ai, tie = you === ai;
       draftSet('draftTerrCompleteTitle', win ? 'You control the map!' : (tie ? 'Split territory — a draw.' : 'The AI claimed the map.'));
       // Territory is the longer draft — worth more XP than Category.
       const _xp = (typeof progAddXp === 'function') ? progAddXp(win ? 90 : tie ? 55 : 30) : null;
-      const tiedCats = 3 - you - ai;   // a tie category awards no point — say so
-      draftSet('draftTerrCompleteDetail', 'Categories: ' + you + ' — ' + ai + ' AI'
-        + (tiedCats > 0 ? ' · ' + tiedCats + ' tied (no point)' : '') + '. 3-category territory draft.'
+      const tied = TERR_ROUNDS - you - ai;   // a tied round awards no point — say so
+      const breakdown = DT.roundResults.map((r, i) => 'R' + (i + 1) + ' ' + r.title + ': ' + (r.winner === 'you' ? 'You' : r.winner === 'ai' ? 'AI' : 'Tie')).join(' · ');
+      draftSet('draftTerrCompleteDetail', 'Rounds won: ' + you + ' — ' + ai + ' AI'
+        + (tied > 0 ? ' · ' + tied + ' tied' : '') + '. ' + breakdown
         + (_xp ? ' · +' + _xp.gain + ' XP' + (_xp.leveledUp ? ' — Lvl ' + _xp.level + ' 🎉' : '') : ''));
       // Juice: fanfare + buzz + confetti on a map-control win.
       SFX.complete(win ? 'gold' : (tie ? 'bronze' : 'none'));
@@ -8058,8 +8085,7 @@
       onClick('draftTerrToHub', () => Router.navigate('/games/draft'));
       onClick('draftTerrPlayAgain', () => { document.getElementById('draftTerrComplete').style.display = 'none'; draftTerrStart(); });
       onClick('draftTerrShareBtn', draftTerrShareMatch);
-      onClick('draftTerrRevealNext', draftTerrRevealNext);
-      onClick('draftTerrSeeResult', draftTerrShowComplete);
+      onClick('draftTerrRevealNext', draftTerrNextRound);
       onClick('draftTerrZoomIn', () => draftTerrZoom.zoomBy(1.4));
       onClick('draftTerrZoomOut', () => draftTerrZoom.zoomBy(1 / 1.4));
       onClick('draftTerrZoomReset', () => draftTerrZoom.reset(true));

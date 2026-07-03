@@ -2843,7 +2843,9 @@
         background: color-mix(in srgb, var(--surface, #1e293b) 84%, transparent);
         border: 2px solid var(--arcade);
         border-radius: 18px; padding: 10px 28px;
-        max-width: 92%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        /* Wrap long prompts (e.g. "Tap every state starting with X") instead of
+           ellipsizing them off-screen on a ~360px phone. */
+        max-width: 92%; white-space: normal; overflow-wrap: break-word;
         opacity: 0; pointer-events: none; z-index: 4;
         box-shadow: 0 8px 40px rgba(0,0,0,0.35);
       }
@@ -2997,6 +2999,7 @@
         opacity: 0; pointer-events: none;
         transition: opacity .18s ease, transform .18s ease;
         white-space: nowrap;
+        bottom: max(18px, env(safe-area-inset-bottom)); /* clear the home indicator */
       }
       .arcade-toast.is-show { opacity: 1; transform: translateX(-50%) translateY(0); }
       .arcade-toast.is-correct { border-color: var(--success, #22c55e); color: var(--success, #4ade80); }
@@ -3296,6 +3299,7 @@
         backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
         padding: 7px 18px; border-radius: 24px; font-size: 14px; font-weight: 800;
         border: 1px solid var(--border, #334155); white-space: nowrap; pointer-events: none;
+        bottom: calc(44px + env(safe-area-inset-bottom)); /* clear the home indicator */
       }
       /* Territory reveal & complete overlays reuse .draft-reveal / .draft-complete styles */
       .draft-terr-reveal { background: none; }
@@ -3537,7 +3541,7 @@
       .gallery-empty h3 { margin: 0; font-size: 19px; }
       .gallery-empty p { margin: 0; font-size: 14px; opacity: 0.7; max-width: 380px; }
       .gallery-empty .gallery-card-btn { flex: none; padding: 10px 18px; }
-      .gallery-footer { text-align: center; padding: 18px; font-size: 13px; }
+      .gallery-footer { text-align: center; padding: 18px; padding-bottom: max(18px, env(safe-area-inset-bottom)); font-size: 13px; }
       .gallery-footer a { color: var(--gal); text-decoration: none; font-weight: 700; }
       /* Phones: scale the header, let tabs scroll horizontally instead of
          wrapping, allow a 2-up card grid on wider phones, and tighten padding. */
@@ -4328,6 +4332,12 @@
             <button type="button" class="arcade-zoom-btn" id="draftZoomIn" aria-label="Zoom in">+</button>
             <button type="button" class="arcade-zoom-btn" id="draftZoomOut" aria-label="Zoom out">−</button>
             <button type="button" class="arcade-zoom-btn arcade-zoom-btn--reset" id="draftZoomReset" aria-label="Reset zoom">⤾</button>
+            <button type="button" class="arcade-zoom-btn draft-terr-ne-btn" id="draftZoomNE" aria-label="Zoom to the Northeast (small states)" title="Zoom to the small Northeast states">NE</button>
+          </div>
+          <button type="button" class="draft-terr-list-toggle" id="draftListToggle">☰ Pick from list</button>
+          <div class="draft-terr-list-panel" id="draftListPanel" style="display:none">
+            <div class="draft-terr-list-head"><span>Draftable states — tap to pick</span><button type="button" id="draftListClose" aria-label="Close list">×</button></div>
+            <div class="draft-terr-list-chips" id="draftListChips"></div>
           </div>
         </div>
         <aside class="draft-rosters">
@@ -7618,6 +7628,38 @@
       };
       fill('draftRosterYou', DG.youPicks);
       fill('draftRosterAi', DG.aiPicks);
+      draftRenderList();
+    }
+
+    // Small-state helpers for Category Draft (mirrors Territory): a tappable
+    // list of draftable states + an NE region-zoom. Reuses DRAFT_SMALL_STATES /
+    // DRAFT_NE_REGION and the .draft-terr-list-* / .draft-terr-chip styles.
+    function draftRenderList() {
+      const wrap = document.getElementById('draftListChips');
+      if (!wrap || !DG.available) return;
+      const names = Array.from(DG.available).sort();
+      wrap.innerHTML = '';
+      names.forEach(name => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'draft-terr-chip' + (DRAFT_SMALL_STATES.has(name) ? ' is-small' : '');
+        b.textContent = name;
+        b.addEventListener('click', () => {
+          if (DG.phase === 'pick' && DG.turn === 'you') draftOnTap(name);
+        });
+        wrap.appendChild(b);
+      });
+    }
+    function draftToggleList(open) {
+      const panel = document.getElementById('draftListPanel');
+      if (!panel) return;
+      const show = (open === undefined) ? (panel.style.display === 'none') : open;
+      panel.style.display = show ? 'flex' : 'none';
+      if (show) draftRenderList();
+    }
+    function draftFrameRegion() {
+      const paths = DRAFT_NE_REGION.map(draftStatePath).filter(Boolean);
+      if (paths.length && draftZoom.zoomToPaths) draftZoom.zoomToPaths(paths, 0.85);
     }
 
     function draftStartRound() {
@@ -8305,6 +8347,9 @@
       onClick('draftZoomIn', () => draftZoom.zoomBy(1.4));
       onClick('draftZoomOut', () => draftZoom.zoomBy(1 / 1.4));
       onClick('draftZoomReset', () => draftZoom.reset(true));
+      onClick('draftZoomNE', draftFrameRegion);
+      onClick('draftListToggle', () => draftToggleList());
+      onClick('draftListClose', () => draftToggleList(false));
       // Territory Draft buttons
       onClick('draftTerrBackBtn', () => {
         DT.phase = 'idle';

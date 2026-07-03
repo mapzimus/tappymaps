@@ -6049,6 +6049,45 @@
     function arcadeDuelSets() {
       return DATA_MAP_DATASETS.filter(d => d.duel);
     }
+    // Offline-safe trivia stats for Stat Duel / Rank It. Built LAZILY — the
+    // arcade block evaluates before the DRAFT_* tables are declared, so reading
+    // them at top level would throw a TDZ ReferenceError (see CLAUDE.md). Shaped
+    // like a duel dataset: { id, title, desc, format, values }.
+    let _arcadeTrivia = null;
+    function arcadeTriviaStats() {
+      if (_arcadeTrivia) return _arcadeTrivia;
+      const mk = (id, title, desc, format, values) =>
+        values ? { id: 'trivia_' + id, title, desc, format, values, static: true } : null;
+      _arcadeTrivia = [
+        mk('area', 'Total Area', 'Total area in square miles', 'number', DRAFT_AREA),
+        mk('highpoint', 'Highest Point', 'Elevation of the highest point (feet)', 'number', DRAFT_HIGHPOINT),
+        mk('mean_elev', 'Average Elevation', 'Mean elevation above sea level (feet)', 'number', DRAFT_MEAN_ELEV),
+        mk('coastline', 'Ocean Coastline', 'Miles of general ocean coastline', 'number', DRAFT_COASTLINE),
+        mk('counties', 'Counties', 'Number of counties or county-equivalents', 'number', DRAFT_COUNTIES),
+        mk('electoral', 'Electoral Votes', 'Electoral College votes', 'number', DRAFT_EV),
+        mk('presidents', 'Presidents Born', 'U.S. presidents born in the state', 'number', DRAFT_PRESIDENTS),
+        mk('parks', 'National Parks', 'National Park Service “National Park” units', 'number', DRAFT_PARKS),
+        mk('borders', 'Bordering States', 'Number of states it shares a land border with', 'number', DRAFT_BORDERS),
+        mk('statehood', 'Statehood Year', 'Year admitted to the Union', 'year', DRAFT_STATEHOOD),
+      ].filter(Boolean);
+      return _arcadeTrivia;
+    }
+    // Combined stat pool for Stat Duel / Rank It: live Census stats + offline
+    // trivia. Trivia guarantees variety even if /api/census is unreachable.
+    function arcadeStatPool() {
+      return arcadeDuelSets().concat(arcadeTriviaStats());
+    }
+    // Resolve a stat's per-state values. Census fetches (sessionStorage-cached);
+    // trivia is already in memory. Returns null on failure so the caller drops it.
+    async function arcadeLoadStatData(stat) {
+      if (stat.static) return stat.values;
+      try { return await fetchCensusData(stat); } catch (e) { return null; }
+    }
+    function arcadeShuffle(arr, rng) {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+      return a;
+    }
     // n state pairs from pool — distinct within a pair, no unordered repeats.
     function arcadePickPairs(n, rng, pool, data) {
       const pairs = [];
@@ -6317,36 +6356,47 @@
       const rng = arcadeMakeRng(AG.seed);
 
       if (game.kind === 'duel' || game.kind === 'rank') {
-        const sets = arcadeDuelSets();
-        const dataset = sets[Math.floor(rng() * sets.length)];
+        // A DIFFERENT stat every round (fixes "one stat every game"). Cycle a
+        // shuffled pool of live Census stats + offline trivia; each prompt
+        // carries its own {dataset, data}. Trivia guarantees variety even if
+        // /api/census is down, so we no longer dead-end to a single stat.
         AG.loading = true;
         arcadeShowToast('Loading live Census data…', 'correct');
-        try {
-          const data = await fetchCensusData(dataset);
-          const pool = arcadeStateNames().filter(s => isFinite(data[s]));
-          if (pool.length < 10) throw new Error('not enough states with data');
-          AG.duelDataset = dataset;
-          AG.duelData = data;
-          AG.prompts = (game.kind === 'rank')
-            ? arcadePickQuads(game.runLength, rng, pool, data)
-            : arcadePickPairs(game.runLength, rng, pool, data);
-        } catch (err) {
-          // Census down? Don't dead-end to the hub — degrade to a bundled
-          // static stat (state land area) so the run is still playable. Uses a
-          // SEPARATE synthetic dataset object + DRAFT_AREA data, so it never
-          // touches/poisons the sessionStorage census cache.
-          console.warn('Census-data game load failed — using static fallback:', err);
-          arcadeShowToast('Live data unavailable — using state land area', 'wrong', 1500);
-          const fallback = { title: 'Total Area', desc: 'Total state area in square miles.', format: 'number', fallback: true };
-          const data = DRAFT_AREA;
-          const pool = arcadeStateNames().filter(s => isFinite(data[s]));
-          AG.duelDataset = fallback;
-          AG.duelData = data;
-          AG.prompts = (game.kind === 'rank')
-            ? arcadePickQuads(game.runLength, rng, pool, data)
-            : arcadePickPairs(game.runLength, rng, pool, data);
+        const isRank = game.kind === 'rank';
+        const pool = arcadeShuffle(arcadeStatPool(), rng);
+        const dataCache = {};
+        let censusOk = false, censusFail = false;
+        const statData = async (stat) => {
+          if (dataCache[stat.id] !== undefined) return dataCache[stat.id];
+          const d = await arcadeLoadStatData(stat);
+          dataCache[stat.id] = d;
+          if (!stat.static) { if (d) censusOk = true; else censusFail = true; }
+          return d;
+        };
+        const prompts = [];
+        let poolIdx = 0, guard = 0;
+        const maxGuard = game.runLength * (pool.length + 2) + 50;
+        while (prompts.length < game.runLength && guard++ < maxGuard) {
+          const stat = pool[poolIdx % pool.length]; poolIdx++;
+          const data = await statData(stat);
+          if (!data) continue;                       // census stat failed — skip
+          const sp = arcadeStateNames().filter(s => isFinite(data[s]));
+          if (sp.length < (isRank ? 6 : 8)) continue; // too few states with data
+          if (isRank) {
+            const q = arcadePickQuads(1, rng, sp, data)[0];
+            if (q) prompts.push({ states: q.states, dataset: stat, data: data });
+          } else {
+            const p = arcadePickPairs(1, rng, sp, data)[0];
+            if (p) prompts.push({ a: p.a, b: p.b, dataset: stat, data: data });
+          }
         }
+        AG.prompts = prompts;
+        // Back-compat: some paths still read AG.duelDataset/Data; point them at
+        // round 1 (per-round code below reads the prompt's own dataset/data).
+        if (prompts[0]) { AG.duelDataset = prompts[0].dataset; AG.duelData = prompts[0].data; }
+        if (censusFail && !censusOk) arcadeShowToast('Live data unavailable — playing with map trivia', 'wrong', 1600);
         AG.loading = false;
+        if (!prompts.length) { arcadeShowToast('Could not start — try again', 'wrong'); arcadeShowHub(); return; }
       } else {
         const gen = (game.modes && game.modes[AG.mode]) ? game.modes[AG.mode].generator : game.generator;
         AG.prompts = gen(rng);
@@ -6386,9 +6436,10 @@
       let popText, popSub = '', promptText = '', bannerSub = '';
       if (kind === 'duel') {
         const pair = AG.prompts[AG.idx];
-        promptText = 'Higher ' + AG.duelDataset.title + '?';
+        const ds = pair.dataset || AG.duelDataset;   // per-round stat
+        promptText = 'Higher ' + ds.title + '?';
         popText = pair.a + ' or ' + pair.b + '?';
-        popSub = AG.duelDataset.desc || '';   // remind players what the stat means
+        popSub = ds.desc || '';   // remind players what the stat means
         bannerSub = popSub;
         const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
         if (pa) pa.classList.add('arcade-state--duel');
@@ -6403,9 +6454,10 @@
         arcadeClearPaint();          // wipe last round's order colors
         AG.rankPicked = [];
         const q = AG.prompts[AG.idx];
-        promptText = 'Order by ' + AG.duelDataset.title + ' — highest first';
-        popText = AG.duelDataset.title + ' — highest → lowest';
-        popSub = AG.duelDataset.desc || '';
+        const ds = q.dataset || AG.duelDataset;      // per-round stat
+        promptText = 'Order by ' + ds.title + ' — highest first';
+        popText = ds.title + ' — highest → lowest';
+        popSub = ds.desc || '';
         bannerSub = popSub;
         q.states.forEach(st => { const p = arcadeStatePath(st); if (p) p.classList.add('arcade-state--duel'); });
       } else {
@@ -6533,7 +6585,7 @@
       arcadeStopTimers();
       const group = document.getElementById('arcadeStatesGroup');
       if (group) group.classList.add('is-locked');
-      const q = AG.prompts[AG.idx], data = AG.duelData, s = AG.game.scoring;
+      const q = AG.prompts[AG.idx], data = q.data || AG.duelData, s = AG.game.scoring;
       const trueOrder = q.states.slice().sort((a, b) => data[b] - data[a]); // highest first
       let correctPositions = 0;
       AG.rankPicked.forEach((nm, i) => { if (trueOrder[i] === nm) correctPositions++; });
@@ -6577,10 +6629,11 @@
       let target, correct, valueLine = '';
       if (isDuel) {
         const pair = AG.prompts[AG.idx];
-        const va = AG.duelData[pair.a], vb = AG.duelData[pair.b];
+        const data = pair.data || AG.duelData;       // per-round stat data
+        const va = data[pair.a], vb = data[pair.b];
         target = (va >= vb) ? pair.a : pair.b; // the state to paint / reveal
-        correct = tapped === target || (tapped && AG.duelData[tapped] !== undefined && va === vb);
-        const fmt = AG.duelDataset.format;
+        correct = tapped === target || (tapped && data[tapped] !== undefined && va === vb);
+        const fmt = (pair.dataset || AG.duelDataset).format;
         valueLine = pair.a + ' ' + arcadeFormatVal(va, fmt) + ' · ' + pair.b + ' ' + arcadeFormatVal(vb, fmt);
       } else if (isAlpha) {
         // Many valid answers: any UNUSED state starting with the prompt letter.
@@ -11226,26 +11279,26 @@
     // dom-to-image-more is now integrated into captureMapImage() as the primary renderer
 
     const DATA_MAP_DATASETS = [
-      { id: 'population', title: 'Population', desc: 'Total population by state', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01003_001E'], format: 'number', colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true },
+      { id: 'population', title: 'Population', desc: 'Total population by state', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01003_001E'], format: 'number', colorScale: ['#f7fcf5','#c7e9c0','#74c476','#238b45','#00441b'], pro: true, duel: true },
       { id: 'income', title: 'Median Household Income', desc: 'Median household income in dollars', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19013_001E'], format: 'currency', colorScale: ['#eff3ff','#bdd7e7','#6baed6','#2171b5','#08306b'], pro: true },
       { id: 'income_growth_13_23', title: 'Median Income Growth (2013 → 2023)', desc: 'Percent change in median household income, 2013 vs 2023', source: 'U.S. Census Bureau, ACS 1-year (2013 vs 2023)', type: 'census', variables: ['B19013_001E'], years: [2013, 2023], format: 'percent', colorScale: ['#f7fbff','#c6dbef','#6baed6','#2171b5','#084594'], pro: true },
       { id: 'poverty', title: 'Poverty Rate', desc: 'Percent of population below the poverty line', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B17001_002E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fee5d9','#fcae91','#fb6a4a','#de2d26','#a50f15'], pro: true },
-      { id: 'education', title: "Bachelor's Degree+", desc: 'Adults 25+ with a bachelors degree or higher', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B15003_022E','B15003_023E','B15003_024E','B15003_025E','B15003_001E'], compute: function(v) { return (((v[0]+v[1]+v[2]+v[3]) / v[4]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f2f0f7','#cbc9e2','#9e9ac8','#756bb1','#54278f'], pro: true },
+      { id: 'education', title: "Bachelor's Degree+", desc: 'Adults 25+ with a bachelors degree or higher', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B15003_022E','B15003_023E','B15003_024E','B15003_025E','B15003_001E'], compute: function(v) { return (((v[0]+v[1]+v[2]+v[3]) / v[4]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f2f0f7','#cbc9e2','#9e9ac8','#756bb1','#54278f'], pro: true, duel: true },
       { id: 'unemployment', title: 'Unemployment Rate', desc: 'Civilian labor force unemployment rate', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B23025_005E','B23025_002E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#ffffcc','#c7e9b4','#7fcdbb','#1d91c0','#0c2c84'], pro: true },
-      { id: 'homevalue', title: 'Median Home Value', desc: 'Median value of owner-occupied housing', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25077_001E'], format: 'currency', colorScale: ['#ffffd4','#fed98e','#fe9929','#d95f0e','#993404'], pro: true },
-      { id: 'median_age', title: 'Median Age', desc: 'Median age of the population', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01002_001E'], format: 'number', colorScale: ['#feebe2','#fbb4b9','#f768a1','#c51b8a','#7a0177'], pro: true },
-      { id: 'per_capita_income', title: 'Per Capita Income', desc: 'Per capita income in the past 12 months', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19301_001E'], format: 'currency', colorScale: ['#edf8fb','#b3cde3','#8c96c6','#8856a7','#810f7c'], pro: true },
+      { id: 'homevalue', title: 'Median Home Value', desc: 'Median value of owner-occupied housing', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25077_001E'], format: 'currency', colorScale: ['#ffffd4','#fed98e','#fe9929','#d95f0e','#993404'], pro: true, duel: true },
+      { id: 'median_age', title: 'Median Age', desc: 'Median age of the population', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01002_001E'], format: 'number', colorScale: ['#feebe2','#fbb4b9','#f768a1','#c51b8a','#7a0177'], pro: true, duel: true },
+      { id: 'per_capita_income', title: 'Per Capita Income', desc: 'Per capita income in the past 12 months', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19301_001E'], format: 'currency', colorScale: ['#edf8fb','#b3cde3','#8c96c6','#8856a7','#810f7c'], pro: true, duel: true },
       { id: 'gini', title: 'Income Inequality (Gini)', desc: 'Gini index of income inequality (0=equal, 1=unequal)', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B19083_001E'], format: 'decimal', colorScale: ['#f7f7f7','#cccccc','#969696','#636363','#252525'], pro: true },
-      { id: 'homeownership', title: 'Homeownership Rate', desc: 'Percent of occupied housing that is owner-occupied', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25003_002E','B25003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#eff3ff','#bdd7e7','#6baed6','#3182bd','#08519c'], pro: true },
-      { id: 'median_rent', title: 'Median Gross Rent', desc: 'Median monthly gross rent', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25064_001E'], format: 'currency', colorScale: ['#fff7ec','#fee8c8','#fdd49e','#fdbb84','#e34a33'], pro: true },
+      { id: 'homeownership', title: 'Homeownership Rate', desc: 'Percent of occupied housing that is owner-occupied', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25003_002E','B25003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#eff3ff','#bdd7e7','#6baed6','#3182bd','#08519c'], pro: true, duel: true },
+      { id: 'median_rent', title: 'Median Gross Rent', desc: 'Median monthly gross rent', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25064_001E'], format: 'currency', colorScale: ['#fff7ec','#fee8c8','#fdd49e','#fdbb84','#e34a33'], pro: true, duel: true },
       { id: 'rent_burden', title: 'Rent Burden', desc: 'Median gross rent as percentage of household income', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B25071_001E'], format: 'percent', colorScale: ['#f1eef6','#d7b5d8','#df65b0','#dd1c77','#980043'], pro: true },
       { id: 'uninsured', title: 'Uninsured Rate', desc: 'Percent of population without health insurance', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B27010_017E','B27010_033E','B27010_050E','B27010_066E','B27010_001E'], compute: function(v) { return (((v[0]+v[1]+v[2]+v[3]) / v[4]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fee5d9','#fcbba1','#fc9272','#fb6a4a','#cb181d'], pro: true },
-      { id: 'foreign_born', title: 'Foreign-Born Population', desc: 'Percent of population born outside the U.S.', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B05002_013E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcfd','#ccece6','#66c2a4','#238b45','#00441b'], pro: true },
-      { id: 'veterans', title: 'Veteran Population', desc: 'Percent of civilian adults who are veterans', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B21001_002E','B21001_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fbff','#c6dbef','#6baed6','#2171b5','#084594'], pro: true },
-      { id: 'commute_time', title: 'Mean Commute Time', desc: 'Mean travel time to work in minutes', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08136_001E','B08301_001E'], compute: function(v) { return (v[0] / v[1]).toFixed(1); }, format: 'number', colorScale: ['#ffffb2','#fed976','#feb24c','#fd8d3c','#e31a1c'], pro: true },
-      { id: 'pop_65plus', title: 'Population 65+', desc: 'Percent of population aged 65 and older', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01001_020E','B01001_021E','B01001_022E','B01001_023E','B01001_024E','B01001_025E','B01001_044E','B01001_045E','B01001_046E','B01001_047E','B01001_048E','B01001_049E','B01003_001E'], compute: function(v) { var s=0; for(var i=0;i<v.length-1;i++) s+=v[i]; return ((s/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#feedde','#fdbe85','#fd8d3c','#e6550d','#a63603'], pro: true },
-      { id: 'pop_under18', title: 'Population Under 18', desc: 'Percent of population under age 18', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B09001_001E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081'], pro: true },
-      { id: 'broadband', title: 'Broadband Internet', desc: 'Percent of households with broadband internet', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B28002_004E','B28002_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7f7f7','#d9d9d9','#bdbdbd','#737373','#252525'], pro: true },
+      { id: 'foreign_born', title: 'Foreign-Born Population', desc: 'Percent of population born outside the U.S.', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B05002_013E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcfd','#ccece6','#66c2a4','#238b45','#00441b'], pro: true, duel: true },
+      { id: 'veterans', title: 'Veteran Population', desc: 'Percent of civilian adults who are veterans', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B21001_002E','B21001_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fbff','#c6dbef','#6baed6','#2171b5','#084594'], pro: true, duel: true },
+      { id: 'commute_time', title: 'Mean Commute Time', desc: 'Mean travel time to work in minutes', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B08136_001E','B08301_001E'], compute: function(v) { return (v[0] / v[1]).toFixed(1); }, format: 'number', colorScale: ['#ffffb2','#fed976','#feb24c','#fd8d3c','#e31a1c'], pro: true, duel: true },
+      { id: 'pop_65plus', title: 'Population 65+', desc: 'Percent of population aged 65 and older', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B01001_020E','B01001_021E','B01001_022E','B01001_023E','B01001_024E','B01001_025E','B01001_044E','B01001_045E','B01001_046E','B01001_047E','B01001_048E','B01001_049E','B01003_001E'], compute: function(v) { var s=0; for(var i=0;i<v.length-1;i++) s+=v[i]; return ((s/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#feedde','#fdbe85','#fd8d3c','#e6550d','#a63603'], pro: true, duel: true },
+      { id: 'pop_under18', title: 'Population Under 18', desc: 'Percent of population under age 18', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B09001_001E','B01003_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7fcf0','#ccebc5','#7bccc4','#2b8cbe','#084081'], pro: true, duel: true },
+      { id: 'broadband', title: 'Broadband Internet', desc: 'Percent of households with broadband internet', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B28002_004E','B28002_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#f7f7f7','#d9d9d9','#bdbdbd','#737373','#252525'], pro: true, duel: true },
       { id: 'snap', title: 'SNAP/Food Stamps', desc: 'Percent of households receiving SNAP benefits', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B22010_002E','B22010_001E'], compute: function(v) { return ((v[0] / v[1]) * 100).toFixed(1); }, format: 'percent', colorScale: ['#fff5f0','#fcbba1','#fb6a4a','#cb181d','#67000d'], pro: true },
       { id: 'disability', title: 'Disability Rate', desc: 'Percent of civilian population with a disability', source: 'U.S. Census Bureau, ACS 2023', type: 'census', variables: ['B18101_004E','B18101_007E','B18101_010E','B18101_013E','B18101_016E','B18101_019E','B18101_023E','B18101_026E','B18101_029E','B18101_032E','B18101_035E','B18101_038E','B01003_001E'], compute: function(v) { var d=0; for(var i=0;i<v.length-1;i++) d+=v[i]; return ((d/v[v.length-1])*100).toFixed(1); }, format: 'percent', colorScale: ['#fff7f3','#fde0dd','#fcc5c0','#f768a1','#ae017e'], pro: true },
       // --- Expansion wave (2026-06) — every variable verified against the live

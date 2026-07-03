@@ -2775,6 +2775,23 @@
         font-size: clamp(16px, 2.4vw, 24px); font-weight: 800;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
+      /* Persistent, full-width prompt banner under the game bar. The center pop
+         (.arcade-prompt-pop) only flashes ~1.3s; this stays for the whole
+         prompt so players always have a big legible reference of what to tap. */
+      .arcade-banner {
+        padding: 7px 14px; text-align: center;
+        border-left: 4px solid var(--arcade);
+        background: color-mix(in srgb, var(--surface, #1e293b) 60%, transparent);
+        border-bottom: 1px solid var(--border, #334155);
+      }
+      .arcade-banner span {
+        font-size: clamp(17px, 3.2vw, 22px); font-weight: 800;
+        color: var(--text, #f0f9ff); letter-spacing: -0.2px;
+      }
+      .arcade-banner .arcade-banner-sub {
+        display: block; margin-top: 2px;
+        font-size: 12.5px; font-weight: 600; opacity: 0.7; letter-spacing: 0;
+      }
       /* Big center-screen prompt pop. pointer-events:none so fast players can
          tap the map straight through it while it's still fading. */
       .arcade-prompt-pop {
@@ -2836,13 +2853,29 @@
       .arcade-stat-val { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
       .arcade-stat--prog .arcade-stat-val { color: var(--arcade); }
 
-      .arcade-timer-track { height: 5px; background: var(--surface, #1e293b); width: 100%; }
+      /* Timer row: a fill bar plus a legible numeric seconds readout. The old
+         5px bar alone had no number, so players couldn't tell how long was
+         left. Shared by Arcade + GeoDraft. */
+      .arcade-timer-track {
+        display: flex; align-items: center; gap: 8px;
+        padding: 3px 10px; width: 100%; box-sizing: border-box;
+      }
+      .arcade-timer-bar {
+        flex: 1; height: 7px; border-radius: 4px; overflow: hidden;
+        background: var(--surface, #1e293b);
+      }
       .arcade-timer-fill {
         height: 100%; width: 100%;
-        background: var(--arcade);
+        background: var(--arcade); border-radius: 4px;
         transition: width .1s linear, background .2s ease;
       }
       .arcade-timer-fill.is-low { background: var(--error, #ef4444); }
+      .arcade-timer-num {
+        font-size: 15px; font-weight: 800; line-height: 1;
+        font-variant-numeric: tabular-nums; color: var(--arcade);
+        min-width: 30px; text-align: right;
+      }
+      .arcade-timer-num.is-low { color: var(--error, #ef4444); }
 
       /* Mirror the Create editor's .map-container so the whole US (Florida,
          the Alaska + Hawaii insets) frames identically — flex column, the SVG
@@ -3047,11 +3080,16 @@
       .draft-pips .ai { color: #8b5cf6; }
       .draft-category {
         display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
-        padding: 8px 14px;
+        padding: 10px 14px 10px 16px;
         border-bottom: 1px solid var(--border, #334155);
+        border-left: 4px solid var(--arcade);
+        background: color-mix(in srgb, var(--surface, #1e293b) 60%, transparent);
       }
-      .draft-cat-title { font-size: 17px; font-weight: 800; color: var(--arcade); }
-      .draft-cat-desc { font-size: 12.5px; opacity: 0.7; flex: 1; min-width: 140px; }
+      /* Title is the single most important thing on screen while picking, so
+         make it big and near-white (orange-on-dark at 17px was hard to read);
+         the orange stays as the left accent + the rule pill. */
+      .draft-cat-title { font-size: 22px; font-weight: 800; color: var(--text, #f0f9ff); letter-spacing: -0.2px; }
+      .draft-cat-desc { font-size: 13px; opacity: 0.85; flex: 1; min-width: 140px; }
       .draft-cat-rule {
         font-size: 11.5px; font-weight: 700; white-space: nowrap;
         border: 1px solid var(--arcade); border-radius: 999px; padding: 2px 10px;
@@ -4088,7 +4126,8 @@
           <div class="arcade-stat"><span class="arcade-stat-label">Round</span><span class="arcade-stat-val" id="arcadeProgress">0/10</span></div>
         </div>
       </header>
-      <div class="arcade-timer-track"><div class="arcade-timer-fill" id="arcadeTimerFill"></div></div>
+      <div class="arcade-banner" id="arcadeBanner"><span id="arcadeBannerText">Find the state</span></div>
+      <div class="arcade-timer-track"><div class="arcade-timer-bar"><div class="arcade-timer-fill" id="arcadeTimerFill"></div></div><span class="arcade-timer-num" id="arcadeTimerNum"></span></div>
       <div class="arcade-map-wrap" id="arcadeMapWrap">
         <svg id="arcadeMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap the named state">
           <g id="arcadeStatesGroup" transform="translate(5, -20) scale(0.95)"></g>
@@ -4178,7 +4217,7 @@
         <span class="draft-cat-desc" id="draftCatDesc"></span>
         <span class="draft-cat-rule" id="draftCatRule">Highest total wins</span>
       </div>
-      <div class="arcade-timer-track"><div class="arcade-timer-fill" id="draftTimerFill"></div></div>
+      <div class="arcade-timer-track"><div class="arcade-timer-bar"><div class="arcade-timer-fill" id="draftTimerFill"></div></div><span class="arcade-timer-num" id="draftTimerNum"></span></div>
       <div class="draft-main">
         <div class="draft-map-wrap" id="draftMapWrap">
           <svg id="draftMapSvg" viewBox="-20 -30 1010 710" preserveAspectRatio="xMidYMid meet" aria-label="US states map — tap a state to draft it"><g id="draftStatesGroup" transform="translate(5, -20) scale(0.95)"></g></svg>
@@ -6344,12 +6383,13 @@
       const prompt = document.getElementById('arcadePrompt');
       const pop = document.getElementById('arcadePromptPop');
       const kind = AG.game.kind;
-      let popText, popSub = '';
+      let popText, popSub = '', promptText = '', bannerSub = '';
       if (kind === 'duel') {
         const pair = AG.prompts[AG.idx];
-        if (prompt) prompt.textContent = 'Higher ' + AG.duelDataset.title + ' — tap your pick';
+        promptText = 'Higher ' + AG.duelDataset.title + '?';
         popText = pair.a + ' or ' + pair.b + '?';
         popSub = AG.duelDataset.desc || '';   // remind players what the stat means
+        bannerSub = popSub;
         const pa = arcadeStatePath(pair.a), pb = arcadeStatePath(pair.b);
         if (pa) pa.classList.add('arcade-state--duel');
         if (pb) pb.classList.add('arcade-state--duel');
@@ -6357,20 +6397,36 @@
         const letter = AG.prompts[AG.idx];
         // Unused states that satisfy this letter — cached for scoring + reveal.
         AG.alphaValid = arcadeStatesByLetter(letter).filter(s => !AG.alphaUsed.has(s));
-        if (prompt) prompt.textContent = 'Tap a state starting with “' + letter + '”';
+        promptText = 'Tap a state starting with “' + letter + '”';
         popText = 'Letter: ' + letter; // labelled so a flashed I/1 or U/V isn't misread
       } else if (kind === 'rank') {
         arcadeClearPaint();          // wipe last round's order colors
         AG.rankPicked = [];
         const q = AG.prompts[AG.idx];
-        if (prompt) prompt.textContent = 'Order by ' + AG.duelDataset.title + ' — highest first';
+        promptText = 'Order by ' + AG.duelDataset.title + ' — highest first';
         popText = AG.duelDataset.title + ' — highest → lowest';
         popSub = AG.duelDataset.desc || '';
+        bannerSub = popSub;
         q.states.forEach(st => { const p = arcadeStatePath(st); if (p) p.classList.add('arcade-state--duel'); });
       } else {
         const target = AG.prompts[AG.idx];
-        if (prompt) prompt.textContent = 'Find: ' + target;
+        promptText = 'Find: ' + target;
         popText = target;
+      }
+      if (prompt) prompt.textContent = promptText;
+      // Persistent banner mirrors the prompt (big + legible), with the stat
+      // description as a muted second line for duel/rank.
+      const bannerText = document.getElementById('arcadeBannerText');
+      if (bannerText) {
+        bannerText.textContent = promptText;
+        const banner = document.getElementById('arcadeBanner');
+        if (banner) {
+          let subEl = banner.querySelector('.arcade-banner-sub');
+          if (bannerSub) {
+            if (!subEl) { subEl = document.createElement('span'); subEl.className = 'arcade-banner-sub'; banner.appendChild(subEl); }
+            subEl.textContent = bannerSub;
+          } else if (subEl) { subEl.remove(); }
+        }
       }
       // Big center-screen pop of the prompt (taps pass through it). When a stat
       // has a one-line description (Stat Duel / Rank It), show it as a muted
@@ -6416,20 +6472,22 @@
 
     function arcadeStartTimer() {
       const fill = document.getElementById('arcadeTimerFill');
+      const num = document.getElementById('arcadeTimerNum');
       const dur = AG.game.perPrompt * 1000;
       AG.deadline = Date.now() + dur;
       if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
       let lastTick = 0;  // throttles the urgency tick to ~once/second in the low zone
-      AG.timerId = setInterval(() => {
+      const paint = () => {
         const remain = AG.deadline - Date.now();
         const pct = Math.max(0, remain / dur) * 100;
-        if (fill) {
-          fill.style.width = pct + '%';
-          fill.classList.toggle('is-low', pct < 25);
-        }
+        const low = pct < 25;
+        if (fill) { fill.style.width = pct + '%'; fill.classList.toggle('is-low', low); }
+        if (num) { num.textContent = Math.max(0, Math.ceil(remain / 1000)) + 's'; num.classList.toggle('is-low', low); }
         if (pct < 25 && remain > 0 && Date.now() - lastTick > 600) { lastTick = Date.now(); SFX.tick(); }
         if (remain <= 0) arcadeTimeout(); // timeout = miss
-      }, 90);
+      };
+      paint();  // show the full time immediately, not after the first 90ms tick
+      AG.timerId = setInterval(paint, 90);
     }
     // Timeout dispatch — rank scores whatever's placed so far; others resolve.
     function arcadeTimeout() {
@@ -7372,22 +7430,24 @@
     }
     function draftStartPickTimer() {
       const fill = document.getElementById('draftTimerFill');
+      const num = document.getElementById('draftTimerNum');
       const dur = 10000;  // a touch longer than the old 7s — less intimidating
       DG.deadline = Date.now() + dur;
       if (fill) { fill.style.width = '100%'; fill.classList.remove('is-low'); }
-      DG.timerId = setInterval(() => {
+      const paint = () => {
         const remain = DG.deadline - Date.now();
         const pct = Math.max(0, remain / dur) * 100;
-        if (fill) {
-          fill.style.width = pct + '%';
-          fill.classList.toggle('is-low', pct < 25);
-        }
+        const low = pct < 25;
+        if (fill) { fill.style.width = pct + '%'; fill.classList.toggle('is-low', low); }
+        if (num) { num.textContent = Math.max(0, Math.ceil(remain / 1000)) + 's'; num.classList.toggle('is-low', low); }
         if (remain <= 0) {
           clearInterval(DG.timerId); DG.timerId = null;
           const arr = Array.from(DG.available);
           draftCommitPick('you', arr[Math.floor(DG.rng() * arr.length)]); // time's up — random pick
         }
-      }, 90);
+      };
+      paint();
+      DG.timerId = setInterval(paint, 90);
     }
     function draftOnTap(name) {
       if (DG.phase !== 'pick' || DG.turn !== 'you') return;

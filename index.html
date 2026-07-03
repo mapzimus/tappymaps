@@ -3288,6 +3288,44 @@
       .draft-terr-tally-dot.you { background: #F97316; }
       .draft-terr-tally-dot.ai { background: #8b5cf6; }
       .draft-terr-tally-dot.tie { background: #64748b; }
+      /* Small-state helpers: NE region-zoom button + tap-from-list panel */
+      .draft-terr-ne-btn { font-size: 13px; font-weight: 800; }
+      .draft-terr-list-toggle {
+        position: absolute; left: 10px; bottom: 10px; z-index: 4;
+        padding: 8px 14px; min-height: 40px; border-radius: 10px;
+        background: color-mix(in srgb, var(--surface, #1e293b) 92%, transparent);
+        border: 1px solid var(--border, #334155); color: var(--text, #f0f9ff);
+        font-size: 13px; font-weight: 700; cursor: pointer;
+      }
+      .draft-terr-list-panel {
+        position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+        max-height: 55%; display: flex; flex-direction: column;
+        background: color-mix(in srgb, var(--surface, #1e293b) 96%, transparent);
+        border-top: 1px solid var(--border, #334155);
+        border-radius: 14px 14px 0 0; box-shadow: 0 -10px 30px rgba(0,0,0,0.35);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .draft-terr-list-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 10px 14px; border-bottom: 1px solid var(--border, #334155);
+        font-size: 13px; font-weight: 700;
+      }
+      .draft-terr-list-head button {
+        background: none; border: none; color: var(--text, #f0f9ff);
+        font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px;
+      }
+      .draft-terr-list-chips {
+        display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px;
+        overflow-y: auto;
+      }
+      .draft-terr-chip {
+        min-height: 44px; padding: 6px 12px; border-radius: 10px;
+        background: var(--surface-raised, #243044); border: 1px solid var(--border, #334155);
+        color: var(--text, #f0f9ff); font-size: 14px; font-weight: 600; cursor: pointer;
+      }
+      .draft-terr-chip:hover { border-color: var(--arcade); }
+      /* Small/hard-to-tap states get an accent so the list's value is obvious. */
+      .draft-terr-chip.is-small { border-color: var(--arcade); color: var(--arcade); }
 
       /* GeoDraft how-to overlay */
       .draft-howto {
@@ -4303,6 +4341,14 @@
             <button type="button" class="arcade-zoom-btn" id="draftTerrZoomIn" aria-label="Zoom in">+</button>
             <button type="button" class="arcade-zoom-btn" id="draftTerrZoomOut" aria-label="Zoom out">−</button>
             <button type="button" class="arcade-zoom-btn arcade-zoom-btn--reset" id="draftTerrZoomReset" aria-label="Reset zoom">⤾</button>
+            <button type="button" class="arcade-zoom-btn draft-terr-ne-btn" id="draftTerrZoomNE" aria-label="Zoom to the Northeast (small states)" title="Zoom to the small Northeast states">NE</button>
+          </div>
+          <!-- Easier small-state picking: tap a name from the list instead of
+               the tiny polygon. Toggled open; claims on tap when it's your turn. -->
+          <button type="button" class="draft-terr-list-toggle" id="draftTerrListToggle">☰ Pick from list</button>
+          <div class="draft-terr-list-panel" id="draftTerrListPanel" style="display:none">
+            <div class="draft-terr-list-head"><span>Remaining states — tap to claim</span><button type="button" id="draftTerrListClose" aria-label="Close list">×</button></div>
+            <div class="draft-terr-list-chips" id="draftTerrListChips"></div>
           </div>
         </div>
         <aside class="draft-terr-sidebar you">
@@ -7811,6 +7857,43 @@
       const aset = document.getElementById('draftTerrCountAi');
       if (yset) yset.textContent = DT.youPicks.length;
       if (aset) aset.textContent = DT.aiPicks.length;
+      draftTerrRenderList();
+    }
+
+    // Small states that are hard to tap on the map — highlighted in the list
+    // and framed by the "NE" region-zoom button.
+    const DRAFT_SMALL_STATES = new Set(['Rhode Island','Delaware','Connecticut','New Jersey','New Hampshire','Vermont','Massachusetts','Maryland','Hawaii']);
+    const DRAFT_NE_REGION = ['Maine','New Hampshire','Vermont','Massachusetts','Rhode Island','Connecticut','New York','New Jersey','Pennsylvania','Delaware','Maryland','District of Columbia'];
+
+    // Tappable list of remaining states — an easy alternative to hitting a tiny
+    // polygon. Claims on tap when it's your turn (same path as a map tap).
+    function draftTerrRenderList() {
+      const wrap = document.getElementById('draftTerrListChips');
+      if (!wrap || !DT.available) return;
+      const names = Array.from(DT.available).sort();
+      wrap.innerHTML = '';
+      names.forEach(name => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'draft-terr-chip' + (DRAFT_SMALL_STATES.has(name) ? ' is-small' : '');
+        b.textContent = name;
+        b.addEventListener('click', () => {
+          if (DT.phase === 'pick' && DT.turn === 'you') draftTerrOnTap(name);
+        });
+        wrap.appendChild(b);
+      });
+    }
+    function draftTerrToggleList(open) {
+      const panel = document.getElementById('draftTerrListPanel');
+      if (!panel) return;
+      const show = (open === undefined) ? (panel.style.display === 'none') : open;
+      panel.style.display = show ? 'flex' : 'none';
+      if (show) draftTerrRenderList();
+    }
+    // Frame the small Northeast cluster so tiny states become tappable.
+    function draftTerrFrameRegion() {
+      const paths = DRAFT_NE_REGION.map(draftTerrStatePath).filter(Boolean);
+      if (paths.length && draftTerrZoom.zoomToPaths) draftTerrZoom.zoomToPaths(paths, 0.85);
     }
 
     async function draftTerrStart(seed) {
@@ -8089,6 +8172,9 @@
       onClick('draftTerrZoomIn', () => draftTerrZoom.zoomBy(1.4));
       onClick('draftTerrZoomOut', () => draftTerrZoom.zoomBy(1 / 1.4));
       onClick('draftTerrZoomReset', () => draftTerrZoom.reset(true));
+      onClick('draftTerrZoomNE', draftTerrFrameRegion);
+      onClick('draftTerrListToggle', () => draftTerrToggleList());
+      onClick('draftTerrListClose', () => draftTerrToggleList(false));
       onClick('draftTerrHelpBtn', () => { document.getElementById('draftTerrHowto').style.display = 'flex'; });
       onClick('draftTerrHowtoClose', () => {
         document.getElementById('draftTerrHowto').style.display = 'none';

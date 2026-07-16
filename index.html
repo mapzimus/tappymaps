@@ -2514,6 +2514,7 @@
         text-decoration: none;
       }
       .hub-footer a:hover { text-decoration: underline; }
+      .hub-footer a.hub-footer-pro { color: var(--accent); font-weight: 600; }
       .hub-footer-sep { user-select: none; }
 
       /* Portrait phones: stack cards */
@@ -2522,8 +2523,8 @@
         .hub-wordmark { font-size: 36px; }
       }
 
-      /* TapIn landing */
-      #modeTapIn {
+      /* Pricing page (replaced the TapIn access-code landing) */
+      #modePricing {
         background: var(--bg);
         color: var(--text);
         display: flex;
@@ -2533,60 +2534,81 @@
         min-height: 100vh;
         min-height: 100dvh;
       }
-      .tap-in-inner {
-        max-width: 420px;
+      .pricing-inner {
+        max-width: 760px;
         width: 100%;
         text-align: center;
       }
-      .tap-in-title {
+      .pricing-title {
         font-size: 28px;
         font-weight: 700;
         margin: 0 0 8px;
         color: var(--accent);
       }
-      .tap-in-sub {
+      .pricing-sub {
         font-size: 14px;
         margin: 0 0 24px;
         opacity: 0.7;
       }
-      .tap-in-form {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        text-align: left;
       }
-      .tap-in-input {
-        flex: 1;
-        padding: 12px 16px;
+      .pricing-card {
         border: 1px solid var(--border, rgba(255,255,255,0.15));
-        border-radius: 8px;
+        border-radius: 12px;
         background: var(--surface, rgba(255,255,255,0.04));
-        color: var(--text);
-        font-size: 16px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
       }
-      .tap-in-submit {
+      .pricing-card--pro { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+      .pricing-card-name { margin: 0 0 4px; font-size: 16px; }
+      .pricing-card--pro .pricing-card-name { color: var(--accent); }
+      .pricing-card-price { font-size: 30px; font-weight: 700; margin-bottom: 12px; }
+      .pricing-card-per { font-size: 14px; font-weight: 400; opacity: 0.7; }
+      .pricing-card-alt { font-size: 12px; font-weight: 400; opacity: 0.7; }
+      .pricing-card-list {
+        list-style: none;
+        margin: 0 0 16px;
+        padding: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        flex: 1;
+      }
+      .pricing-card-list li { padding: 3px 0 3px 20px; position: relative; }
+      .pricing-card-list li::before { content: '✓'; position: absolute; left: 0; color: var(--accent); }
+      .pricing-card-cta {
+        display: block;
+        width: 100%;
+        text-align: center;
         padding: 12px 24px;
-        background: var(--accent);
-        color: white;
-        border: none;
         border-radius: 8px;
         font-weight: 600;
+        font-size: 14px;
         cursor: pointer;
-      }
-      .tap-in-submit:hover { transform: translateY(-1px); }
-      .tap-in-status {
-        font-size: 13px;
-        min-height: 20px;
-        margin: 0 0 16px;
-        opacity: 0.85;
-      }
-      .tap-in-skip {
-        display: inline-block;
-        font-size: 13px;
-        color: var(--text);
-        opacity: 0.6;
         text-decoration: none;
+        box-sizing: border-box;
       }
-      .tap-in-skip:hover { opacity: 1; text-decoration: underline; }
+      .pricing-card-cta--free {
+        border: 1px solid var(--border, rgba(255,255,255,0.25));
+        background: transparent;
+        color: var(--text);
+      }
+      .pricing-card-cta--pro {
+        border: none;
+        background: var(--accent);
+        color: #fff;
+      }
+      .pricing-card-cta:hover { transform: translateY(-1px); }
+      .pricing-foot { margin-top: 20px; font-size: 13px; }
+      .pricing-foot a { color: var(--text); opacity: 0.6; text-decoration: none; }
+      .pricing-foot a:hover { opacity: 1; text-decoration: underline; }
+      @media (max-width: 600px) {
+        .pricing-grid { grid-template-columns: 1fr; }
+      }
 
       /* Forced-landscape rotate overlay removed — the editor works in portrait. */
 
@@ -4061,27 +4083,43 @@
       <span class="hub-footer-sep"> · </span>
       <a href="/pricing" data-route>pricing</a>
       <span class="hub-footer-sep"> · </span>
-      <a href="/tap-in" data-route>tap in</a>
+      <a href="/pricing" data-route class="hub-footer-pro">go pro</a>
     </footer>
   </div>
-  <!-- Tap In landing — minimal Phase 1 implementation -->
-  <div class="mode" id="modeTapIn" style="display:none">
-    <div class="tap-in-inner">
-      <h2 class="tap-in-title">Tap in to Tappymaps</h2>
-      <p class="tap-in-sub">Enter your access code to unlock the Pro editor.</p>
-      <form id="tapInForm" class="tap-in-form" autocomplete="off">
-        <input
-          type="text"
-          id="tapInCodeInput"
-          class="tap-in-input"
-          placeholder="access code"
-          autocomplete="off"
-          spellcheck="false"
-          maxlength="32">
-        <button type="submit" class="tap-in-submit">Unlock</button>
-      </form>
-      <p class="tap-in-status" id="tapInStatus" aria-live="polite"></p>
-      <a href="/design/make" data-route class="tap-in-skip">Skip — make a map without unlocking →</a>
+  <!-- Pricing — real marketing page (replaced the ComingSoon stub; access-code
+       /tap-in page removed with the retired tester mode) -->
+  <div class="mode" id="modePricing" style="display:none">
+    <div class="pricing-inner">
+      <h2 class="pricing-title">Tappymaps Pricing</h2>
+      <p class="pricing-sub">Make and share US maps free. Go Pro when you want the full toolkit.</p>
+      <div class="pricing-grid">
+        <div class="pricing-card">
+          <h3 class="pricing-card-name">Free</h3>
+          <div class="pricing-card-price">$0</div>
+          <ul class="pricing-card-list">
+            <li>Tap-to-color US state maps</li>
+            <li>Undo / redo, 16 themes, templates</li>
+            <li>Share links &amp; embeds</li>
+            <li>3 exports per month (signed in)</li>
+            <li>All Arcade &amp; GeoDraft games</li>
+          </ul>
+          <a class="pricing-card-cta pricing-card-cta--free" href="/design/make" data-route>Start making maps</a>
+        </div>
+        <div class="pricing-card pricing-card--pro">
+          <h3 class="pricing-card-name">Pro</h3>
+          <div class="pricing-card-price">$5<span class="pricing-card-per">/mo</span> <span class="pricing-card-alt">or $48/yr (save 20%)</span></div>
+          <ul class="pricing-card-list">
+            <li>Everything in Free</li>
+            <li><strong>Unlimited exports</strong></li>
+            <li><strong>Data Maps</strong> — 39 live Census datasets</li>
+            <li>County-level maps</li>
+            <li>Legend builder, subtitles, region fill</li>
+            <li>No tappymaps.com stamp on exports</li>
+          </ul>
+          <button type="button" class="pricing-card-cta pricing-card-cta--pro" id="pricingUpgradeBtn">Go Pro</button>
+        </div>
+      </div>
+      <p class="pricing-foot"><a href="/" data-route>← Back to Tappymaps</a></p>
     </div>
   </div>
   <!-- Create mode — 5-panel rail rebuild (Phase 1) -->
@@ -4166,15 +4204,11 @@
         <!-- Upgrade panel: Pro feature surfacing -->
         <section class="create-panel-content" id="createPanelUpgrade" style="display:none">
           <h3 class="create-panel-heading">Tappymaps Pro</h3>
-          <p class="create-panel-lede">Unlock unlimited exports, no watermark, and Data Maps.</p>
+          <p class="create-panel-lede">Unlock unlimited exports, Data Maps, county maps, and exports without the tappymaps.com stamp.</p>
           <button type="button" class="create-action-btn create-action-btn--share" id="createUpgradeCTA" style="width:100%;margin-top:12px">
             Upgrade
           </button>
-          <p class="create-panel-sub">Already have an access code?</p>
-          <form id="createPanelCodeForm" autocomplete="off">
-            <input type="text" id="createPanelCodeInput" class="tap-in-input" placeholder="access code" maxlength="32">
-            <button type="submit" class="tap-in-submit" style="width:100%;margin-top:8px">Unlock</button>
-          </form>
+          <p class="create-panel-sub"><a href="/pricing" data-route style="color:inherit;">See full pricing →</a></p>
         </section>
         </div><!-- /.create-panel-scroll -->
       </aside>
@@ -4773,7 +4807,7 @@
       <!-- Upgrade Banner (free users only) -->
       <div class="upgrade-banner" id="upgradeBanner" onclick="showUpgradeModal()">
         <div class="upgrade-banner-title">Unlock Tappymaps Pro</div>
-        <div class="upgrade-banner-text">Legend builder, subtitles, region fill, unlimited exports, no watermark, and more. <strong style="color: #0EA5E9;">$5/mo</strong></div>
+        <div class="upgrade-banner-text">Legend builder, subtitles, region fill, unlimited exports, no tappymaps.com stamp, and more. <strong style="color: #0EA5E9;">$5/mo</strong></div>
       </div>
     </div>
 
@@ -4871,7 +4905,7 @@
           <div style="background: rgba(43, 122, 140, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
             <div style="font-size: 20px; margin-bottom: 4px;">📷</div>
             <div style="font-size: 11px; font-weight: 600; color: #0EA5E9;">Unlimited Exports</div>
-            <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">No watermark</div>
+            <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">No monthly limits</div>
           </div>
         </div>
 
@@ -4901,14 +4935,6 @@
           <button class="btn secondary" id="authSignOutBtn" style="width: 100%; font-size: 10px; padding: 6px;">Sign Out</button>
         </div>
 
-        <!-- Legacy access code (hidden in auth-only mode) -->
-        <div id="upgradeAccessCodeSection" style="text-align: center; margin-top: 12px; border-top: 1px solid rgba(43,122,140,0.2); padding-top: 10px;">
-          <div style="font-size: 10px; color: var(--text-dim); margin-bottom: 8px;">Have an access code?</div>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="proCodeInput" placeholder="Enter access code" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #3a3a5a; background: #1a1a2e; color: #e0e0e0; font-size: 12px;">
-            <button class="btn" id="proCodeSubmit" style="width: auto;">Unlock</button>
-          </div>
-        </div>
       </div>
       <div class="modal-actions">
         <button class="btn secondary" id="upgradeCancelBtn" onclick="closeUpgradeModal()">Maybe Later</button>
@@ -5185,6 +5211,12 @@
         if (next.meta && typeof updateMetaTags === 'function') {
           updateMetaTags(next.meta(route));
         }
+        // Pageview beacon per route. trackEvent is a hoisted declaration in
+        // this same script block, but guard anyway — a missing analytics fn
+        // must never break routing.
+        if (typeof trackEvent === 'function') {
+          trackEvent('pageview', { path: window.location.pathname });
+        }
       }
 
       // popstate listener attaches now — but no modes registered yet, so
@@ -5265,8 +5297,8 @@
     // design/gallery is a real mode now (Phase 4) — registered below as Modes.Gallery.
     // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
     // embed is a real mode now (Phase 3) — registered below as Modes.Embed.
+    // pricing is a real mode now (monetization pass) — registered below as Modes.Pricing.
     registerComingSoon('about',          'About',   'Coming soon — Marketing');
-    registerComingSoon('pricing',        'Pricing', 'Coming soon — Marketing');
     Router.register('__notFound__', {
       enter(route) { Modes.ComingSoon.enter({ ...route, label: 'Page not found', phaseTarget: 'the Tappymaps URL tree' }); },
       exit() { Modes.ComingSoon.exit(); },
@@ -5358,47 +5390,35 @@
     };
     Router.register('__hub__', Modes.Hub);
 
-    // --- TapIn landing (Phase 1) ------------------------------------------
-    // Minimal page surfacing the access-code unlock for testers. Reuses
-    // handleProCodeSubmit() (defined later in the script) when the form
-    // submits.
+    // --- Pricing (monetization pass) ---------------------------------------
+    // Real free-vs-Pro marketing page (was a ComingSoon stub; the /tap-in
+    // access-code landing that used to live here was removed with tester
+    // mode). "Go Pro" opens the existing upgrade modal — the modal markup is
+    // a body-level sibling of .container, so it renders from any mode.
 
-    Modes.TapIn = {
+    Modes.Pricing = {
       enter() {
-        const el = document.getElementById('modeTapIn');
+        const el = document.getElementById('modePricing');
         if (el) el.style.display = 'flex';
-        // Reset status text on every entry
-        const status = document.getElementById('tapInStatus');
-        if (status) status.textContent = '';
       },
       exit() {
-        const el = document.getElementById('modeTapIn');
+        const el = document.getElementById('modePricing');
         if (el) el.style.display = 'none';
       },
       meta() {
         return {
-          title: 'Tappymaps — Tap in',
-          description: 'Tap in to Tappymaps. Enter your access code to unlock the Pro editor.',
-          canonical: 'https://tappymaps.com/tap-in',
+          title: 'Tappymaps — Pricing',
+          description: 'Make US state maps free. Tappymaps Pro ($5/mo or $48/yr) adds unlimited exports, Census Data Maps, county maps, and clean exports.',
+          canonical: 'https://tappymaps.com/pricing',
         };
       },
     };
-    Router.register('tap-in', Modes.TapIn);
+    Router.register('pricing', Modes.Pricing);
 
-    // Form handler — submits the code via existing handleProCodeSubmit if
-    // available, else falls back to a local validate-and-redirect.
-    document.addEventListener('submit', function(e) {
-      if (e.target && e.target.id === 'tapInForm') {
-        e.preventDefault();
-        const input = document.getElementById('tapInCodeInput');
-        const status = document.getElementById('tapInStatus');
-        const code = (input && input.value || '').trim();
-        if (!code) {
-          if (status) status.textContent = 'Enter a code first.';
-          return;
-        }
-        // Access codes are retired with tester mode — don't claim an unlock.
-        if (status) status.textContent = 'Access codes are not active. Skip below to make a map free.';
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.id === 'pricingUpgradeBtn') {
+        if (typeof showUpgradeModal === 'function') showUpgradeModal();
+        if (typeof trackEvent === 'function') trackEvent('pricing_upgrade_click');
       }
     });
 
@@ -5545,29 +5565,13 @@
     })();
 
     // --- Upgrade panel handlers (Phase 1) ---------------------------------
-    // CTA: shows the full upgrade modal (auth + pricing).
-    // Form: delegates to handleProCodeSubmit() — same plumbing as /tap-in
-    //      and the existing modal field.
+    // CTA: shows the full upgrade modal (auth + pricing). The access-code
+    // form that used to sit under it was removed with tester mode.
 
     document.addEventListener('click', function(e) {
       if (e.target && e.target.id === 'createUpgradeCTA') {
         if (typeof showUpgradeModal === 'function') {
           showUpgradeModal();
-        }
-      }
-    });
-
-    document.addEventListener('submit', function(e) {
-      if (e.target && e.target.id === 'createPanelCodeForm') {
-        e.preventDefault();
-        const input = document.getElementById('createPanelCodeInput');
-        const code = (input && input.value || '').trim();
-        if (!code) return;
-        if (typeof handleProCodeSubmit === 'function') {
-          // Stash on the canonical input the legacy fn reads from.
-          const canonical = document.getElementById('proCodeInput');
-          if (canonical) canonical.value = code;
-          try { handleProCodeSubmit(); } catch (_) {}
         }
       }
     });
@@ -9836,23 +9840,9 @@
         toggleMultiSelectMode(e.target.checked);
       });
 
-      // Access-code unlock is retired with tester mode. Promo codes will be
-      // server-verified when they ship; for now this rejects all input rather
-      // than granting Pro client-side.
-      function handleProCodeSubmit() {
-        const input = document.getElementById('proCodeInput');
-        if (typeof showMessage === 'function') showMessage('Access codes are not active. Sign in to upgrade.', 'error');
-        if (input) input.focus();
-        return false;
-      }
-      // Expose to global scope so the top-level /tap-in (line ~3718) and Create
-      // Upgrade-panel (line ~3820) submit delegates can reach it — both guard with
-      // `typeof handleProCodeSubmit === 'function'`, which is false without this.
-      window.handleProCodeSubmit = handleProCodeSubmit;
-      document.getElementById('proCodeSubmit')?.addEventListener('click', handleProCodeSubmit);
-      document.getElementById('proCodeInput')?.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); handleProCodeSubmit(); }
-      });
+      // Access-code unlock fully removed with tester mode (markup, /tap-in
+      // route, and handlers all deleted). Promo codes, if they ever ship,
+      // will be server-verified.
 
       // Defeat browser autofill prefilling the Source citation with the user's email.
       // The autocomplete="off" + name + 1p-ignore attrs are ignored by Chrome.
@@ -10064,19 +10054,16 @@
       const titleEl = document.getElementById('upgradeModalTitle');
       const subtitleEl = document.getElementById('upgradeModalSubtitle');
       const featureGrid = document.getElementById('upgradeFeatureGrid');
-      const accessCode = document.getElementById('upgradeAccessCodeSection');
       const cancelBtn = document.getElementById('upgradeCancelBtn');
       if (mode === 'auth') {
         if (titleEl) titleEl.textContent = 'Sign In or Sign Up';
         if (subtitleEl) subtitleEl.textContent = 'Save your maps and sync across devices';
         if (featureGrid) featureGrid.style.display = 'none';
-        if (accessCode) accessCode.style.display = 'none';
         if (cancelBtn) cancelBtn.textContent = 'Cancel';
       } else {
         if (titleEl) titleEl.textContent = 'Upgrade to Pro';
         if (subtitleEl) subtitleEl.textContent = 'Make maps that look professional';
         if (featureGrid) featureGrid.style.display = '';
-        if (accessCode) accessCode.style.display = 'none';
         if (cancelBtn) cancelBtn.textContent = 'Maybe Later';
       }
       updateUpgradeModalUI();
@@ -10329,6 +10316,10 @@
 
     // ANALYTICS — lightweight event tracking
     // ============================================================================
+    // Anonymous per-pageload session id so funnel steps can be joined without
+    // any account or cookie.
+    const ANALYTICS_SESSION_ID = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
     function trackEvent(event, meta = {}) {
       try {
         const entry = { event, ts: new Date().toISOString(), ...meta };
@@ -10338,16 +10329,37 @@
         trackEvent._pending.push(entry);
         clearTimeout(trackEvent._flushTimer);
         trackEvent._flushTimer = setTimeout(() => {
-          const log = JSON.parse(localStorage.getItem('tappymaps_events') || '[]');
-          log.push(...trackEvent._pending);
+          const batch = trackEvent._pending;
           trackEvent._pending = [];
+          const log = JSON.parse(localStorage.getItem('tappymaps_events') || '[]');
+          log.push(...batch);
           if (log.length > 500) log.splice(0, log.length - 500);
           localStorage.setItem('tappymaps_events', JSON.stringify(log));
+          // Fire-and-forget server-side copy — the LIVE Supabase project
+          // (same one auth uses; the dead-project no-op from commit 77e8b99
+          // is over). Requires the analytics_events table + anon-insert RLS
+          // policy (supabase/migrations/20260716_analytics_events.sql). Any
+          // failure is silent: analytics must never break the app.
+          try {
+            const rows = batch.map(en => ({
+              event: en.event,
+              path: window.location.pathname,
+              session_id: ANALYTICS_SESSION_ID,
+              user_id: (typeof appState !== 'undefined' && appState.currentUser) ? appState.currentUser.id : null,
+              meta: (() => { const { event: _e, ts: _t, ...rest } = en; return rest; })(),
+            }));
+            fetch(SUPABASE_URL + '/rest/v1/analytics_events', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+                'Prefer': 'return=minimal',
+              },
+              body: JSON.stringify(rows),
+            }).catch(() => {});
+          } catch (e) { /* silent */ }
         }, 2000);
-        // Phase 0: localStorage-only. The Supabase analytics table is gone
-        // (ERR_NAME_NOT_RESOLVED on every page load). Phase 1 will rewire
-        // analytics writes to whatever new Supabase project the gallery
-        // schemas land in. Auth/subscription paths still use supabaseClient.
       } catch (e) { /* silent */ }
     }
 
@@ -12418,14 +12430,6 @@
       const upgradeOverlay = document.getElementById('upgradeModal');
       if (upgradeOverlay) upgradeOverlay.addEventListener('click', (e) => {
         if (e.target === upgradeOverlay) closeUpgradeModal();
-      });
-
-      // Pro code — validate server-side in future; for now codes are disabled
-      const proCodeSubmit = document.getElementById('proCodeSubmit');
-      if (proCodeSubmit) proCodeSubmit.addEventListener('click', () => {
-        const code = document.getElementById('proCodeInput').value.trim();
-        if (!code) return;
-        showMessage('Access codes are no longer accepted. Please subscribe to unlock Pro.', 'info');
       });
 
       // Template picker

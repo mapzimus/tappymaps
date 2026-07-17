@@ -7,7 +7,7 @@
 > tap color map
 
 [![Live at tappymaps.com](https://img.shields.io/badge/live-tappymaps.com-3a86ff?style=for-the-badge)](https://tappymaps.com)
-[![Made by Mapparatus](https://img.shields.io/badge/made_by-Mapparatus-111?style=for-the-badge)](https://mapparatus.org)
+[![Portfolio](https://img.shields.io/badge/built_by-Maxwell_Howe-111?style=for-the-badge)](https://maxwellhowegis.com)
 
 ## What it does
 
@@ -77,16 +77,9 @@ npx vercel dev
 Required env vars are documented in `.env.example`. You'll need a Supabase
 project and a Stripe test-mode account to exercise the paid-tier paths.
 
-## About Mapparatus
+## About
 
-Tappymaps is one of three products under **Mapparatus Organization** —
-my LLC for map-related software.
-
-- **Tappymaps** (this repo) — consumer map editor. Live at [tappymaps.com](https://tappymaps.com).
-- **Mapzimus** — editorial brand for viral map content (social presence).
-- **Mapparatus** — pro GIS workflow tool (in development).
-
-See [mapparatus.org](https://mapparatus.org) for the umbrella site.
+Tappymaps is an independent lightweight mapping product built by [Maxwell Howe](https://maxwellhowegis.com), a Web GIS developer and high-school math teacher. Experimental maps, tools, and games live separately at [Mapzimus](https://mapzimus.com).
 
 ## License
 
@@ -96,4 +89,4 @@ Mapparatus LLC.
 
 ## Contact
 
-[max@mapparatus.org](mailto:max@mapparatus.org)
+[mhowe.gis@gmail.com](mailto:mhowe.gis@gmail.com)

@@ -2409,6 +2409,51 @@
       }
       .coming-soon-back:hover { transform: translateY(-1px); }
 
+      /* Product pages: /about and /pricing */
+      #modeMarketing {
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow-y: auto;
+        background:
+          radial-gradient(circle at 12% 10%, rgba(14, 165, 233, 0.12), transparent 28rem),
+          radial-gradient(circle at 90% 22%, rgba(249, 115, 22, 0.10), transparent 24rem),
+          var(--bg);
+        color: var(--text);
+      }
+      .marketing-shell { width: min(100% - 40px, 960px); margin: 0 auto; padding: 24px 0 64px; }
+      .marketing-nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+      .marketing-brand { display: inline-flex; align-items: center; gap: 8px; color: var(--text); text-decoration: none; font-size: 22px; font-weight: 800; }
+      .marketing-brand-dot { width: 14px; height: 14px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--accent); box-shadow: inset -4px -4px 0 rgba(249, 115, 22, .9); }
+      .marketing-links { display: flex; align-items: center; gap: 18px; }
+      .marketing-links a { color: var(--text); text-decoration: none; font-size: 14px; opacity: .76; }
+      .marketing-links a:hover, .marketing-links a[aria-current="page"] { opacity: 1; color: var(--accent); }
+      .marketing-panel { display: none; padding: clamp(64px, 10vw, 112px) 0 32px; }
+      .marketing-panel.is-active { display: block; }
+      .marketing-eyebrow { margin: 0 0 14px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+      .marketing-title { max-width: 760px; margin: 0; font-size: clamp(42px, 7vw, 76px); line-height: .98; letter-spacing: -.045em; }
+      .marketing-lede { max-width: 680px; margin: 24px 0 0; color: var(--text-muted, var(--text)); font-size: clamp(18px, 2.6vw, 23px); line-height: 1.55; }
+      .marketing-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 48px; }
+      .marketing-card { padding: 24px; border: 1px solid var(--border, rgba(148, 163, 184, .25)); border-radius: 18px; background: color-mix(in srgb, var(--surface, #1e293b) 84%, transparent); }
+      .marketing-card h2 { margin: 0 0 10px; font-size: 18px; }
+      .marketing-card p { margin: 0; color: var(--text-muted, var(--text)); line-height: 1.6; }
+      .pricing-card { display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end; margin-top: 44px; padding: clamp(26px, 5vw, 48px); border: 1px solid var(--accent); border-radius: 22px; background: color-mix(in srgb, var(--surface, #1e293b) 90%, transparent); }
+      .pricing-name { margin: 0 0 10px; font-size: 24px; }
+      .pricing-price { margin: 0; font-size: clamp(42px, 6vw, 64px); font-weight: 800; letter-spacing: -.05em; }
+      .pricing-price span { font-size: 16px; font-weight: 500; letter-spacing: 0; opacity: .68; }
+      .pricing-note { margin: 10px 0 0; color: var(--text-muted, var(--text)); }
+      .pricing-features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 28px; margin: 30px 0 0; padding: 0; list-style: none; }
+      .pricing-features li::before { content: '\2713'; color: var(--accent); margin-right: 9px; font-weight: 800; }
+      .marketing-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border: 0; border-radius: 10px; background: var(--accent); color: white; font: inherit; font-weight: 750; text-decoration: none; cursor: pointer; }
+      .marketing-cta:hover { filter: brightness(1.08); transform: translateY(-1px); }
+      .marketing-foot { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border, rgba(148, 163, 184, .25)); color: var(--text-muted, var(--text)); font-size: 13px; }
+      .marketing-foot a { color: inherit; }
+      @media (max-width: 720px) {
+        .marketing-shell { width: min(100% - 28px, 960px); }
+        .marketing-grid, .pricing-features { grid-template-columns: 1fr; }
+        .pricing-card { grid-template-columns: 1fr; align-items: start; }
+        .marketing-links { gap: 12px; }
+      }
+
       /* Hub at / */
       #modeHub {
         background: var(--bg);
@@ -4225,6 +4270,53 @@
     </div>
   </div>
 
+  <div class="mode" id="modeMarketing" style="display:none">
+    <div class="marketing-shell">
+      <nav class="marketing-nav" aria-label="Product pages">
+        <a href="/" data-route class="marketing-brand"><span class="marketing-brand-dot" aria-hidden="true"></span>tappymaps</a>
+        <div class="marketing-links">
+          <a href="/about" data-route data-marketing-link="about">About</a>
+          <a href="/pricing" data-route data-marketing-link="pricing">Pricing</a>
+          <a href="/design/make" data-route>Make a map</a>
+        </div>
+      </nav>
+
+      <main class="marketing-panel" id="marketingAbout">
+        <p class="marketing-eyebrow">About Tappymaps</p>
+        <h1 class="marketing-title">A small map tool that gets out of your way.</h1>
+        <p class="marketing-lede">Tappymaps is for quick, good-looking maps of the United States. Tap states, set colors, add labels, and share or export the result without opening desktop GIS software.</p>
+        <div class="marketing-grid">
+          <article class="marketing-card"><h2>Design</h2><p>Build a clean map in a few minutes with legends, titles, color tools, and export controls.</p></article>
+          <article class="marketing-card"><h2>Data</h2><p>Explore ready-to-map public datasets or paste in your own state-level values.</p></article>
+          <article class="marketing-card"><h2>Play</h2><p>Practice geography with short map games built on the same lightweight engine.</p></article>
+        </div>
+        <p class="marketing-lede">Tappymaps is independently designed and built by <a href="https://maxwellhowegis.com/about/" style="color:var(--accent)">Maxwell Howe</a>, a Web GIS developer and high-school math teacher in Salem, Massachusetts.</p>
+        <a class="marketing-cta" href="/design/make" data-route style="margin-top:28px">Make a map</a>
+      </main>
+
+      <main class="marketing-panel" id="marketingPricing">
+        <p class="marketing-eyebrow">Simple pricing</p>
+        <h1 class="marketing-title">Start free. Upgrade when you need more control.</h1>
+        <p class="marketing-lede">The editor and geography games are free to use. Pro adds the features meant for polished maps and repeat work.</p>
+        <section class="pricing-card" aria-labelledby="proPlanTitle">
+          <div>
+            <h2 class="pricing-name" id="proPlanTitle">Tappymaps Pro</h2>
+            <p class="pricing-price">$5 <span>/ month</span></p>
+            <p class="pricing-note">Or $48 per year. Cancel from your account at any time.</p>
+            <ul class="pricing-features">
+              <li>Legend builder and subtitles</li>
+              <li>More map regions and datasets</li>
+              <li>High-resolution exports</li>
+              <li>Saved maps and cross-device access</li>
+            </ul>
+          </div>
+          <button class="marketing-cta" type="button" onclick="showUpgradeModal()">Choose Pro</button>
+        </section>
+        <p class="marketing-foot">Questions about billing or the product? <a href="mailto:mhowe.gis@gmail.com">Email Maxwell</a>.</p>
+      </main>
+    </div>
+  </div>
+
   <!-- Arcade — Phase 2: shared game shell + Find the State (MVP game).
        Self-contained: renders its OWN SVG from appState.topologyData, never
        touches #mapContainer / captureMapImage / the editor. -->
@@ -5297,8 +5389,42 @@
     // design/gallery is a real mode now (Phase 4) — registered below as Modes.Gallery.
     // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
     // embed is a real mode now (Phase 3) — registered below as Modes.Embed.
+<<<<<<< HEAD
     // pricing is a real mode now (monetization pass) — registered below as Modes.Pricing.
     registerComingSoon('about',          'About',   'Coming soon — Marketing');
+=======
+    Modes.Marketing = {
+      enter(route) {
+        const el = document.getElementById('modeMarketing');
+        if (!el) return;
+        el.style.display = 'block';
+        const page = route.mode === 'pricing' ? 'pricing' : 'about';
+        document.getElementById('marketingAbout').classList.toggle('is-active', page === 'about');
+        document.getElementById('marketingPricing').classList.toggle('is-active', page === 'pricing');
+        document.querySelectorAll('[data-marketing-link]').forEach(link => {
+          if (link.dataset.marketingLink === page) link.setAttribute('aria-current', 'page');
+          else link.removeAttribute('aria-current');
+        });
+        el.scrollTop = 0;
+      },
+      exit() {
+        const el = document.getElementById('modeMarketing');
+        if (el) el.style.display = 'none';
+      },
+      meta(route) {
+        const pricing = route.mode === 'pricing';
+        return {
+          title: pricing ? 'Tappymaps Pricing — Free maps and $5 Pro' : 'About Tappymaps — A lightweight US map maker',
+          description: pricing
+            ? 'Make and play with US maps for free. Tappymaps Pro adds polished export, data, and design features for $5/month or $48/year.'
+            : 'Tappymaps is a lightweight browser tool for making, sharing, and playing with maps of the United States.',
+          canonical: 'https://tappymaps.com/' + (pricing ? 'pricing' : 'about'),
+        };
+      },
+    };
+    Router.register('about', Modes.Marketing);
+    Router.register('pricing', Modes.Marketing);
+>>>>>>> origin/master
     Router.register('__notFound__', {
       enter(route) { Modes.ComingSoon.enter({ ...route, label: 'Page not found', phaseTarget: 'the Tappymaps URL tree' }); },
       exit() { Modes.ComingSoon.exit(); },

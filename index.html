@@ -2568,93 +2568,6 @@
         .hub-wordmark { font-size: 36px; }
       }
 
-      /* Pricing page (replaced the TapIn access-code landing) */
-      #modePricing {
-        background: var(--bg);
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-        min-height: 100vh;
-        min-height: 100dvh;
-      }
-      .pricing-inner {
-        max-width: 760px;
-        width: 100%;
-        text-align: center;
-      }
-      .pricing-title {
-        font-size: 28px;
-        font-weight: 700;
-        margin: 0 0 8px;
-        color: var(--accent);
-      }
-      .pricing-sub {
-        font-size: 14px;
-        margin: 0 0 24px;
-        opacity: 0.7;
-      }
-      .pricing-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
-        text-align: left;
-      }
-      .pricing-card {
-        border: 1px solid var(--border, rgba(255,255,255,0.15));
-        border-radius: 12px;
-        background: var(--surface, rgba(255,255,255,0.04));
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-      }
-      .pricing-card--pro { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-      .pricing-card-name { margin: 0 0 4px; font-size: 16px; }
-      .pricing-card--pro .pricing-card-name { color: var(--accent); }
-      .pricing-card-price { font-size: 30px; font-weight: 700; margin-bottom: 12px; }
-      .pricing-card-per { font-size: 14px; font-weight: 400; opacity: 0.7; }
-      .pricing-card-alt { font-size: 12px; font-weight: 400; opacity: 0.7; }
-      .pricing-card-list {
-        list-style: none;
-        margin: 0 0 16px;
-        padding: 0;
-        font-size: 13px;
-        line-height: 1.5;
-        flex: 1;
-      }
-      .pricing-card-list li { padding: 3px 0 3px 20px; position: relative; }
-      .pricing-card-list li::before { content: '✓'; position: absolute; left: 0; color: var(--accent); }
-      .pricing-card-cta {
-        display: block;
-        width: 100%;
-        text-align: center;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        text-decoration: none;
-        box-sizing: border-box;
-      }
-      .pricing-card-cta--free {
-        border: 1px solid var(--border, rgba(255,255,255,0.25));
-        background: transparent;
-        color: var(--text);
-      }
-      .pricing-card-cta--pro {
-        border: none;
-        background: var(--accent);
-        color: #fff;
-      }
-      .pricing-card-cta:hover { transform: translateY(-1px); }
-      .pricing-foot { margin-top: 20px; font-size: 13px; }
-      .pricing-foot a { color: var(--text); opacity: 0.6; text-decoration: none; }
-      .pricing-foot a:hover { opacity: 1; text-decoration: underline; }
-      @media (max-width: 600px) {
-        .pricing-grid { grid-template-columns: 1fr; }
-      }
-
       /* Forced-landscape rotate overlay removed — the editor works in portrait. */
 
       /* ===================================================================
@@ -4131,42 +4044,6 @@
       <a href="/pricing" data-route class="hub-footer-pro">go pro</a>
     </footer>
   </div>
-  <!-- Pricing — real marketing page (replaced the ComingSoon stub; access-code
-       /tap-in page removed with the retired tester mode) -->
-  <div class="mode" id="modePricing" style="display:none">
-    <div class="pricing-inner">
-      <h2 class="pricing-title">Tappymaps Pricing</h2>
-      <p class="pricing-sub">Make and share US maps free. Go Pro when you want the full toolkit.</p>
-      <div class="pricing-grid">
-        <div class="pricing-card">
-          <h3 class="pricing-card-name">Free</h3>
-          <div class="pricing-card-price">$0</div>
-          <ul class="pricing-card-list">
-            <li>Tap-to-color US state maps</li>
-            <li>Undo / redo, 16 themes, templates</li>
-            <li>Share links &amp; embeds</li>
-            <li>3 exports per month (signed in)</li>
-            <li>All Arcade &amp; GeoDraft games</li>
-          </ul>
-          <a class="pricing-card-cta pricing-card-cta--free" href="/design/make" data-route>Start making maps</a>
-        </div>
-        <div class="pricing-card pricing-card--pro">
-          <h3 class="pricing-card-name">Pro</h3>
-          <div class="pricing-card-price">$5<span class="pricing-card-per">/mo</span> <span class="pricing-card-alt">or $48/yr (save 20%)</span></div>
-          <ul class="pricing-card-list">
-            <li>Everything in Free</li>
-            <li><strong>Unlimited exports</strong></li>
-            <li><strong>Data Maps</strong> — 39 live Census datasets</li>
-            <li>County-level maps</li>
-            <li>Legend builder, subtitles, region fill</li>
-            <li>No tappymaps.com stamp on exports</li>
-          </ul>
-          <button type="button" class="pricing-card-cta pricing-card-cta--pro" id="pricingUpgradeBtn">Go Pro</button>
-        </div>
-      </div>
-      <p class="pricing-foot"><a href="/" data-route>← Back to Tappymaps</a></p>
-    </div>
-  </div>
   <!-- Create mode — 5-panel rail rebuild (Phase 1) -->
   <div class="mode" id="modeCreate" style="display:none">
     <header id="createTopBar">
@@ -4310,7 +4187,7 @@
               <li>Saved maps and cross-device access</li>
             </ul>
           </div>
-          <button class="marketing-cta" type="button" onclick="showUpgradeModal()">Choose Pro</button>
+          <button class="marketing-cta" type="button" onclick="showUpgradeModal(); if(typeof trackEvent==='function') trackEvent('pricing_upgrade_click');">Choose Pro</button>
         </section>
         <p class="marketing-foot">Questions about billing or the product? <a href="mailto:mhowe.gis@gmail.com">Email Maxwell</a>.</p>
       </main>
@@ -5389,10 +5266,7 @@
     // design/gallery is a real mode now (Phase 4) — registered below as Modes.Gallery.
     // games/arcade is a real mode now (Phase 2) — registered below as Modes.Arcade.
     // embed is a real mode now (Phase 3) — registered below as Modes.Embed.
-<<<<<<< HEAD
-    // pricing is a real mode now (monetization pass) — registered below as Modes.Pricing.
-    registerComingSoon('about',          'About',   'Coming soon — Marketing');
-=======
+    // about + pricing are real modes now — registered below as Modes.Marketing.
     Modes.Marketing = {
       enter(route) {
         const el = document.getElementById('modeMarketing');
@@ -5424,7 +5298,6 @@
     };
     Router.register('about', Modes.Marketing);
     Router.register('pricing', Modes.Marketing);
->>>>>>> origin/master
     Router.register('__notFound__', {
       enter(route) { Modes.ComingSoon.enter({ ...route, label: 'Page not found', phaseTarget: 'the Tappymaps URL tree' }); },
       exit() { Modes.ComingSoon.exit(); },
@@ -5515,38 +5388,6 @@
       },
     };
     Router.register('__hub__', Modes.Hub);
-
-    // --- Pricing (monetization pass) ---------------------------------------
-    // Real free-vs-Pro marketing page (was a ComingSoon stub; the /tap-in
-    // access-code landing that used to live here was removed with tester
-    // mode). "Go Pro" opens the existing upgrade modal — the modal markup is
-    // a body-level sibling of .container, so it renders from any mode.
-
-    Modes.Pricing = {
-      enter() {
-        const el = document.getElementById('modePricing');
-        if (el) el.style.display = 'flex';
-      },
-      exit() {
-        const el = document.getElementById('modePricing');
-        if (el) el.style.display = 'none';
-      },
-      meta() {
-        return {
-          title: 'Tappymaps — Pricing',
-          description: 'Make US state maps free. Tappymaps Pro ($5/mo or $48/yr) adds unlimited exports, Census Data Maps, county maps, and clean exports.',
-          canonical: 'https://tappymaps.com/pricing',
-        };
-      },
-    };
-    Router.register('pricing', Modes.Pricing);
-
-    document.addEventListener('click', function(e) {
-      if (e.target && e.target.id === 'pricingUpgradeBtn') {
-        if (typeof showUpgradeModal === 'function') showUpgradeModal();
-        if (typeof trackEvent === 'function') trackEvent('pricing_upgrade_click');
-      }
-    });
 
     // --- data-route click delegate (Phase 1) ------------------------------
     // Intercepts <a data-route> clicks so internal navigation uses

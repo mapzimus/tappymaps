@@ -31,7 +31,7 @@ const PORT = Number(process.env.SMOKE_PORT || 8799);
 const ROUTES = [
   '/', '/design/make', '/games/arcade', '/games/draft',
   '/games/draft/category', '/games/draft/territory', '/games/draft/practice',
-  '/design/gallery/mine', '/about',
+  '/design/gallery/mine', '/about', '/pricing',
 ];
 const IGNORE = /CERT_AUTHORITY|Failed to load US map|Failed to fetch|net::ERR|favicon|census|topojson|ERR_NAME_NOT_RESOLVED/i;
 

@@ -1,6 +1,9 @@
 {
   "framework": null,
   "outputDirectory": ".",
+  "crons": [
+    { "path": "/api/keepalive", "schedule": "0 12 * * *" }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/s/:hash", "destination": "/api/share?h=:hash" },

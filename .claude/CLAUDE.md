@@ -21,7 +21,7 @@ Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella over thre
 - Auth: Supabase (email/password). Anon publishable key (`sb_publishable_*`) is in client; service role key is server-side only.
 - Payments: Stripe subscription ($5/mo, $48/yr). Webhook signature verified.
 - State persistence: URL hash via `btoa(JSON.stringify(...))`
-- Analytics: localStorage (capped 500) + fire-and-forget Supabase insert
+- Analytics: localStorage (capped 500) + fire-and-forget Supabase REST insert into `analytics_events` on the live project (re-enabled 2026-07-16; table DDL at `supabase/migrations/20260716_analytics_events.sql`, insert-only RLS). `Router.dispatch` fires a `pageview` event per route.
 
 ## Repository Layout
 
@@ -61,7 +61,7 @@ Expected output: `Block 0 (NNN chars): PASS` + `Block 1 (NNN chars): PASS` + `va
 
 Phase 1 added a **client-side mode router** on top of the single-page editor. The editor is no longer the root page — it now lives at `/design/make`, and `/` is a **Hub** landing page.
 
-- `Router` IIFE (grep `const Router = (function()`) dispatches History-API paths to mode handlers that expose `enter / exit / meta`. Routes: `/` → `Modes.Hub`, `/design/make` → `Modes.Create` (the editor), `/tap-in` → access-code unlock, `/gallery` `/arcade` `/geodraft` `/embed/*` → `Modes.ComingSoon` stub.
+- `Router` IIFE (grep `const Router = (function()`) dispatches History-API paths to mode handlers that expose `enter / exit / meta`. Routes: `/` → `Modes.Hub`, `/design/make` → `Modes.Create` (the editor), `/pricing` → `Modes.Pricing` (real page since 2026-07-16; `/tap-in` was deleted with the access-code retirement), `/about` → `Modes.ComingSoon` stub (Gallery/Arcade/GeoDraft/Embed are real modes now, see their sections).
 - `vercel.json` rewrites every non-asset path to `/index.html` so deep links resolve in production. `init().then(Router.dispatch)` activates the router on load. **Local `python -m http.server` has NO rewrite** — a hard load of `/design/make` 404s; load `/` then call `Router.navigate('/design/make')` in the console.
 - Legacy `/#<base64>` share URLs auto-rewrite to `/design/make#<base64>`, so old shared links still open the editor with state restored.
 
@@ -224,7 +224,7 @@ The mobile Sign In button calls `showUpgradeModal('auth')`, which renders the up
 
 Tester mode (auto-granted Pro to every visitor + hid the auth/pricing UI + the `tap26` access code) was removed before public launch. The `TESTER_MODE` / `TESTER_CODES` / `TESTER_PRO_KEY` constants and the auto-grant block are deleted; `updateUpgradeModalUI()` is back to its plain auth/pricing if/else; the upgrade-modal access-code field is hidden; `handleProCodeSubmit()` is a guarded no-op that rejects input (no client-side unlock). Pro is earned via real auth + Stripe (`verify-subscription`) or the `ADMIN_EMAILS` gate in `checkSubscriptionStatus()` (admins get Pro on sign-in).
 
-**Inert vestiges left to retire when convenient** (low-traffic, harmless): the `/tap-in` access-code page and the Create Upgrade panel's "access code" form — both now just show "Access codes are not active." Remove their markup + routes in a future cleanup.
+**Vestiges RETIRED (2026-07-16 monetization pass):** the `/tap-in` access-code page (markup + route + handlers), the Create Upgrade panel's access-code form, and the upgrade modal's `#upgradeAccessCodeSection` are all deleted. `/tap-in` now falls through to the not-found stub. `/pricing` is a real mode (`Modes.Pricing`, grep `id="modePricing"`) — a free-vs-Pro comparison page whose "Go Pro" button opens the existing upgrade modal (the modal markup is a body-level sibling of `.container`, so it renders from any mode).
 
 ## Source field autofill defeat
 
@@ -259,7 +259,7 @@ Save location for agent exports: `C:\Users\mhowe\Downloads\tappymaps-agent-expor
 
 ## Infrastructure
 
-- **Vercel**: Serverless functions in `/api/stripe/`. Env vars in dashboard. Push to `master` = auto-deploy in ~30s.
+- **Vercel**: Serverless functions in `/api/stripe/`. Env vars in dashboard. Push to `master` = auto-deploy in ~30s. A daily cron (`vercel.json` `crons` → `/api/keepalive`) touches the live Supabase DB so the free-tier project can never pause from inactivity again — a pause takes down sign-in, checkout, and export quota all at once (it happened: both projects were found paused on 2026-07-16).
 - **Supabase**: Original project `qbhqdicppoahhvnuvcwd.supabase.co` is **DEAD** (paused or deleted — Phase 0 Task 7 commit `77e8b99` no-op'd the `appendAnalyticsEvent` network call because every page load was firing `ERR_NAME_NOT_RESOLVED`). The auth-related code paths that still reference Supabase work because the JWT verification happens server-side in `/api/stripe/*` against a different (still-live) project. Phase 1 will rewire analytics to the new project once gallery schemas land. Tables (in the working project): `user_subscriptions`, `export_counts` — both with RLS.
 - **Stripe**: Monthly + annual prices, webhook at `/api/stripe/webhook` (signature-verified). PriceId allowlist + origin-pinned success/cancel URLs landed in `1ed6036`.
 - **DNS**: tappymaps.com — A 76.76.21.21, CNAME www → cname.vercel-dns.com.

@@ -66,6 +66,9 @@ export default async function handler(req, res) {
     if (/missing_key/.test(upstream.url)) {
       return res.status(502).json({ error: 'Census API key required. Set CENSUS_API_KEY in the deployment environment.' });
     }
+    if (/invalid_key/.test(upstream.url)) {
+      return res.status(502).json({ error: 'Census rejected the API key. New keys must be activated via the link in the signup email; also re-check the pasted value for typos or spaces.' });
+    }
     if (!upstream.ok) {
       return res.status(502).json({ error: 'Census API returned ' + upstream.status });
     }

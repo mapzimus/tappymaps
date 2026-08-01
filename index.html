@@ -4992,6 +4992,13 @@
           <div class="export-counter" id="exportCounter" style="display: none;">
             <strong id="exportCountNum">3</strong> free exports remaining this month
           </div>
+          <div style="font-size: 11px; color: var(--text-muted, #a0a0a0); margin-bottom: 4px;">Image size</div>
+          <div class="panel-btn-row" id="exportAspectRow" role="group" aria-label="Export image size" style="margin-bottom: 10px;">
+            <button type="button" class="panel-sm-btn active" data-aspect="landscape" title="Landscape — default map frame">Landscape</button>
+            <button type="button" class="panel-sm-btn" data-aspect="square" title="Square 1:1 — Instagram feed">Square</button>
+            <button type="button" class="panel-sm-btn" data-aspect="portrait" title="Portrait 4:5 — Instagram feed">Portrait</button>
+            <button type="button" class="panel-sm-btn" data-aspect="story" title="Story 9:16 — Reels &amp; Stories">Story</button>
+          </div>
           <button class="btn" id="exportPNGBtn" style="font-size: 13px; padding: 10px 12px;">📷 Save as Image</button>
           <button class="btn secondary" id="exportSVGBtn">🖼 Save for Print (SVG)
             <span class="pro-badge">PRO</span>
@@ -5263,6 +5270,10 @@
       scaleUnit: 'imperial',
       legendTitle: 'Legend',
       legendPosition: 'bottom-right',
+      // PNG export frame: landscape (map 1010:710), square (1:1 feed),
+      // portrait (4:5 feed), story (9:16 Reels/Stories). captureMapImage()
+      // reads this; callers may override via { aspect }.
+      exportAspect: 'landscape',
       arrowPosition: 'top-right',
       arrowColor: '#ffffff',
       arrowStyle: 'ornate',
@@ -10947,7 +10958,26 @@
     }
 
     // ── Shared capture helper ────────────────────────────────────
-    async function captureMapImage() {
+    // Sole export capture entry (cartographer tribal knowledge). Optional
+    // options.aspect: 'landscape' | 'square' | 'portrait' | 'story'.
+    // Default landscape keeps Classroom worksheet packs and legacy callers
+    // on the map frame (1010:710). Square/portrait/story letterbox the
+    // map via SVG preserveAspectRatio="xMidYMid meet" inside a taller frame.
+    const EXPORT_ASPECT_RATIOS = {
+      landscape: 1010 / 710, // ~1.4225 — native map viewBox
+      square: 1,             // Instagram feed
+      portrait: 4 / 5,       // Instagram feed portrait
+      story: 9 / 16          // Reels / Stories
+    };
+
+    function resolveExportAspect(options) {
+      const key = (options && options.aspect) || appState.exportAspect || 'landscape';
+      if (EXPORT_ASPECT_RATIOS[key]) return key;
+      return 'landscape';
+    }
+
+    async function captureMapImage(options) {
+      options = options || {};
       const statsBar = document.getElementById('statsBar');
       const watermarkEl = document.getElementById('freeWatermark');
       // #logoWatermark deliberately not queried — Phase 0 §9 makes it
@@ -10996,14 +11026,16 @@
       // code hid it here (commit ccc5508, "clean Pro exports"); that flow is
       // reversed by the new spec, so the live logo is captured as-is.
       if (subtitleWasEmpty) subtitleEl.style.display = 'none';
-      // Force title visible — landscape-orientation media query hides it on
-      // mobile, but exports always force landscape framing and need the title.
+      // Force title visible — portrait media query can hide it on mobile,
+      // but every export frame needs the on-map title.
       if (titleEl) titleEl.style.display = 'block';
 
-      // ── FORCE LANDSCAPE ASPECT RATIO ──
-      // SVG viewBox is 1010x710 (~1.42:1). Force container to this ratio
-      // so every export looks identical regardless of device orientation.
-      const EXPORT_RATIO = 1010 / 710; // ~1.4225
+      // ── FORCE EXPORT ASPECT RATIO ──
+      // Default landscape matches SVG viewBox 1010x710 so exports look
+      // identical regardless of device orientation. Square / portrait /
+      // story grow the capture frame; the map letterboxes inside via meet.
+      const aspectKey = resolveExportAspect(options);
+      const EXPORT_RATIO = EXPORT_ASPECT_RATIOS[aspectKey];
       const captureWidth = Math.max(mapContainer.offsetWidth, 800);
       const captureHeight = Math.round(captureWidth / EXPORT_RATIO);
       // Opt out of parent flex sizing — .map-container has `flex: 1` which
@@ -11015,7 +11047,7 @@
       mapContainer.style.height = captureHeight + 'px';
       mapContainer.style.overflow = 'hidden';
 
-      // Let SVG fill the forced landscape container. Compute the explicit
+      // Let SVG fill the forced capture container. Compute the explicit
       // pixel height so flex layout drift on iOS Safari can't leave the SVG
       // sized to its natural-content rect (the bug behind error4's huge empty
       // band — flex:1 height:100% inside a freshly-resized parent sometimes
@@ -11219,7 +11251,8 @@
       }
 
       try {
-        const canvas = await captureMapImage();
+        const aspect = resolveExportAspect();
+        const canvas = await captureMapImage({ aspect });
         const ctx = canvas.getContext('2d');
         ctx.save();
         if (!cleanExport) {
@@ -11231,8 +11264,9 @@
           ctx.fillText('tappymaps.com', canvas.width - (16 * scaleFactor), canvas.height - (8 * scaleFactor));
         }
         ctx.restore();
-        const slug = (appState.mapTitle || 'tappymaps').toLowerCase()
+        const slugBase = (appState.mapTitle || 'tappymaps').toLowerCase()
           .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tappymaps';
+        const slug = aspect === 'landscape' ? slugBase : (slugBase + '-' + aspect);
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         if (isMobile) {
           const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
@@ -11243,7 +11277,7 @@
             try {
               await navigator.share({ files: [file], title: appState.mapTitle || 'Tappymaps' });
               showMessage('Shared successfully!', 'success');
-              trackEvent('export_png', { title: appState.mapTitle, method: 'share_api', states: Object.keys(appState.stateColors).length });
+              trackEvent('export_png', { title: appState.mapTitle, method: 'share_api', aspect, states: Object.keys(appState.stateColors).length });
               return;
             } catch (shareErr) {
               // User cancelled share or it failed — fall through to overlay
@@ -11293,14 +11327,14 @@
           document.body.appendChild(overlay);
 
           showMessage('Hold the image to save it', 'success');
-          trackEvent('export_png', { title: appState.mapTitle, method: 'overlay', states: Object.keys(appState.stateColors).length });
+          trackEvent('export_png', { title: appState.mapTitle, method: 'overlay', aspect, states: Object.keys(appState.stateColors).length });
         } else {
           const link = document.createElement('a');
           link.href = canvas.toDataURL('image/png');
           link.download = `${slug}.png`;
           link.click();
           showMessage('PNG exported successfully', 'success');
-          trackEvent('export_png', { title: appState.mapTitle, states: Object.keys(appState.stateColors).length });
+          trackEvent('export_png', { title: appState.mapTitle, aspect, states: Object.keys(appState.stateColors).length });
         }
       } catch (err) {
         console.error('Export failed:', err);
@@ -11324,7 +11358,8 @@
       }
 
       try {
-        const canvas = await captureMapImage();
+        const aspect = resolveExportAspect();
+        const canvas = await captureMapImage({ aspect });
         const ctx = canvas.getContext('2d');
         if (!cleanExport) {
           const sf = 3;
@@ -11337,7 +11372,7 @@
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
         showMessage('Image copied to clipboard! Paste anywhere.', 'success');
-        trackEvent('copy_image', { title: appState.mapTitle, states: Object.keys(appState.stateColors).length });
+        trackEvent('copy_image', { title: appState.mapTitle, aspect, states: Object.keys(appState.stateColors).length });
       } catch (err) {
         console.error('Copy to clipboard failed:', err);
         showMessage('Copy failed \u2014 your browser may not support clipboard images', 'error');
@@ -13236,7 +13271,20 @@
 
       // Export
       document.getElementById('exportPNGBtn').addEventListener('click', exportPNG);
-    document.getElementById('copyImageBtn').addEventListener('click', copyImageToClipboard);
+      document.getElementById('copyImageBtn').addEventListener('click', copyImageToClipboard);
+      const exportAspectRow = document.getElementById('exportAspectRow');
+      if (exportAspectRow) {
+        exportAspectRow.addEventListener('click', function(e) {
+          const btn = e.target.closest('[data-aspect]');
+          if (!btn) return;
+          const aspect = btn.getAttribute('data-aspect');
+          if (!EXPORT_ASPECT_RATIOS[aspect]) return;
+          appState.exportAspect = aspect;
+          exportAspectRow.querySelectorAll('[data-aspect]').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-aspect') === aspect);
+          });
+        });
+      }
       document.getElementById('exportSVGBtn').addEventListener('click', () => {
         if (!gateProFeature('SVG export')) return;
         exportSVG();

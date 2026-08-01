@@ -3710,6 +3710,32 @@
       .gallery-empty h3 { margin: 0; font-size: 19px; }
       .gallery-empty p { margin: 0; font-size: 14px; opacity: 0.7; max-width: 380px; }
       .gallery-empty .gallery-card-btn { flex: none; padding: 10px 18px; }
+      .gallery-sync-banner {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        flex-wrap: wrap;
+        margin: 0 0 16px; padding: 12px 14px;
+        border-radius: 12px;
+        border: 1px solid color-mix(in srgb, var(--gal) 40%, var(--border, #334155));
+        background: linear-gradient(135deg,
+          color-mix(in srgb, var(--gal) 14%, transparent),
+          color-mix(in srgb, #F97316 8%, transparent));
+        font-size: 13px; line-height: 1.4;
+      }
+      .gallery-sync-banner strong { font-weight: 700; }
+      .gallery-sync-banner p { margin: 0; opacity: 0.9; flex: 1; min-width: 200px; }
+      .gallery-sync-banner .gallery-card-btn { flex: none; min-width: 110px; }
+      .gallery-sync-status {
+        font-size: 12px; opacity: 0.7; margin: 0 0 14px;
+        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      }
+      .gallery-sync-dot {
+        width: 8px; height: 8px; border-radius: 50%;
+        background: #22c55e; box-shadow: 0 0 0 3px color-mix(in srgb, #22c55e 25%, transparent);
+      }
+      .gallery-sync-dot.is-local { background: #94a3b8; box-shadow: none; }
+      .gallery-card-meta {
+        font-size: 11px; opacity: 0.55; margin: -6px 0 10px;
+      }
       .gallery-footer { text-align: center; padding: 18px; padding-bottom: max(18px, env(safe-area-inset-bottom)); font-size: 13px; }
       .gallery-footer a { color: var(--gal); text-decoration: none; font-weight: 700; }
       /* Phones: scale the header, let tabs scroll horizontally instead of
@@ -4342,7 +4368,7 @@
         <!-- Upgrade panel: Pro feature surfacing -->
         <section class="create-panel-content" id="createPanelUpgrade" style="display:none">
           <h3 class="create-panel-heading">Tappymaps Pro</h3>
-          <p class="create-panel-lede">Unlock spreadsheet → map, unlimited exports, Census data maps, county view, and exports without the tappymaps.com stamp.</p>
+          <p class="create-panel-lede">Unlock spreadsheet → map, cloud My Maps sync, unlimited exports, Census data maps, county view, and exports without the tappymaps.com stamp.</p>
           <button type="button" class="create-action-btn create-action-btn--share" id="createUpgradeCTA" style="width:100%;margin-top:12px">
             Upgrade
           </button>
@@ -4398,9 +4424,9 @@
             <p class="pricing-note">Or $48 per year. Cancel from your account at any time.</p>
             <ul class="pricing-features">
               <li>Spreadsheet paste → choropleth</li>
+              <li>Cloud My Maps sync across devices</li>
               <li>Census data maps and county view</li>
               <li>Unlimited high-resolution exports</li>
-              <li>Legend builder and subtitles</li>
             </ul>
           </div>
           <button class="marketing-cta" type="button" onclick="showUpgradeModal(); if(typeof trackEvent==='function') trackEvent('pricing_upgrade_click');">Choose Pro</button>
@@ -4701,13 +4727,13 @@
     </div>
   </div>
 
-  <!-- Gallery (Phase 4) — browse maps. MVP: My Maps from localStorage with
-       /api/render thumbnails; Recent/Featured await the gallery backend. -->
+  <!-- Gallery (Phase 4) — My Maps: localStorage for everyone; Pro syncs to
+       Supabase user_maps. Recent/Featured still await public publish. -->
   <div class="mode" id="modeGallery" style="display:none">
     <header class="gallery-header">
       <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
       <h2 class="gallery-title">Gallery</h2>
-      <p class="gallery-sub">Maps made with Tappymaps.</p>
+      <p class="gallery-sub">Your maps — on this device, or synced with Pro.</p>
       <nav class="gallery-tabs">
         <a class="gallery-tab" data-route href="/design/gallery/recent">Recent</a>
         <a class="gallery-tab" data-route href="/design/gallery/featured">Featured</a>
@@ -5934,10 +5960,10 @@
     };
     Router.register('embed', Modes.Embed);
 
-    // --- Gallery (Phase 4) ------------------------------------------------
-    // MVP: "My Maps" persisted in localStorage with /api/render thumbnails.
-    // Recent + Featured need the gallery backend (Supabase user_maps), so
-    // they show a tasteful "coming soon" empty state for now.
+    // --- Gallery (Phase 4 + A2 cloud My Maps) -----------------------------
+    // Free: My Maps in localStorage (this device). Pro + signed-in: also
+    // upserted to Supabase `user_maps` and loaded from the cloud in Gallery.
+    // Recent / Featured still need public publish — coming-soon empty state.
     const GALLERY_MINE_KEY = 'tappymaps_my_maps';
     const GALLERY_MAX = 60;
     function galleryGetMine() {
@@ -5955,14 +5981,149 @@
       const mine = galleryGetMine().filter(m => m.hash !== hash);
       try { localStorage.setItem(GALLERY_MINE_KEY, JSON.stringify(mine)); } catch (_) {}
     }
+    function galleryCloudEnabled() {
+      return !!(typeof supabaseClient !== 'undefined' && supabaseClient
+        && appState && appState.currentUser
+        && typeof isPro === 'function' && isPro());
+    }
+    function galleryPromptCloudUpgrade(message) {
+      if (typeof openUpgradePanel === 'function') openUpgradePanel(message);
+      else if (typeof showUpgradeModal === 'function') {
+        showUpgradeModal();
+        if (message && typeof showMessage === 'function') showMessage(message, 'info');
+      }
+    }
+    async function galleryUpsertCloud(hash, title, subtitle) {
+      if (!galleryCloudEnabled() || !hash) return { ok: false, reason: 'not_pro' };
+      try {
+        const theme = document.documentElement.getAttribute('data-theme')
+          || (document.body && document.body.getAttribute('data-theme'))
+          || null;
+        const palette = (appState && Array.isArray(appState.presetColors))
+          ? appState.presetColors.slice(0, 48)
+          : [];
+        const row = {
+          user_id: appState.currentUser.id,
+          hash: String(hash),
+          title: (title || 'Untitled map').slice(0, 200),
+          subtitle: String(subtitle || '').slice(0, 400),
+          theme: theme,
+          palette_snapshot: palette,
+          is_deleted: false,
+          updated_at: new Date().toISOString(),
+        };
+        const { error } = await supabaseClient
+          .from('user_maps')
+          .upsert(row, { onConflict: 'user_id,hash' });
+        if (error) {
+          console.warn('user_maps upsert failed:', error.message || error);
+          return { ok: false, reason: error.message || 'upsert_failed' };
+        }
+        return { ok: true };
+      } catch (err) {
+        console.warn('user_maps upsert error:', err);
+        return { ok: false, reason: (err && err.message) || 'upsert_error' };
+      }
+    }
+    async function gallerySoftDeleteCloud(hash) {
+      if (!galleryCloudEnabled() || !hash) return false;
+      try {
+        const { error } = await supabaseClient
+          .from('user_maps')
+          .update({ is_deleted: true, updated_at: new Date().toISOString() })
+          .eq('user_id', appState.currentUser.id)
+          .eq('hash', hash);
+        if (error) {
+          console.warn('user_maps soft-delete failed:', error.message || error);
+          return false;
+        }
+        return true;
+      } catch (err) {
+        console.warn('user_maps soft-delete error:', err);
+        return false;
+      }
+    }
+    async function galleryFetchCloudMine() {
+      if (!galleryCloudEnabled()) return null;
+      try {
+        const { data, error } = await supabaseClient
+          .from('user_maps')
+          .select('id,hash,title,subtitle,theme,created_at,updated_at')
+          .eq('user_id', appState.currentUser.id)
+          .eq('is_deleted', false)
+          .order('updated_at', { ascending: false })
+          .limit(GALLERY_MAX);
+        if (error) {
+          console.warn('user_maps fetch failed:', error.message || error);
+          return null;
+        }
+        return (data || []).map(function(row) {
+          return {
+            id: row.id,
+            hash: row.hash,
+            title: row.title || 'Untitled map',
+            subtitle: row.subtitle || '',
+            ts: new Date(row.updated_at || row.created_at || Date.now()).getTime(),
+            cloud: true,
+          };
+        });
+      } catch (err) {
+        console.warn('user_maps fetch error:', err);
+        return null;
+      }
+    }
+    // One-shot: push this browser's local My Maps into the cloud after Pro unlock.
+    async function galleryMigrateLocalToCloud() {
+      if (!galleryCloudEnabled()) return 0;
+      const uid = appState.currentUser.id;
+      const flag = 'tappymaps_cloud_migrated_' + uid;
+      try { if (localStorage.getItem(flag) === '1') return 0; } catch (_) {}
+      const local = galleryGetMine();
+      if (!local.length) {
+        try { localStorage.setItem(flag, '1'); } catch (_) {}
+        return 0;
+      }
+      let n = 0;
+      for (let i = 0; i < local.length && i < GALLERY_MAX; i++) {
+        const m = local[i];
+        const res = await galleryUpsertCloud(m.hash, m.title, m.subtitle);
+        if (res && res.ok) n++;
+      }
+      try { localStorage.setItem(flag, '1'); } catch (_) {}
+      if (n && typeof trackEvent === 'function') trackEvent('gallery_cloud_migrate', { count: n });
+      return n;
+    }
     // Called from the editor's "Save to My Maps" button.
-    function saveCurrentMapToGallery() {
+    async function saveCurrentMapToGallery() {
       if (typeof encodeStateToURL !== 'function') return;
       const colored = Object.keys((appState && appState.stateColors) || {}).length;
       if (colored < 1) { showMessage('Color at least one state first', 'info'); return; }
-      gallerySaveMine(encodeStateToURL(), appState.mapTitle, appState.mapSubtitle);
-      showMessage('Saved to My Maps — see the Gallery', 'success');
-      if (typeof trackEvent === 'function') trackEvent('gallery_save_mine', { title: appState.mapTitle });
+      const hash = encodeStateToURL();
+      const title = appState.mapTitle;
+      const subtitle = appState.mapSubtitle;
+      gallerySaveMine(hash, title, subtitle);
+
+      if (!appState.currentUser) {
+        showMessage('Saved on this device — sign in with Pro to sync across devices', 'success');
+        if (typeof trackEvent === 'function') trackEvent('gallery_save_mine', { title: title, cloud: false, signed_in: false });
+        return;
+      }
+      if (typeof isPro !== 'function' || !isPro()) {
+        showMessage('Saved on this device', 'success');
+        if (typeof trackEvent === 'function') trackEvent('gallery_save_mine', { title: title, cloud: false, signed_in: true });
+        galleryPromptCloudUpgrade('Cloud My Maps sync is Pro — your maps follow you across devices.');
+        return;
+      }
+
+      showMessage('Syncing to My Maps…', 'info');
+      const res = await galleryUpsertCloud(hash, title, subtitle);
+      if (res && res.ok) {
+        showMessage('Saved to My Maps — synced across devices', 'success');
+        if (typeof trackEvent === 'function') trackEvent('gallery_save_mine', { title: title, cloud: true });
+      } else {
+        showMessage('Saved on this device — cloud sync failed (try again later)', 'info');
+        if (typeof trackEvent === 'function') trackEvent('gallery_save_mine', { title: title, cloud: false, error: res && res.reason });
+      }
     }
 
     function galleryThumb(hash) {
@@ -5971,46 +6132,160 @@
     function galleryEscape(s) {
       return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
-    function galleryRenderMine(body) {
-      const mine = galleryGetMine();
+    function galleryFormatWhen(ts) {
+      if (!ts) return '';
+      try {
+        return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+      } catch (_) { return ''; }
+    }
+    function galleryMergeMineLists(cloud, local) {
+      const byHash = Object.create(null);
+      (local || []).forEach(function(m) {
+        if (!m || !m.hash) return;
+        byHash[m.hash] = {
+          hash: m.hash,
+          title: m.title || 'Untitled map',
+          subtitle: m.subtitle || '',
+          ts: m.ts || 0,
+          cloud: false,
+        };
+      });
+      (cloud || []).forEach(function(m) {
+        if (!m || !m.hash) return;
+        const prev = byHash[m.hash];
+        byHash[m.hash] = {
+          hash: m.hash,
+          title: m.title || (prev && prev.title) || 'Untitled map',
+          subtitle: m.subtitle || (prev && prev.subtitle) || '',
+          ts: Math.max(m.ts || 0, (prev && prev.ts) || 0),
+          cloud: true,
+          id: m.id,
+        };
+      });
+      return Object.keys(byHash)
+        .map(function(k) { return byHash[k]; })
+        .sort(function(a, b) { return (b.ts || 0) - (a.ts || 0); })
+        .slice(0, GALLERY_MAX);
+    }
+    function galleryRenderMineCards(body, mine, opts) {
+      opts = opts || {};
+      let html = '';
+      if (opts.bannerHtml) html += opts.bannerHtml;
+      if (opts.statusHtml) html += opts.statusHtml;
       if (!mine.length) {
-        body.innerHTML = '<div class="gallery-empty">'
+        html += '<div class="gallery-empty">'
           + '<div class="gallery-empty-icon">🗺️</div>'
           + '<h3>No saved maps yet</h3>'
-          + '<p>Make a map, then hit <strong>Save to My Maps</strong> in Save &amp; Share. Your maps live in this browser.</p>'
+          + '<p>Make a map, then hit <strong>Save to My Maps</strong> in Share. '
+          + (opts.cloud
+            ? 'Pro keeps them synced across your devices.'
+            : 'They stay on this device until you sync with Pro.')
+          + '</p>'
           + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="/design/make">Make a map</a>'
           + '</div>';
+        body.innerHTML = html;
+        galleryWireMineBanner(body);
         return;
       }
-      let html = '<div class="gallery-grid">';
-      mine.forEach(m => {
+      html += '<div class="gallery-grid">';
+      mine.forEach(function(m) {
         const editHref = '/design/make#' + m.hash;
+        const when = galleryFormatWhen(m.ts);
         html += '<div class="gallery-card">'
           + '<img class="gallery-thumb" loading="lazy" alt="' + galleryEscape(m.title) + '" src="' + galleryEscape(galleryThumb(m.hash)) + '">'
           + '<div class="gallery-card-body">'
           + '<div class="gallery-card-title">' + galleryEscape(m.title) + '</div>'
           + '<div class="gallery-card-sub">' + galleryEscape(m.subtitle || '') + '</div>'
+          + (when ? '<div class="gallery-card-meta">' + galleryEscape(when)
+            + (m.cloud ? ' · synced' : ' · this device') + '</div>' : '')
           + '<div class="gallery-card-actions">'
           + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="' + galleryEscape(editHref) + '">Open</a>'
-          + '<button class="gallery-card-btn" data-remove="' + galleryEscape(m.hash) + '">Remove</button>'
+          + '<button type="button" class="gallery-card-btn" data-remove="' + galleryEscape(m.hash) + '">Remove</button>'
           + '</div></div></div>';
       });
       html += '</div>';
       body.innerHTML = html;
-      body.querySelectorAll('[data-remove]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          // Removal is permanent (localStorage) and the button is a small mobile
-          // target next to Open — confirm so a mis-tap doesn't drop a saved map.
+      galleryWireMineBanner(body);
+      body.querySelectorAll('[data-remove]').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
           if (!confirm('Remove this map from My Maps? This can’t be undone.')) return;
-          galleryRemoveMine(btn.getAttribute('data-remove')); galleryRenderMine(body);
+          const hash = btn.getAttribute('data-remove');
+          galleryRemoveMine(hash);
+          if (galleryCloudEnabled()) await gallerySoftDeleteCloud(hash);
+          galleryRenderMine(body);
         });
+      });
+    }
+    function galleryWireMineBanner(body) {
+      const upgradeBtn = body.querySelector('[data-gallery-upgrade]');
+      if (upgradeBtn) {
+        upgradeBtn.addEventListener('click', function() {
+          galleryPromptCloudUpgrade('Cloud My Maps sync is Pro — your maps follow you across devices.');
+        });
+      }
+      const signInBtn = body.querySelector('[data-gallery-signin]');
+      if (signInBtn) {
+        signInBtn.addEventListener('click', function() {
+          if (typeof showUpgradeModal === 'function') showUpgradeModal('auth');
+        });
+      }
+    }
+    async function galleryRenderMine(body) {
+      if (!body) return;
+      body.innerHTML = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span> Loading My Maps…</div>';
+
+      const local = galleryGetMine();
+      let cloud = null;
+      let cloudError = false;
+      const wantCloud = galleryCloudEnabled();
+
+      if (wantCloud) {
+        await galleryMigrateLocalToCloud();
+        cloud = await galleryFetchCloudMine();
+        if (cloud === null) cloudError = true;
+      }
+
+      const usingCloud = Array.isArray(cloud);
+      const mine = usingCloud ? galleryMergeMineLists(cloud, local) : local;
+
+      let bannerHtml = '';
+      let statusHtml = '';
+      if (wantCloud) {
+        statusHtml = '<div class="gallery-sync-status">'
+          + '<span class="gallery-sync-dot' + (cloudError ? ' is-local' : '') + '"></span>'
+          + '<span>' + (cloudError
+            ? 'Pro sync unavailable — showing maps on this device'
+            : 'Synced with Pro')
+          + '</span></div>';
+      } else if (appState && appState.currentUser && typeof isPro === 'function' && !isPro()) {
+        bannerHtml = '<div class="gallery-sync-banner">'
+          + '<p><strong>On this device only.</strong> Upgrade to Pro to sync My Maps across phones and laptops.</p>'
+          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-upgrade>Go Pro</button>'
+          + '</div>';
+        statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
+      } else if (!appState || !appState.currentUser) {
+        bannerHtml = '<div class="gallery-sync-banner">'
+          + '<p><strong>Saved in this browser.</strong> Sign in with Pro to keep My Maps across devices.</p>'
+          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-signin>Sign in</button>'
+          + '</div>';
+        statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
+      } else {
+        statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
+      }
+
+      galleryRenderMineCards(body, mine, {
+        bannerHtml: bannerHtml,
+        statusHtml: statusHtml,
+        cloud: usingCloud,
       });
     }
     function galleryRenderComingSoon(body, label) {
       body.innerHTML = '<div class="gallery-empty">'
         + '<div class="gallery-empty-icon">✨</div>'
         + '<h3>' + label + ' is coming soon</h3>'
-        + '<p>Published maps from the whole community will show up here once accounts and the gallery backend land. For now, your own maps live under <strong>My Maps</strong>.</p>'
+        + '<p>Community publish is next. Your own maps already sync under <strong>My Maps</strong>'
+        + (typeof isPro === 'function' && isPro() ? ' with Pro' : '')
+        + '.</p>'
         + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="/design/gallery/mine">Go to My Maps</a>'
         + '</div>';
     }
@@ -10315,6 +10590,9 @@
         appState.proUnlocked = true;
         appState.subscription = { status: 'admin' };
         updateProGates();
+        if (typeof galleryMigrateLocalToCloud === 'function') {
+          galleryMigrateLocalToCloud().catch(function() {});
+        }
         return;
       }
       try {
@@ -10326,6 +10604,9 @@
           appState.proUnlocked = pro;
           appState.subscription = subscription;
           updateProGates();
+          if (pro && typeof galleryMigrateLocalToCloud === 'function') {
+            galleryMigrateLocalToCloud().catch(function() {});
+          }
         }
       } catch (err) {
         console.error('Subscription check error:', err);

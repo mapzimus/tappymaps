@@ -6,6 +6,7 @@
     "validate": "node scripts/validate.mjs",
     "smoke": "node scripts/smoke.mjs",
     "smoke:csv": "node scripts/csv-import-smoke.mjs",
+    "smoke:cloud-maps": "node scripts/cloud-maps-smoke.mjs",
     "test": "node scripts/validate.mjs"
   },
   "dependencies": {

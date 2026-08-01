@@ -1589,6 +1589,195 @@
     .data-map-more-btn { width: 100%; padding: 10px; border-radius: 8px; border: 1px dashed var(--border); background: transparent; color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
     .data-map-more-btn:hover { border-color: var(--accent); background: rgba(14, 165, 233, 0.06); }
 
+    /* ── Spreadsheet → map (Create Data panel) ───────── */
+    .csv-import {
+      margin: 0 0 14px;
+      padding: 0 0 14px;
+      border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+    }
+    .csv-import-kicker {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted, #8a9bb0);
+      margin: 0 0 6px;
+    }
+    .csv-import-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 4px;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .csv-import-lede {
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--text-muted, #8a9bb0);
+      margin: 0 0 12px;
+    }
+    .csv-sample-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      padding: 10px 12px;
+      margin: 0 0 12px;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+      background:
+        linear-gradient(135deg,
+          color-mix(in srgb, var(--accent) 14%, transparent),
+          color-mix(in srgb, #F97316 8%, transparent));
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+    }
+    .csv-sample-btn:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    .csv-sample-btn:active { transform: translateY(0); }
+    .csv-sample-swatch {
+      display: flex;
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .csv-sample-swatch span { flex: 1; }
+    .csv-sample-copy { flex: 1; min-width: 0; }
+    .csv-sample-name {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .csv-sample-meta {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted, #8a9bb0);
+    }
+    .csv-sample-pill {
+      flex-shrink: 0;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 18%, transparent);
+      color: var(--accent);
+    }
+    .csv-paste-label {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 0 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .csv-paste-hint {
+      font-weight: 500;
+      color: var(--text-muted, #8a9bb0);
+      font-size: 10px;
+    }
+    .csv-paste {
+      width: 100%;
+      min-height: 118px;
+      max-height: 220px;
+      resize: vertical;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px dashed var(--border);
+      background: color-mix(in srgb, var(--surface) 70%, transparent);
+      color: var(--text);
+      font-family: ui-monospace, "Geist Mono", "SF Mono", Menlo, Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.45;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .csv-paste::placeholder { color: var(--text-muted, #8a9bb0); opacity: 0.85; }
+    .csv-paste:focus {
+      border-style: solid;
+      border-color: var(--accent);
+      background: var(--surface);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+    }
+    .csv-import-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .csv-import-actions .btn { margin-bottom: 0; }
+    .csv-import-actions .btn .pro-chip {
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .csv-import-status {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--surface-raised, var(--surface)) 88%, transparent);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--text);
+    }
+    .csv-import-status.is-visible { display: block; }
+    .csv-import-status.is-error {
+      border-color: color-mix(in srgb, var(--error, #ef4444) 45%, var(--border));
+      background: color-mix(in srgb, var(--error, #ef4444) 8%, var(--surface));
+    }
+    .csv-import-status-summary { font-weight: 600; margin-bottom: 4px; }
+    .csv-import-status-detail {
+      font-size: 11px;
+      color: var(--text-muted, #8a9bb0);
+      margin-bottom: 6px;
+    }
+    .csv-unmatched-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      max-height: 96px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .csv-unmatched-list li {
+      font-family: ui-monospace, "Geist Mono", "SF Mono", Menlo, Consolas, monospace;
+      font-size: 10px;
+      padding: 4px 7px;
+      border-radius: 6px;
+      background: color-mix(in srgb, var(--error, #ef4444) 10%, transparent);
+      color: var(--text);
+      word-break: break-word;
+    }
+    .csv-census-heading {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted, #8a9bb0);
+      margin: 4px 0 2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .csv-census-heading .pro-chip { cursor: pointer; }
+    .pro-chip { cursor: pointer; }
+    .pro-chip:hover { filter: brightness(1.05); }
+
     @media (min-width: 901px) {
       .mobile-icon-bar, .mobile-panel, .mobile-panel-backdrop, .mobile-account-menu { display: none !important; }
     }
@@ -4115,18 +4304,45 @@
           <h3 class="create-panel-heading">Map Elements</h3>
         </section>
 
-        <!-- Data panel: ACS datasets + ramp -->
+        <!-- Data panel: spreadsheet import + ACS datasets -->
         <section class="create-panel-content" id="createPanelData" style="display:none">
-          <h3 class="create-panel-heading">
-            Data Maps
-            <span class="pro-chip">PRO</span>
-          </h3>
+          <h3 class="create-panel-heading">Data</h3>
+          <div class="csv-import" id="csvImportSection">
+            <p class="csv-import-kicker">Spreadsheet → map</p>
+            <h4 class="csv-import-title">Paste state values. Get a choropleth.</h4>
+            <p class="csv-import-lede">Columns: state name (or USPS / FIPS) + a number or category. Try the free sample, or bring your own sheet with Pro.</p>
+            <button type="button" class="csv-sample-btn" id="csvSampleBtn" title="Load free sample population map">
+              <span class="csv-sample-swatch" aria-hidden="true">
+                <span style="background:#f7fcf5"></span><span style="background:#c7e9c0"></span><span style="background:#74c476"></span><span style="background:#238b45"></span><span style="background:#00441b"></span>
+              </span>
+              <span class="csv-sample-copy">
+                <span class="csv-sample-name">2023 State Population</span>
+                <span class="csv-sample-meta">Free sample · 50 states · numeric ramp</span>
+              </span>
+              <span class="csv-sample-pill">Try free</span>
+            </button>
+            <div class="csv-paste-label">
+              <span>Paste CSV / TSV</span>
+              <span class="csv-paste-hint">State,Value</span>
+            </div>
+            <textarea id="csvPasteInput" class="csv-paste" spellcheck="false" autocomplete="off" placeholder="State,Population&#10;California,38965193&#10;Texas,30503301&#10;Florida,22610726&#10;…"></textarea>
+            <div class="csv-import-actions">
+              <button type="button" class="btn" id="csvApplyBtn">Color map <span class="pro-chip" id="csvApplyProChip">PRO</span></button>
+              <button type="button" class="btn secondary" id="csvFileBtn">Choose file <span class="pro-chip" id="csvFileProChip">PRO</span></button>
+            </div>
+            <input type="file" id="csvFileInput" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" hidden>
+            <div class="csv-import-status" id="csvImportStatus" role="status" aria-live="polite"></div>
+          </div>
+          <div class="csv-census-heading">
+            Census data maps
+            <span class="pro-chip" data-open-upgrade>PRO</span>
+          </div>
         </section>
 
         <!-- Upgrade panel: Pro feature surfacing -->
         <section class="create-panel-content" id="createPanelUpgrade" style="display:none">
           <h3 class="create-panel-heading">Tappymaps Pro</h3>
-          <p class="create-panel-lede">Unlock unlimited exports, Data Maps, county maps, and exports without the tappymaps.com stamp.</p>
+          <p class="create-panel-lede">Unlock spreadsheet → map, unlimited exports, Census data maps, county view, and exports without the tappymaps.com stamp.</p>
           <button type="button" class="create-action-btn create-action-btn--share" id="createUpgradeCTA" style="width:100%;margin-top:12px">
             Upgrade
           </button>
@@ -4181,10 +4397,10 @@
             <p class="pricing-price">$5 <span>/ month</span></p>
             <p class="pricing-note">Or $48 per year. Cancel from your account at any time.</p>
             <ul class="pricing-features">
+              <li>Spreadsheet paste → choropleth</li>
+              <li>Census data maps and county view</li>
+              <li>Unlimited high-resolution exports</li>
               <li>Legend builder and subtitles</li>
-              <li>More map regions and datasets</li>
-              <li>High-resolution exports</li>
-              <li>Saved maps and cross-device access</li>
             </ul>
           </div>
           <button class="marketing-cta" type="button" onclick="showUpgradeModal(); if(typeof trackEvent==='function') trackEvent('pricing_upgrade_click');">Choose Pro</button>
@@ -4569,7 +4785,7 @@
 
       <!-- Legend Builder -->
       <div class="section" id="legendSection">
-        <div class="section-title">Data Maps <span class="pro-badge-inline" onclick="event.stopPropagation();showUpgradeModal()">PRO</span></div>
+        <div class="section-title">Data Maps <span class="pro-badge-inline" onclick="event.stopPropagation(); if(typeof openUpgradePanel==='function') openUpgradePanel(); else showUpgradeModal();">PRO</span></div>
         <div id="dataMapSection">
           <div id="dataMapCards" class="data-maps-grid"></div>
           <!-- Live palette switcher — appears once a data map is loaded so you
@@ -5453,7 +5669,7 @@
     // switchPanel(name) hides all #createPanelXxx sections, shows the named
     // one, toggles .is-active on the matching rail button.
 
-    const CREATE_PANEL_LABELS = { map: 'Map', color: 'Colors', elements: 'Map Elements', data: 'Data Maps', upgrade: 'Tappymaps Pro' };
+    const CREATE_PANEL_LABELS = { map: 'Map', color: 'Colors', elements: 'Map Elements', data: 'Data', upgrade: 'Tappymaps Pro' };
     function switchPanel(name) {
       const ids = ['createPanelMap', 'createPanelColor', 'createPanelElements', 'createPanelData', 'createPanelUpgrade'];
       const targetId = 'createPanel' + name.charAt(0).toUpperCase() + name.slice(1);
@@ -8427,9 +8643,10 @@
       updateProGates();
       await initializeAuth();
       handleCheckoutReturn();
-      // Initialize Data Maps cards
+      // Initialize Data Maps cards + spreadsheet import UI
       renderDataMapCards('dataMapCards');
       renderDataMapCards('mobileDataMapCards');
+      if (typeof wireCsvImportUI === 'function') wireCsvImportUI();
     }
 
     // ============================================================================
@@ -10845,6 +11062,14 @@
       document.querySelectorAll('.pro-badge-inline').forEach(el => {
         el.style.display = pro ? 'none' : '';
       });
+      // Spreadsheet import Pro chips (Create → Data)
+      ['csvApplyProChip', 'csvFileProChip'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.style.display = pro ? 'none' : '';
+      });
+      document.querySelectorAll('#createPanelData .csv-census-heading .pro-chip, #createPanelData > .create-panel-heading .pro-chip').forEach(function(el) {
+        el.style.display = pro ? 'none' : '';
+      });
       // Hide upgrade banner for pro users
       const banner = document.getElementById('upgradeBanner');
       if (banner) banner.style.display = pro ? 'none' : '';
@@ -11418,117 +11643,580 @@
     }
 
     // ============================================================================
-    // DATA IMPORT
+    // DATA IMPORT — spreadsheet / paste → choropleth (Create → Data)
+    // Free: one bundled sample. Custom paste + file import: Pro.
+    // Pro soft-gate opens the Upgrade panel (no blocking modal spam).
     // ============================================================================
 
-    function importCSVData() {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.csv,.tsv,.txt';
-      input.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            parseAndApplyCSV(event.target.result);
-          } catch (err) {
-            console.error('CSV import error:', err);
-            showMessage('Failed to parse CSV: ' + err.message, 'error');
-          }
-        };
-        reader.readAsText(file);
-      });
-      input.click();
+    const CSV_NUMERIC_RAMP = ['#f7fcf5', '#c7e9c0', '#74c476', '#238b45', '#00441b'];
+    const CSV_CATEGORICAL_PALETTE = [
+      '#0EA5E9', '#F97316', '#22C55E', '#A855F7', '#EF4444',
+      '#EAB308', '#14B8A6', '#EC4899', '#6366F1', '#84CC16',
+      '#F43F5E', '#06B6D4'
+    ];
+
+    // ACS 2023-ish state population (rounded) — free teaser dataset.
+    const CSV_SAMPLE_POPULATION = [
+      ['Alabama', 5108468], ['Alaska', 733406], ['Arizona', 7431344], ['Arkansas', 3067732],
+      ['California', 38965193], ['Colorado', 5877610], ['Connecticut', 3617174], ['Delaware', 1031890],
+      ['Florida', 22610726], ['Georgia', 11029227], ['Hawaii', 1435138], ['Idaho', 1964726],
+      ['Illinois', 12549689], ['Indiana', 6862199], ['Iowa', 3207004], ['Kansas', 2940546],
+      ['Kentucky', 4526154], ['Louisiana', 4573749], ['Maine', 1395722], ['Maryland', 6164660],
+      ['Massachusetts', 7001399], ['Michigan', 10037261], ['Minnesota', 5737915], ['Mississippi', 2939690],
+      ['Missouri', 6196156], ['Montana', 1126370], ['Nebraska', 1978379], ['Nevada', 3194176],
+      ['New Hampshire', 1401432], ['New Jersey', 9290841], ['New Mexico', 2114371], ['New York', 19571216],
+      ['North Carolina', 10835491], ['North Dakota', 783926], ['Ohio', 11785935], ['Oklahoma', 4053824],
+      ['Oregon', 4233358], ['Pennsylvania', 12961683], ['Rhode Island', 1095962], ['South Carolina', 5373555],
+      ['South Dakota', 919318], ['Tennessee', 7126489], ['Texas', 30503301], ['Utah', 3417734],
+      ['Vermont', 647464], ['Virginia', 8715698], ['Washington', 7812880], ['West Virginia', 1770071],
+      ['Wisconsin', 5910955], ['Wyoming', 584057]
+    ];
+
+    const CSV_STATE_ALIASES = {
+      'ala': 'Alabama', 'alas': 'Alaska', 'ariz': 'Arizona', 'ark': 'Arkansas',
+      'calif': 'California', 'colo': 'Colorado', 'conn': 'Connecticut', 'del': 'Delaware',
+      'fla': 'Florida', 'ga': 'Georgia', 'hawaii': 'Hawaii', 'ill': 'Illinois',
+      'ind': 'Indiana', 'kan': 'Kansas', 'kans': 'Kansas', 'ky': 'Kentucky',
+      'la': 'Louisiana', 'mass': 'Massachusetts', 'mich': 'Michigan', 'minn': 'Minnesota',
+      'miss': 'Mississippi', 'mo': 'Missouri', 'mont': 'Montana', 'neb': 'Nebraska',
+      'nebr': 'Nebraska', 'nev': 'Nevada', 'n h': 'New Hampshire', 'n j': 'New Jersey',
+      'n m': 'New Mexico', 'n y': 'New York', 'n c': 'North Carolina', 'n d': 'North Dakota',
+      'okla': 'Oklahoma', 'ore': 'Oregon', 'oreg': 'Oregon', 'penn': 'Pennsylvania',
+      'penna': 'Pennsylvania', 'r i': 'Rhode Island', 's c': 'South Carolina',
+      's d': 'South Dakota', 'tenn': 'Tennessee', 'tex': 'Texas', 'vt': 'Vermont',
+      'va': 'Virginia', 'wash': 'Washington', 'w va': 'West Virginia', 'w v': 'West Virginia',
+      'wis': 'Wisconsin', 'wisc': 'Wisconsin', 'wyo': 'Wyoming',
+      'district of columbia': 'District of Columbia', 'washington dc': 'District of Columbia',
+      'washington d c': 'District of Columbia', 'd c': 'District of Columbia', 'dc': 'District of Columbia'
+    };
+
+    function openUpgradePanel(message) {
+      if (typeof switchPanel === 'function' && document.getElementById('createPanelUpgrade')) {
+        switchPanel('upgrade');
+        if (message) showMessage(message, 'info');
+        return;
+      }
+      if (typeof showUpgradeModal === 'function') showUpgradeModal();
+      if (message) showMessage(message, 'info');
     }
 
-    function parseAndApplyCSV(csvText) {
-      const lines = csvText.trim().split('\n').map(l => l.trim()).filter(l => l);
-      if (lines.length < 2) {
-        showMessage('CSV needs a header row and at least one data row', 'error');
+    function csvNormalizeKey(raw) {
+      return String(raw || '')
+        .toLowerCase()
+        .replace(/^["']|["']$/g, '')
+        .replace(/\./g, ' ')
+        .replace(/[_\-]+/g, ' ')
+        .replace(/\bstate of\b/g, ' ')
+        .replace(/\bthe\b/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function csvLevenshtein(a, b) {
+      if (a === b) return 0;
+      const m = a.length, n = b.length;
+      if (!m) return n;
+      if (!n) return m;
+      const prev = new Array(n + 1);
+      const cur = new Array(n + 1);
+      for (let j = 0; j <= n; j++) prev[j] = j;
+      for (let i = 1; i <= m; i++) {
+        cur[0] = i;
+        for (let j = 1; j <= n; j++) {
+          const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+          cur[j] = Math.min(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+        }
+        for (let j = 0; j <= n; j++) prev[j] = cur[j];
+      }
+      return prev[n];
+    }
+
+    function csvBuildStateResolver() {
+      const byKey = Object.create(null);
+      const names = [];
+      Object.entries(appState.stateAbbreviations).forEach(function([name, abbr]) {
+        names.push(name);
+        byKey[csvNormalizeKey(name)] = name;
+        byKey[csvNormalizeKey(abbr)] = name;
+        byKey[csvNormalizeKey(abbr.replace(/\./g, ''))] = name;
+      });
+      Object.keys(FIPS_TO_STATE).forEach(function(fips) {
+        const name = FIPS_TO_STATE[fips];
+        byKey[fips] = name;
+        byKey[String(parseInt(fips, 10))] = name; // "1" → Alabama
+      });
+      Object.entries(CSV_STATE_ALIASES).forEach(function([alias, name]) {
+        byKey[csvNormalizeKey(alias)] = name;
+      });
+      return function resolveState(raw) {
+        if (raw == null) return null;
+        const trimmed = String(raw).trim().replace(/^["']|["']$/g, '');
+        if (!trimmed) return null;
+        const key = csvNormalizeKey(trimmed);
+        if (byKey[key]) return byKey[key];
+        // Bare FIPS with leading zeros / spaces
+        if (/^\d{1,2}$/.test(key)) {
+          const fips = key.padStart(2, '0');
+          if (FIPS_TO_STATE[fips]) return FIPS_TO_STATE[fips];
+        }
+        // Unique prefix / contains
+        const prefixHits = names.filter(function(n) {
+          const nk = csvNormalizeKey(n);
+          return nk.startsWith(key) || key.startsWith(nk);
+        });
+        if (prefixHits.length === 1) return prefixHits[0];
+        // Fuzzy: unique closest within edit distance 2 (len-aware)
+        let best = null, bestDist = Infinity, tie = false;
+        const maxDist = key.length <= 4 ? 1 : 2;
+        for (let i = 0; i < names.length; i++) {
+          const nk = csvNormalizeKey(names[i]);
+          if (Math.abs(nk.length - key.length) > maxDist) continue;
+          const d = csvLevenshtein(key, nk);
+          if (d < bestDist) { bestDist = d; best = names[i]; tie = false; }
+          else if (d === bestDist) tie = true;
+        }
+        if (best && !tie && bestDist <= maxDist) return best;
+        return null;
+      };
+    }
+
+    function csvSplitLine(line, delimiter) {
+      const out = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+          else inQuotes = !inQuotes;
+        } else if (ch === delimiter && !inQuotes) {
+          out.push(cur.trim());
+          cur = '';
+        } else {
+          cur += ch;
+        }
+      }
+      out.push(cur.trim());
+      return out.map(function(c) { return c.replace(/^"|"$/g, '').trim(); });
+    }
+
+    function csvDetectDelimiter(headerLine) {
+      const tabs = (headerLine.match(/\t/g) || []).length;
+      const commas = (headerLine.match(/,/g) || []).length;
+      const semis = (headerLine.match(/;/g) || []).length;
+      if (tabs >= commas && tabs >= semis && tabs > 0) return '\t';
+      if (semis > commas) return ';';
+      return ',';
+    }
+
+    function csvParseNumber(raw) {
+      if (raw == null) return NaN;
+      let s = String(raw).trim();
+      if (!s) return NaN;
+      s = s.replace(/[$%\s]/g, '').replace(/,/g, '');
+      if (!s || s === '-' || s === '—' || s === 'n/a' || s === 'na') return NaN;
+      const n = Number(s);
+      return isFinite(n) ? n : NaN;
+    }
+
+    function csvFindColumn(headers, names) {
+      for (let i = 0; i < headers.length; i++) {
+        if (names.indexOf(headers[i]) !== -1) return i;
+      }
+      return -1;
+    }
+
+    function csvShowStatus(opts) {
+      const el = document.getElementById('csvImportStatus');
+      if (!el) return;
+      const matched = opts.matched || 0;
+      const unmatched = opts.unmatched || [];
+      const mode = opts.mode || 'numeric';
+      const isError = !!opts.error;
+      el.classList.add('is-visible');
+      el.classList.toggle('is-error', isError);
+      if (isError) {
+        el.innerHTML = '<div class="csv-import-status-summary">' + escapeHTML(opts.error) + '</div>';
         return;
       }
-
-      // Parse header
-      const delimiter = lines[0].includes('\t') ? '\t' : ',';
-      const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
-
-      // Find state column
-      const stateColIdx = headers.findIndex(h =>
-        ['state', 'name', 'state_name', 'statename', 'territory'].includes(h)
-      );
-      if (stateColIdx === -1) {
-        showMessage('CSV must have a "State" or "Name" column', 'error');
-        return;
+      let html = '<div class="csv-import-status-summary">'
+        + escapeHTML(matched + ' state' + (matched === 1 ? '' : 's') + ' colored')
+        + ' · ' + escapeHTML(mode === 'numeric' ? 'numeric ramp' : 'category palette')
+        + '</div>';
+      if (unmatched.length) {
+        html += '<div class="csv-import-status-detail">'
+          + escapeHTML(unmatched.length + ' row' + (unmatched.length === 1 ? '' : 's') + ' could not be matched — fix the state name and re-apply')
+          + '</div><ul class="csv-unmatched-list">';
+        unmatched.slice(0, 40).forEach(function(u) {
+          html += '<li>' + escapeHTML(u) + '</li>';
+        });
+        if (unmatched.length > 40) {
+          html += '<li>…and ' + (unmatched.length - 40) + ' more</li>';
+        }
+        html += '</ul>';
+      } else {
+        html += '<div class="csv-import-status-detail">All rows matched.</div>';
       }
+      el.innerHTML = html;
+    }
 
-      // Find category/color column
-      const catColIdx = headers.findIndex(h =>
-        ['category', 'group', 'color', 'class', 'type', 'label', 'value', 'status'].includes(h)
-      );
-      const colorColIdx = headers.findIndex(h => ['color', 'hex', 'fill'].includes(h));
+    function csvClearStatus() {
+      const el = document.getElementById('csvImportStatus');
+      if (!el) return;
+      el.classList.remove('is-visible', 'is-error');
+      el.innerHTML = '';
+    }
 
-      if (catColIdx === -1 && colorColIdx === -1) {
-        showMessage('CSV must have a "Category", "Group", "Color", or "Value" column', 'error');
-        return;
-      }
+    function applyParsedChoropleth(rows, meta) {
+      // rows: [{ state, rawState, value?, category?, color? }]
+      meta = meta || {};
+      const resolve = csvBuildStateResolver();
+      const matchedRows = [];
+      const unmatched = [];
+      const seen = Object.create(null);
 
-      // Build state-name lookup (name → canonical name, abbr → canonical name)
-      const nameToCanonical = {};
-      const abbrToCanonical = {};
-      Object.entries(appState.stateAbbreviations).forEach(([name, abbr]) => {
-        nameToCanonical[name.toLowerCase()] = name;
-        abbrToCanonical[abbr.toLowerCase()] = name;
+      rows.forEach(function(row) {
+        const state = row.state || resolve(row.rawState);
+        if (!state) {
+          if (row.rawState) unmatched.push(String(row.rawState));
+          return;
+        }
+        // Last row wins for duplicates; track unique matched states for counts.
+        matchedRows.push({ state: state, value: row.value, category: row.category, color: row.color });
+        seen[state] = true;
       });
 
-      // Auto-assign colors to categories
-      const categoryColors = {};
-      let colorIdx = 0;
+      if (matchedRows.length === 0) {
+        csvShowStatus({ error: 'No states matched. Use state names, USPS codes, or FIPS.', unmatched: unmatched });
+        showMessage('No states matched — check the unmatched list', 'error');
+        return { matched: 0, unmatched: unmatched };
+      }
+
+      // Prefer numeric when most matched rows have a finite value.
+      let numericCount = 0;
+      matchedRows.forEach(function(r) { if (typeof r.value === 'number' && isFinite(r.value)) numericCount++; });
+      const useNumeric = numericCount >= Math.max(1, matchedRows.length * 0.6);
+
+      if (typeof countyMode !== 'undefined' && countyMode && typeof backToStateView === 'function') {
+        try { backToStateView(); } catch (_) {}
+      }
 
       saveHistory();
 
-      let matched = 0;
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
-        const rawState = cols[stateColIdx];
-        if (!rawState) continue;
+      // Clear prior state fills so partial sheets don't leave stale colors.
+      Object.keys(appState.stateColors).forEach(function(k) { delete appState.stateColors[k]; });
 
-        // Resolve state name
-        const stateName = nameToCanonical[rawState.toLowerCase()] || abbrToCanonical[rawState.toLowerCase()];
-        if (!stateName) continue;
-
-        let color;
-        if (colorColIdx !== -1 && cols[colorColIdx] && /^#[0-9a-fA-F]{6}$/.test(cols[colorColIdx])) {
-          color = cols[colorColIdx];
-        } else if (catColIdx !== -1) {
-          const cat = cols[catColIdx] || 'Other';
+      if (useNumeric) {
+        if (!window.chroma) {
+          showMessage('chroma.js not loaded — refresh the page', 'error');
+          return { matched: 0, unmatched: unmatched };
+        }
+        const data = {};
+        matchedRows.forEach(function(r) {
+          if (typeof r.value === 'number' && isFinite(r.value)) data[r.state] = r.value;
+        });
+        const values = Object.values(data);
+        const mn = Math.min.apply(null, values);
+        const mx = Math.max.apply(null, values);
+        const scale = (mn === mx)
+          ? function() { return chroma(CSV_NUMERIC_RAMP[Math.floor(CSV_NUMERIC_RAMP.length / 2)]).hex(); }
+          : chroma.scale(CSV_NUMERIC_RAMP).domain([mn, mx]);
+        Object.keys(data).forEach(function(state) {
+          appState.stateColors[state] = scale(data[state]).hex();
+        });
+        const numClasses = Math.min(5, Math.max(3, Object.keys(data).length >= 10 ? 5 : 3));
+        const breaks = [];
+        for (let i = 0; i <= numClasses; i++) {
+          breaks.push(mn + (mx - mn) * (i / numClasses));
+        }
+        appState.legendEntries = [];
+        for (let i = 0; i < numClasses; i++) {
+          const lo = breaks[i], hi = breaks[i + 1];
+          const mid = (lo + hi) / 2;
+          appState.legendEntries.push({
+            label: Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString(),
+            color: scale(mid).hex()
+          });
+        }
+        appState.legendTitle = meta.legendTitle || 'Value';
+      } else {
+        const categoryColors = Object.create(null);
+        let colorIdx = 0;
+        matchedRows.forEach(function(r) {
+          if (r.color && /^#?[0-9a-fA-F]{6}$/.test(r.color)) {
+            const hex = r.color.charAt(0) === '#' ? r.color : ('#' + r.color);
+            appState.stateColors[r.state] = hex;
+            const cat = r.category || hex;
+            if (!categoryColors[cat]) categoryColors[cat] = hex;
+            return;
+          }
+          const cat = (r.category != null && String(r.category).trim() !== '') ? String(r.category).trim() : 'Other';
           if (!categoryColors[cat]) {
-            categoryColors[cat] = appState.presetColors[colorIdx % appState.presetColors.length];
+            categoryColors[cat] = CSV_CATEGORICAL_PALETTE[colorIdx % CSV_CATEGORICAL_PALETTE.length];
             colorIdx++;
           }
-          color = categoryColors[cat];
-        }
-
-        if (color) {
-          appState.stateColors[stateName] = color;
-          matched++;
-        }
-      }
-
-      // Auto-create legend entries from categories. Cap at MAX_LEGEND_ENTRIES
-      // so a CSV with 30 distinct categories can't blow past the legend cap.
-      if (Object.keys(categoryColors).length > 0) {
-        appState.legendEntries = Object.entries(categoryColors)
+          appState.stateColors[r.state] = categoryColors[cat];
+        });
+        appState.legendEntries = Object.keys(categoryColors)
           .slice(0, MAX_LEGEND_ENTRIES)
-          .map(([label, color]) => ({ label, color }));
+          .map(function(label) { return { label: label, color: categoryColors[label] }; });
+        appState.legendTitle = meta.legendTitle || 'Category';
       }
+
+      if (meta.title) {
+        appState.mapTitle = meta.title;
+        const titleEl = document.getElementById('mapTitle');
+        if (titleEl) titleEl.textContent = meta.title;
+        const topTitle = document.getElementById('createMapTitleInput');
+        if (topTitle) topTitle.value = meta.title;
+      }
+      if (meta.subtitle != null) {
+        appState.mapSubtitle = meta.subtitle;
+        const subEl = document.getElementById('mapSubtitle');
+        if (subEl) subEl.textContent = meta.subtitle;
+      }
+      if (meta.source != null) {
+        appState.mapSource = meta.source;
+        const si = document.getElementById('sourceInput'); if (si) si.value = meta.source;
+        const msi = document.getElementById('mobileSourceInput'); if (msi) msi.value = meta.source;
+        const srcEl = document.getElementById('mapSource');
+        if (srcEl) { srcEl.textContent = meta.source; srcEl.style.opacity = meta.source ? '1' : '0'; }
+      }
+
+      const legendTitleInput = document.getElementById('legendTitleInput');
+      if (legendTitleInput) legendTitleInput.value = appState.legendTitle;
 
       renderMap();
       updateLegendBuilder();
       updateLegendDisplay();
       updateStatsBar();
       updateURL();
-      showMessage(`Imported ${matched} states from CSV`, 'success');
+
+      const matchedCount = Object.keys(seen).length;
+      csvShowStatus({
+        matched: matchedCount,
+        unmatched: unmatched,
+        mode: useNumeric ? 'numeric' : 'category'
+      });
+      showMessage(
+        'Mapped ' + matchedCount + ' state' + (matchedCount === 1 ? '' : 's')
+          + (unmatched.length ? (' · ' + unmatched.length + ' unmatched') : ''),
+        unmatched.length ? 'info' : 'success'
+      );
+      if (typeof trackEvent === 'function') {
+        trackEvent('csv_import_applied', {
+          matched: matchedCount,
+          unmatched: unmatched.length,
+          mode: useNumeric ? 'numeric' : 'category',
+          sample: !!meta.sample
+        });
+      }
+      return { matched: matchedCount, unmatched: unmatched, mode: useNumeric ? 'numeric' : 'category' };
+    }
+
+    function parseAndApplyCSV(csvText, options) {
+      options = options || {};
+      try {
+        const text = String(csvText || '').replace(/^\uFEFF/, '');
+        const lines = text.split(/\r?\n/).map(function(l) { return l.trimEnd(); }).filter(function(l) { return l.trim(); });
+        if (lines.length < 2) {
+          csvShowStatus({ error: 'Need a header row and at least one data row.' });
+          showMessage('CSV needs a header row and at least one data row', 'error');
+          return;
+        }
+
+        const delimiter = csvDetectDelimiter(lines[0]);
+        const headers = csvSplitLine(lines[0], delimiter).map(function(h) { return csvNormalizeKey(h).replace(/\s+/g, '_'); });
+
+        const stateColIdx = csvFindColumn(headers, [
+          'state', 'name', 'state_name', 'statename', 'state_name_en', 'territory',
+          'usps', 'abbr', 'abbreviation', 'state_abbr', 'state_code', 'st',
+          'fips', 'state_fips', 'statefips', 'fips_code', 'geoid'
+        ]);
+        // Fallback: first column if it looks like states on row 2
+        let stateIdx = stateColIdx;
+        const resolve = csvBuildStateResolver();
+        if (stateIdx === -1) {
+          const probe = csvSplitLine(lines[1], delimiter);
+          if (probe[0] && resolve(probe[0])) stateIdx = 0;
+        }
+        if (stateIdx === -1) {
+          csvShowStatus({ error: 'Missing a State / USPS / FIPS column.' });
+          showMessage('CSV must have a State, USPS, or FIPS column', 'error');
+          return;
+        }
+
+        const valueColIdx = csvFindColumn(headers, [
+          'value', 'val', 'data', 'amount', 'population', 'pop', 'count', 'number',
+          'score', 'rate', 'pct', 'percent', 'percentage', 'n', 'total'
+        ]);
+        const catColIdx = csvFindColumn(headers, [
+          'category', 'group', 'class', 'type', 'label', 'status', 'party', 'region', 'bucket'
+        ]);
+        const colorColIdx = csvFindColumn(headers, ['color', 'hex', 'fill', 'colour']);
+
+        // If no named value/category column, use the first non-state column.
+        let valIdx = valueColIdx;
+        let categoryIdx = catColIdx;
+        if (valIdx === -1 && categoryIdx === -1 && colorColIdx === -1) {
+          for (let c = 0; c < headers.length; c++) {
+            if (c === stateIdx) continue;
+            valIdx = c;
+            break;
+          }
+        }
+        if (valIdx === -1 && categoryIdx === -1 && colorColIdx === -1) {
+          csvShowStatus({ error: 'Need a Value or Category column next to State.' });
+          showMessage('CSV must have a Value or Category column', 'error');
+          return;
+        }
+
+        const rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cols = csvSplitLine(lines[i], delimiter);
+          const rawState = cols[stateIdx];
+          if (!rawState) continue;
+          const row = { rawState: rawState, state: resolve(rawState) };
+          if (colorColIdx !== -1 && cols[colorColIdx]) row.color = cols[colorColIdx];
+          if (categoryIdx !== -1 && cols[categoryIdx] != null) row.category = cols[categoryIdx];
+          if (valIdx !== -1 && cols[valIdx] != null) {
+            const num = csvParseNumber(cols[valIdx]);
+            if (isFinite(num)) row.value = num;
+            else if (row.category == null) row.category = cols[valIdx];
+          }
+          rows.push(row);
+        }
+
+        return applyParsedChoropleth(rows, {
+          title: options.title,
+          subtitle: options.subtitle,
+          source: options.source,
+          legendTitle: options.legendTitle || (headers[valIdx] || headers[categoryIdx] || 'Value'),
+          sample: !!options.sample
+        });
+      } catch (err) {
+        console.error('CSV import error:', err);
+        csvShowStatus({ error: 'Could not parse that sheet: ' + (err && err.message ? err.message : 'unknown error') });
+        showMessage('Failed to parse CSV: ' + (err && err.message ? err.message : 'unknown error'), 'error');
+      }
+    }
+
+    function csvSampleText() {
+      return 'State,Population\n' + CSV_SAMPLE_POPULATION.map(function(r) {
+        return r[0] + ',' + r[1];
+      }).join('\n');
+    }
+
+    function loadCsvSample() {
+      const text = csvSampleText();
+      const ta = document.getElementById('csvPasteInput');
+      if (ta) ta.value = text;
+      parseAndApplyCSV(text, {
+        sample: true,
+        title: '2023 State Population',
+        subtitle: 'Free sample · ACS-style totals',
+        source: 'Sample data (illustrative)',
+        legendTitle: 'Population'
+      });
+    }
+
+    function importCSVData() {
+      // Legacy entry point — Pro-gated file picker used by the Data panel.
+      if (!isPro()) {
+        openUpgradePanel('Custom file import is a Pro feature — try the free sample anytime.');
+        return;
+      }
+      const input = document.getElementById('csvFileInput') || document.createElement('input');
+      if (!input.id) {
+        input.type = 'file';
+        input.accept = '.csv,.tsv,.txt,text/csv,text/tab-separated-values';
+      }
+      input.value = '';
+      input.click();
+    }
+
+    function wireCsvImportUI() {
+      if (wireCsvImportUI._done) return;
+      wireCsvImportUI._done = true;
+
+      const sampleBtn = document.getElementById('csvSampleBtn');
+      const applyBtn = document.getElementById('csvApplyBtn');
+      const fileBtn = document.getElementById('csvFileBtn');
+      const fileInput = document.getElementById('csvFileInput');
+      const paste = document.getElementById('csvPasteInput');
+
+      if (sampleBtn) sampleBtn.addEventListener('click', function() { loadCsvSample(); });
+
+      if (applyBtn) applyBtn.addEventListener('click', function() {
+        const text = paste ? paste.value : '';
+        if (!String(text || '').trim()) {
+          csvShowStatus({ error: 'Paste a CSV/TSV first, or try the free sample above.' });
+          showMessage('Paste data or try the free sample', 'info');
+          return;
+        }
+        // Free path: re-applying the bundled sample (or an untouched copy of it).
+        const isSamplePaste = String(text).replace(/\r\n/g, '\n').trim() === csvSampleText().trim();
+        if (!isPro() && !isSamplePaste) {
+          openUpgradePanel('Custom paste is Pro — the free sample above works anytime.');
+          return;
+        }
+        if (isSamplePaste) {
+          parseAndApplyCSV(text, {
+            sample: true,
+            title: '2023 State Population',
+            subtitle: 'Free sample · ACS-style totals',
+            source: 'Sample data (illustrative)',
+            legendTitle: 'Population'
+          });
+        } else {
+          parseAndApplyCSV(text);
+        }
+      });
+
+      if (fileBtn) fileBtn.addEventListener('click', function() {
+        if (!isPro()) {
+          openUpgradePanel('Custom file import is a Pro feature — try the free sample anytime.');
+          return;
+        }
+        if (fileInput) { fileInput.value = ''; fileInput.click(); }
+        else importCSVData();
+      });
+
+      if (fileInput) fileInput.addEventListener('change', function() {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        if (!isPro()) {
+          openUpgradePanel('Custom file import is a Pro feature — try the free sample anytime.');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          if (paste) paste.value = String(ev.target.result || '');
+          parseAndApplyCSV(ev.target.result, {
+            title: file.name.replace(/\.(csv|tsv|txt)$/i, ''),
+            source: file.name
+          });
+        };
+        reader.onerror = function() {
+          csvShowStatus({ error: 'Could not read that file.' });
+          showMessage('Failed to read file', 'error');
+        };
+        reader.readAsText(file);
+      });
+
+      // Pro chips + census heading chip → Upgrade panel (soft gate).
+      document.addEventListener('click', function(e) {
+        const chip = e.target.closest('.pro-chip, [data-open-upgrade]');
+        if (!chip) return;
+        if (!chip.closest('#createPanelData, #csvImportSection, #createPanelUpgrade')) return;
+        if (chip.id === 'csvApplyProChip' || chip.id === 'csvFileProChip' || chip.hasAttribute('data-open-upgrade') || chip.classList.contains('pro-chip')) {
+          // Don't steal clicks from the Apply/File buttons themselves — those
+          // handlers already soft-gate. Only intercept bare chip clicks.
+          if (chip.closest('#csvApplyBtn, #csvFileBtn')) return;
+          e.preventDefault();
+          openUpgradePanel();
+        }
+      });
     }
 
     // ============================================================================
@@ -11744,8 +12432,8 @@
       var dataset = DATA_MAP_DATASETS.find(function(d) { return d.id === datasetId; });
       if (!dataset) return;
       if (dataset.pro && !isPro()) {
-        showMessage('Data Maps require Pro. Sign up to unlock!', 'info');
-        showUpgradeModal(); return;
+        openUpgradePanel('Census data maps are Pro — try the free population sample above anytime.');
+        return;
       }
       var existing = document.getElementById('dataMapRampModal');
       if (existing) existing.remove();

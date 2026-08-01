@@ -4420,8 +4420,8 @@
         <section class="pricing-card" aria-labelledby="proPlanTitle">
           <div>
             <h2 class="pricing-name" id="proPlanTitle">Tappymaps Pro</h2>
-            <p class="pricing-price">$5 <span>/ month</span></p>
-            <p class="pricing-note">Or $48 per year. Cancel from your account at any time.</p>
+            <p class="pricing-price">$9 <span>/ month</span></p>
+            <p class="pricing-note">Or $72 per year (save 33%). Existing $5 subscribers keep their rate. Cancel anytime.</p>
             <ul class="pricing-features">
               <li>Spreadsheet paste → choropleth</li>
               <li>Cloud My Maps sync across devices</li>
@@ -5018,7 +5018,7 @@
       <!-- Upgrade Banner (free users only) -->
       <div class="upgrade-banner" id="upgradeBanner" onclick="showUpgradeModal()">
         <div class="upgrade-banner-title">Unlock Tappymaps Pro</div>
-        <div class="upgrade-banner-text">Legend builder, subtitles, region fill, unlimited exports, no tappymaps.com stamp, and more. <strong style="color: #0EA5E9;">$5/mo</strong></div>
+        <div class="upgrade-banner-text">Spreadsheet → map, cloud My Maps, Census data, unlimited exports, and more. <strong style="color: #0EA5E9;">$9/mo</strong></div>
       </div>
     </div>
 
@@ -5099,19 +5099,19 @@
       <div class="modal-content">
         <div id="upgradeFeatureGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px;">
           <div style="background: rgba(43, 122, 140, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
-            <div style="font-size: 20px; margin-bottom: 4px;">🏷</div>
-            <div style="font-size: 11px; font-weight: 600; color: #0EA5E9;">Legend Builder</div>
-            <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">Label your colors</div>
+            <div style="font-size: 20px; margin-bottom: 4px;">📊</div>
+            <div style="font-size: 11px; font-weight: 600; color: #0EA5E9;">Spreadsheet → Map</div>
+            <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">Paste CSV, get a choropleth</div>
           </div>
           <div style="background: rgba(43, 122, 140, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
-            <div style="font-size: 20px; margin-bottom: 4px;">📝</div>
-            <div style="font-size: 11px; font-weight: 600; color: #0EA5E9;">Subtitles</div>
-            <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">Add context to maps</div>
+            <div style="font-size: 20px; margin-bottom: 4px;">☁</div>
+            <div style="font-size: 11px; font-weight: 600; color: #0EA5E9;">Cloud My Maps</div>
+            <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">Sync across devices</div>
           </div>
           <div style="background: rgba(43, 122, 140, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
             <div style="font-size: 20px; margin-bottom: 4px;">🗺</div>
-            <div style="font-size: 11px; font-weight: 600; color: #0EA5E9;">County Maps</div>
-            <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">Drill into any state</div>
+            <div style="font-size: 11px; font-weight: 600; color: #0EA5E9;">Census + Counties</div>
+            <div style="font-size: 9px; color: #8a9bb0; margin-top: 2px;">ACS data maps, drill-in</div>
           </div>
           <div style="background: rgba(43, 122, 140, 0.1); border-radius: 6px; padding: 10px; text-align: center;">
             <div style="font-size: 20px; margin-bottom: 4px;">📷</div>
@@ -5137,10 +5137,10 @@
           <div style="font-size: 11px; color: #8a9bb0; text-align: center; margin-bottom: 8px;">Logged in as <span id="upgradeUserEmail"></span></div>
           <div style="display: flex; gap: 8px; margin-bottom: 8px;">
             <button class="btn" id="upgradeMonthlyBtn" style="flex: 1; padding: 12px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #F97316, #EA580C);">
-              $5/month
+              $9/month
             </button>
             <button class="btn" id="upgradeAnnualBtn" style="flex: 1; padding: 12px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #1D5A6A, #0EA5E9);">
-              $48/year<br><span style="font-size: 9px; font-weight: 400; opacity: 0.8;">save 20%</span>
+              $72/year<br><span style="font-size: 9px; font-weight: 400; opacity: 0.8;">save 33%</span>
             </button>
           </div>
           <button class="btn secondary" id="authSignOutBtn" style="width: 100%; font-size: 10px; padding: 6px;">Sign Out</button>
@@ -5530,9 +5530,9 @@
       meta(route) {
         const pricing = route.mode === 'pricing';
         return {
-          title: pricing ? 'Tappymaps Pricing — Free maps and $5 Pro' : 'About Tappymaps — A lightweight US map maker',
+          title: pricing ? 'Tappymaps Pricing — Free maps and $9 Pro' : 'About Tappymaps — A lightweight US map maker',
           description: pricing
-            ? 'Make and play with US maps for free. Tappymaps Pro adds polished export, data, and design features for $5/month or $48/year.'
+            ? 'Make and play with US maps for free. Tappymaps Pro adds spreadsheet→map, cloud My Maps, Census data, and unlimited exports for $9/month or $72/year.'
             : 'Tappymaps is a lightweight browser tool for making, sharing, and playing with maps of the United States.',
           canonical: 'https://tappymaps.com/' + (pricing ? 'pricing' : 'about'),
         };
@@ -10668,10 +10668,16 @@
       showMessage('Signed out', 'info');
     }
 
-    async function startStripeCheckout(priceId) {
+    // plan: 'monthly' | 'annual' — server resolves the live Stripe price IDs
+    // from env (new $9/$72). Legacy $5/$48 price IDs are grandfathered for
+    // existing subscribers and rejected for new checkouts.
+    async function startStripeCheckout(plan) {
       if (!appState.currentUser) { showUpgradeModal(); return; }
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) { showMessage('Please sign in first', 'error'); return; }
+      const normalized = (plan === 'annual' || plan === 'year' || plan === 'yearly')
+        ? 'annual'
+        : 'monthly';
       try {
         showMessage('Redirecting to checkout...', 'info');
         const res = await fetch('/api/stripe/create-checkout', {
@@ -10682,10 +10688,12 @@
           },
           // successUrl/cancelUrl are computed server-side from the validated
           // request origin; anything sent here would be ignored.
-          body: JSON.stringify({ priceId: priceId })
+          body: JSON.stringify({ plan: normalized })
         });
         if (!res.ok) {
-          showMessage('Checkout error: server returned ' + res.status, 'error');
+          let detail = 'server returned ' + res.status;
+          try { const errBody = await res.json(); if (errBody && errBody.error) detail = errBody.error; } catch (_) {}
+          showMessage('Checkout error: ' + detail, 'error');
           return;
         }
         const result = await res.json();
@@ -13358,9 +13366,9 @@
       const signOutBtn = document.getElementById('authSignOutBtn');
       if (signOutBtn) signOutBtn.addEventListener('click', authSignOut);
       const monthlyBtn = document.getElementById('upgradeMonthlyBtn');
-      if (monthlyBtn) monthlyBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('price_1THabF6MmI5fTYyY4WNuFwHe'); });
+      if (monthlyBtn) monthlyBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('monthly'); });
       const annualBtn = document.getElementById('upgradeAnnualBtn');
-      if (annualBtn) annualBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('price_1THabF6MmI5fTYyYwzIwTNKF'); });
+      if (annualBtn) annualBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('annual'); });
 
       // Close upgrade modal on overlay background click
       const upgradeOverlay = document.getElementById('upgradeModal');

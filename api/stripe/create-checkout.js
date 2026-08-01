@@ -16,13 +16,45 @@ const allowedOrigins = [
   'http://127.0.0.1:8000',
 ];
 
-// Server-side allowlist of accepted Stripe priceIds. Client could otherwise
-// post any priceId from the same Stripe account (e.g. a $0.01 test price)
-// and check out at that price.
-const ALLOWED_PRICE_IDS = new Set([
-  'price_1THabF6MmI5fTYyY4WNuFwHe', // Monthly $5
-  'price_1THabF6MmI5fTYyYwzIwTNKF', // Annual $48
-]);
+// New Pro prices ($9/mo, $72/yr) — set in Vercel env after creating the
+// Prices in the Stripe Dashboard (same Product as before is fine).
+// Existing $5/$48 subscribers keep their Stripe Price forever; those legacy
+// IDs are intentionally NOT offered for new checkouts (grandfathering).
+const LEGACY_PRICE_IDS = {
+  monthly: 'price_1THabF6MmI5fTYyY4WNuFwHe', // $5/mo — grandfathered
+  annual: 'price_1THabF6MmI5fTYyYwzIwTNKF',  // $48/yr — grandfathered
+};
+
+function currentPriceIds() {
+  const monthly = process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '';
+  const annual = process.env.STRIPE_PRO_ANNUAL_PRICE_ID || '';
+  return { monthly, annual };
+}
+
+function resolvePriceId(body) {
+  const { monthly, annual } = currentPriceIds();
+  const plan = body && typeof body.plan === 'string' ? body.plan.trim().toLowerCase() : '';
+  if (plan === 'monthly' || plan === 'month') {
+    if (!monthly) return { error: 'Monthly Pro price is not configured (STRIPE_PRO_MONTHLY_PRICE_ID).' };
+    return { priceId: monthly, plan: 'monthly' };
+  }
+  if (plan === 'annual' || plan === 'year' || plan === 'yearly') {
+    if (!annual) return { error: 'Annual Pro price is not configured (STRIPE_PRO_ANNUAL_PRICE_ID).' };
+    return { priceId: annual, plan: 'annual' };
+  }
+
+  // Backward-compatible: accept an explicit priceId only if it matches the
+  // currently configured (new) prices. Legacy $5/$48 IDs are rejected so new
+  // subscribers cannot check out at the grandfathered rate.
+  const priceId = body && typeof body.priceId === 'string' ? body.priceId.trim() : '';
+  if (priceId && (priceId === monthly || priceId === annual)) {
+    return { priceId, plan: priceId === annual ? 'annual' : 'monthly' };
+  }
+  if (priceId && (priceId === LEGACY_PRICE_IDS.monthly || priceId === LEGACY_PRICE_IDS.annual)) {
+    return { error: 'That price is no longer available for new subscriptions. Choose monthly or annual Pro.' };
+  }
+  return { error: 'Invalid plan. Use plan: "monthly" or "annual".' };
+}
 
 function getCorsHeaders(req) {
   const origin = req.headers.origin;
@@ -53,16 +85,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { priceId } = req.body;
-
-    // Validate priceId against the server-side allowlist. Ignores client-
-    // supplied successUrl/cancelUrl entirely — both are computed below from
-    // the validated request origin so a malicious client can't redirect
-    // post-checkout to a phishing host.
-    if (!ALLOWED_PRICE_IDS.has(priceId)) {
-      res.status(400).json({ error: 'Invalid priceId' });
+    const body = req.body || {};
+    const resolved = resolvePriceId(body);
+    if (resolved.error) {
+      res.status(400).json({ error: resolved.error });
       return;
     }
+    const { priceId, plan } = resolved;
 
     // Get Authorization header
     const authHeader = req.headers.authorization;
@@ -108,6 +137,10 @@ export default async function handler(req, res) {
       success_url: successUrl,
       cancel_url: cancelUrl,
       client_reference_id: userId,
+      metadata: {
+        plan: plan,
+        user_id: userId,
+      },
     });
 
     res.status(200).json({ url: session.url });

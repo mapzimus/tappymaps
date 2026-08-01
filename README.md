@@ -25,7 +25,7 @@ Designed to be the fastest way to go from "I need a colored US map for my report
 | Map data | TopoJSON via `us-atlas@3` (Albers USA) | Pre-projected, small enough to ship inline. |
 | Hosting | Vercel + custom domain | Auto-deploy on push to `master`. |
 | Auth | Supabase (email/password, JS client via CDN) | RLS-secured `user_subscriptions` and `analytics` tables. |
-| Billing | Stripe Checkout + webhooks | $5/mo or $48/yr Pro tier; server-side price-ID allowlist. |
+| Billing | Stripe Checkout + webhooks | $9/mo or $72/yr Pro tier (legacy $5/$48 grandfathered); plan-based checkout. |
 | Quota enforcement | Server-side (Vercel function + Supabase `export_counts`) | Anonymous: 1 export tracked in `localStorage`. Authed: 3/mo enforced by API with JWT. |
 
 ## Architecture

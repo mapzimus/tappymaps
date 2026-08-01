@@ -16,8 +16,8 @@ const allowedOrigins = [
   'http://127.0.0.1:8000',
 ];
 
-// New Pro prices ($9/mo, $72/yr) — set in Vercel env after creating the
-// Prices in the Stripe Dashboard (same Product as before is fine).
+// New Pro prices ($9/mo, $72/yr) + Classroom ($12/mo) — set in Vercel env
+// after creating the Prices in the Stripe Dashboard.
 // Existing $5/$48 subscribers keep their Stripe Price forever; those legacy
 // IDs are intentionally NOT offered for new checkouts (grandfathering).
 const LEGACY_PRICE_IDS = {
@@ -26,34 +26,40 @@ const LEGACY_PRICE_IDS = {
 };
 
 function currentPriceIds() {
-  const monthly = process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '';
-  const annual = process.env.STRIPE_PRO_ANNUAL_PRICE_ID || '';
-  return { monthly, annual };
+  return {
+    monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '',
+    annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || '',
+    classroom: process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID || '',
+  };
 }
 
 function resolvePriceId(body) {
-  const { monthly, annual } = currentPriceIds();
+  const { monthly, annual, classroom } = currentPriceIds();
   const plan = body && typeof body.plan === 'string' ? body.plan.trim().toLowerCase() : '';
-  if (plan === 'monthly' || plan === 'month') {
+  if (plan === 'monthly' || plan === 'month' || plan === 'pro' || plan === 'pro_monthly') {
     if (!monthly) return { error: 'Monthly Pro price is not configured (STRIPE_PRO_MONTHLY_PRICE_ID).' };
     return { priceId: monthly, plan: 'monthly' };
   }
-  if (plan === 'annual' || plan === 'year' || plan === 'yearly') {
+  if (plan === 'annual' || plan === 'year' || plan === 'yearly' || plan === 'pro_annual') {
     if (!annual) return { error: 'Annual Pro price is not configured (STRIPE_PRO_ANNUAL_PRICE_ID).' };
     return { priceId: annual, plan: 'annual' };
+  }
+  if (plan === 'classroom' || plan === 'class' || plan === 'teacher') {
+    if (!classroom) return { error: 'Classroom price is not configured (STRIPE_CLASSROOM_MONTHLY_PRICE_ID).' };
+    return { priceId: classroom, plan: 'classroom' };
   }
 
   // Backward-compatible: accept an explicit priceId only if it matches the
   // currently configured (new) prices. Legacy $5/$48 IDs are rejected so new
   // subscribers cannot check out at the grandfathered rate.
   const priceId = body && typeof body.priceId === 'string' ? body.priceId.trim() : '';
-  if (priceId && (priceId === monthly || priceId === annual)) {
-    return { priceId, plan: priceId === annual ? 'annual' : 'monthly' };
-  }
+  if (priceId && priceId === monthly) return { priceId, plan: 'monthly' };
+  if (priceId && priceId === annual) return { priceId, plan: 'annual' };
+  if (priceId && priceId === classroom) return { priceId, plan: 'classroom' };
   if (priceId && (priceId === LEGACY_PRICE_IDS.monthly || priceId === LEGACY_PRICE_IDS.annual)) {
-    return { error: 'That price is no longer available for new subscriptions. Choose monthly or annual Pro.' };
+    return { error: 'That price is no longer available for new subscriptions. Choose Pro or Classroom.' };
   }
-  return { error: 'Invalid plan. Use plan: "monthly" or "annual".' };
+  return { error: 'Invalid plan. Use plan: "monthly", "annual", or "classroom".' };
 }
 
 function getCorsHeaders(req) {

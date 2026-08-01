@@ -24,6 +24,10 @@ function getCorsHeaders(req) {
   };
 }
 
+function classroomPriceId() {
+  return process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID || '';
+}
+
 // Handle preflight
 export default async function handler(req, res) {
   // Set CORS headers
@@ -75,16 +79,22 @@ export default async function handler(req, res) {
     }
 
     const isPro = !!subscriptions;
+    const classPrice = classroomPriceId();
+    const isClassroom = !!(subscriptions && classPrice && subscriptions.price_id === classPrice);
+    const tier = isClassroom ? 'classroom' : (isPro ? 'pro' : 'free');
     const subscription = subscriptions
       ? {
           id: subscriptions.stripe_subscription_id,
           status: subscriptions.status,
           currentPeriodEnd: subscriptions.current_period_end,
           priceId: subscriptions.price_id,
+          tier: tier,
         }
       : null;
 
-    res.status(200).json({ isPro, subscription });
+    // Classroom includes every Pro entitlement; clients also read isClassroom
+    // for teacher-only tools (class code + worksheet pack).
+    res.status(200).json({ isPro, isClassroom, tier, subscription });
   } catch (error) {
     console.error('Verification error:', error);
     res.status(500).json({ error: error.message });

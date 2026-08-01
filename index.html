@@ -3694,7 +3694,7 @@
       .gallery-card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; }
       .gallery-card-title { font-size: 15px; font-weight: 700; margin: 0 0 2px; }
       .gallery-card-sub { font-size: 12px; opacity: 0.65; margin: 0 0 12px; flex: 1; }
-      .gallery-card-actions { display: flex; gap: 8px; }
+      .gallery-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
       .gallery-card-btn {
         flex: 1; text-align: center; text-decoration: none; cursor: pointer;
         font-size: 13px; font-weight: 700; padding: 8px; border-radius: 8px;
@@ -3735,6 +3735,12 @@
       .gallery-sync-dot.is-local { background: #94a3b8; box-shadow: none; }
       .gallery-card-meta {
         font-size: 11px; opacity: 0.55; margin: -6px 0 10px;
+      }
+      .gallery-pill {
+        display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.03em;
+        text-transform: uppercase; padding: 2px 7px; border-radius: 999px;
+        background: color-mix(in srgb, var(--gal) 22%, transparent);
+        color: var(--gal); margin-left: 6px; vertical-align: middle;
       }
       .gallery-footer { text-align: center; padding: 18px; padding-bottom: max(18px, env(safe-area-inset-bottom)); font-size: 13px; }
       .gallery-footer a { color: var(--gal); text-decoration: none; font-weight: 700; }
@@ -4246,11 +4252,11 @@
         <a data-route href="/games/arcade/find-state">Find the State</a>
         <a data-route href="/games/arcade/stat-duel">Stat Duel</a>
         <a data-route href="/games/draft">GeoDraft</a>
-        <a data-route href="/design/gallery/mine">Gallery</a>
+        <a data-route href="/design/gallery/recent">Gallery</a>
       </nav>
     </main>
     <footer class="hub-footer">
-      <a href="/design/gallery/mine" data-route>gallery</a>
+      <a href="/design/gallery/recent" data-route>gallery</a>
       <span class="hub-footer-sep"> · </span>
       <a href="/about" data-route>about</a>
       <span class="hub-footer-sep"> · </span>
@@ -4727,13 +4733,12 @@
     </div>
   </div>
 
-  <!-- Gallery (Phase 4) — My Maps: localStorage for everyone; Pro syncs to
-       Supabase user_maps. Recent/Featured still await public publish. -->
+  <!-- Gallery (Phase 4) — Recent / Featured public maps + My Maps (local or Pro cloud). -->
   <div class="mode" id="modeGallery" style="display:none">
     <header class="gallery-header">
       <a href="/" data-route class="arcade-wordmark"><svg class="wm-pin" viewBox="0 0 60 64" aria-hidden="true"><circle cx="30" cy="24" r="22" fill="#0EA5E9"/><polygon points="14,34 30,62 46,34" fill="#0EA5E9"/><circle cx="30" cy="24" r="12" fill="#fff"/><circle cx="30" cy="24" r="6" fill="#F97316"/></svg><span class="wm-tappy">tappy</span><span class="wm-maps">maps</span></a>
       <h2 class="gallery-title">Gallery</h2>
-      <p class="gallery-sub">Your maps — on this device, or synced with Pro.</p>
+      <p class="gallery-sub">Recent community maps, editorial picks, and your My Maps.</p>
       <nav class="gallery-tabs">
         <a class="gallery-tab" data-route href="/design/gallery/recent">Recent</a>
         <a class="gallery-tab" data-route href="/design/gallery/featured">Featured</a>
@@ -5014,7 +5019,8 @@
             <span class="pro-badge">PRO</span>
           </button>
           <button class="btn secondary" id="saveToGalleryBtn">⭐ Save to My Maps</button>
-          <a class="btn secondary" id="viewGalleryBtn" data-route href="/design/gallery/mine" style="text-decoration:none; display:block; text-align:center;">🖼 View Gallery</a>
+          <button class="btn secondary" id="publishToGalleryBtn">📣 Publish to Gallery</button>
+          <a class="btn secondary" id="viewGalleryBtn" data-route href="/design/gallery/recent" style="text-decoration:none; display:block; text-align:center;">🖼 View Gallery</a>
           <button class="btn secondary btn-pro" id="saveConfigBtn">💾 Save Config
             <span class="pro-badge">PRO</span>
           </button>
@@ -5974,9 +5980,14 @@
     // --- Gallery (Phase 4 + A2 cloud My Maps) -----------------------------
     // Free: My Maps in localStorage (this device). Pro + signed-in: also
     // upserted to Supabase `user_maps` and loaded from the cloud in Gallery.
-    // Recent / Featured still need public publish — coming-soon empty state.
+    // Signed-in users can Publish to Recent (is_public); Featured is editorial
+    // (is_featured via SQL / service role — client trigger locks the flag).
     const GALLERY_MINE_KEY = 'tappymaps_my_maps';
     const GALLERY_MAX = 60;
+    const GALLERY_PUBLIC_MAX = 48;
+    const GALLERY_PUBLISH_MIN_STATES = 3;
+    const GALLERY_PUBLISH_LIMIT_FREE = 5;
+    const GALLERY_PUBLISH_LIMIT_PRO = 20;
     function galleryGetMine() {
       try { const a = JSON.parse(localStorage.getItem(GALLERY_MINE_KEY)); return Array.isArray(a) ? a : []; }
       catch (_) { return []; }
@@ -6004,8 +6015,13 @@
         if (message && typeof showMessage === 'function') showMessage(message, 'info');
       }
     }
-    async function galleryUpsertCloud(hash, title, subtitle) {
-      if (!galleryCloudEnabled() || !hash) return { ok: false, reason: 'not_pro' };
+    async function galleryUpsertCloud(hash, title, subtitle, opts) {
+      opts = opts || {};
+      // Pro sync path, or signed-in publish path (opts.allowSignedIn).
+      const allowed = opts.allowSignedIn
+        ? !!(typeof supabaseClient !== 'undefined' && supabaseClient && appState && appState.currentUser)
+        : galleryCloudEnabled();
+      if (!allowed || !hash) return { ok: false, reason: opts.allowSignedIn ? 'not_signed_in' : 'not_pro' };
       try {
         const theme = document.documentElement.getAttribute('data-theme')
           || (document.body && document.body.getAttribute('data-theme'))
@@ -6023,6 +6039,7 @@
           is_deleted: false,
           updated_at: new Date().toISOString(),
         };
+        if (typeof opts.isPublic === 'boolean') row.is_public = opts.isPublic;
         const { error } = await supabaseClient
           .from('user_maps')
           .upsert(row, { onConflict: 'user_id,hash' });
@@ -6059,7 +6076,7 @@
       try {
         const { data, error } = await supabaseClient
           .from('user_maps')
-          .select('id,hash,title,subtitle,theme,created_at,updated_at')
+          .select('id,hash,title,subtitle,theme,created_at,updated_at,is_public,is_featured')
           .eq('user_id', appState.currentUser.id)
           .eq('is_deleted', false)
           .order('updated_at', { ascending: false })
@@ -6076,11 +6093,190 @@
             subtitle: row.subtitle || '',
             ts: new Date(row.updated_at || row.created_at || Date.now()).getTime(),
             cloud: true,
+            isPublic: !!row.is_public,
+            isFeatured: !!row.is_featured,
           };
         });
       } catch (err) {
         console.warn('user_maps fetch error:', err);
         return null;
+      }
+    }
+
+    function galleryPublishSignedIn() {
+      return !!(typeof supabaseClient !== 'undefined' && supabaseClient
+        && appState && appState.currentUser);
+    }
+    function galleryPublishDailyLimit() {
+      return (typeof isPro === 'function' && isPro())
+        ? GALLERY_PUBLISH_LIMIT_PRO
+        : GALLERY_PUBLISH_LIMIT_FREE;
+    }
+    function galleryUtcDayKey() {
+      return new Date().toISOString().slice(0, 10);
+    }
+    function galleryCountColoredFromHash(hash) {
+      if (!hash || typeof decodeStateFromURL !== 'function') return 0;
+      const state = decodeStateFromURL(hash);
+      if (!state) return 0;
+      const colors = state.colors || state.stateColors || {};
+      return Object.keys(colors).filter(function(k) { return !!colors[k]; }).length;
+    }
+    async function galleryFetchPublishCount() {
+      if (!galleryPublishSignedIn()) return 0;
+      try {
+        const day = galleryUtcDayKey();
+        const { data, error } = await supabaseClient
+          .from('gallery_publish_counts')
+          .select('count')
+          .eq('user_id', appState.currentUser.id)
+          .eq('day', day)
+          .maybeSingle();
+        if (error) {
+          console.warn('gallery_publish_counts fetch failed:', error.message || error);
+          return 0;
+        }
+        return (data && typeof data.count === 'number') ? data.count : 0;
+      } catch (err) {
+        console.warn('gallery_publish_counts fetch error:', err);
+        return 0;
+      }
+    }
+    async function galleryIncrementPublishCount() {
+      if (!galleryPublishSignedIn()) return { ok: false, reason: 'not_signed_in' };
+      const day = galleryUtcDayKey();
+      const limit = galleryPublishDailyLimit();
+      const current = await galleryFetchPublishCount();
+      if (current >= limit) {
+        return { ok: false, reason: 'rate_limit', remaining: 0, limit: limit };
+      }
+      const next = current + 1;
+      const { error } = await supabaseClient
+        .from('gallery_publish_counts')
+        .upsert({
+          user_id: appState.currentUser.id,
+          day: day,
+          count: next,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,day' });
+      if (error) {
+        console.warn('gallery_publish_counts upsert failed:', error.message || error);
+        return { ok: false, reason: error.message || 'count_failed' };
+      }
+      return { ok: true, remaining: Math.max(0, limit - next), limit: limit };
+    }
+    async function galleryFetchPublicMaps(opts) {
+      opts = opts || {};
+      if (typeof supabaseClient === 'undefined' || !supabaseClient) return { ok: false, maps: [], reason: 'no_client' };
+      try {
+        let q = supabaseClient
+          .from('user_maps')
+          .select('id,hash,title,subtitle,theme,created_at,updated_at,is_featured')
+          .eq('is_public', true)
+          .eq('is_deleted', false)
+          .order('updated_at', { ascending: false })
+          .limit(GALLERY_PUBLIC_MAX);
+        if (opts.featured) q = q.eq('is_featured', true);
+        const { data, error } = await q;
+        if (error) {
+          console.warn('user_maps public fetch failed:', error.message || error);
+          return { ok: false, maps: [], reason: error.message || 'fetch_failed' };
+        }
+        return {
+          ok: true,
+          maps: (data || []).map(function(row) {
+            return {
+              id: row.id,
+              hash: row.hash,
+              title: row.title || 'Untitled map',
+              subtitle: row.subtitle || '',
+              ts: new Date(row.updated_at || row.created_at || Date.now()).getTime(),
+              isFeatured: !!row.is_featured,
+            };
+          }),
+        };
+      } catch (err) {
+        console.warn('user_maps public fetch error:', err);
+        return { ok: false, maps: [], reason: (err && err.message) || 'fetch_error' };
+      }
+    }
+    async function gallerySetPublic(hash, title, subtitle, makePublic) {
+      if (!hash) return { ok: false, reason: 'no_hash' };
+      if (!galleryPublishSignedIn()) return { ok: false, reason: 'not_signed_in' };
+      if (makePublic) {
+        const colored = galleryCountColoredFromHash(hash);
+        if (colored < GALLERY_PUBLISH_MIN_STATES) {
+          return { ok: false, reason: 'quality_floor', colored: colored };
+        }
+        // Skip quota burn when the row is already public (republish / title sync).
+        let alreadyPublic = false;
+        try {
+          const { data } = await supabaseClient
+            .from('user_maps')
+            .select('is_public')
+            .eq('user_id', appState.currentUser.id)
+            .eq('hash', hash)
+            .maybeSingle();
+          alreadyPublic = !!(data && data.is_public);
+        } catch (_) {}
+        if (!alreadyPublic) {
+          const counted = await galleryIncrementPublishCount();
+          if (!counted.ok) return counted;
+        }
+      }
+      const res = await galleryUpsertCloud(hash, title, subtitle, {
+        allowSignedIn: true,
+        isPublic: !!makePublic,
+      });
+      return res;
+    }
+    async function galleryReportMap(mapId, reason) {
+      if (!mapId) return { ok: false, reason: 'no_map' };
+      if (!galleryPublishSignedIn()) return { ok: false, reason: 'not_signed_in' };
+      try {
+        const { error } = await supabaseClient.from('map_reports').insert({
+          map_id: mapId,
+          reporter_user_id: appState.currentUser.id,
+          reason: String(reason || 'unspecified').slice(0, 500),
+        });
+        if (error) {
+          console.warn('map_reports insert failed:', error.message || error);
+          return { ok: false, reason: error.message || 'report_failed' };
+        }
+        return { ok: true };
+      } catch (err) {
+        console.warn('map_reports insert error:', err);
+        return { ok: false, reason: (err && err.message) || 'report_error' };
+      }
+    }
+    async function publishCurrentMapToGallery() {
+      if (typeof encodeStateToURL !== 'function') return;
+      if (!galleryPublishSignedIn()) {
+        if (typeof showUpgradeModal === 'function') showUpgradeModal('auth');
+        showMessage('Sign in to publish to the Gallery', 'info');
+        return;
+      }
+      const colored = Object.keys((appState && appState.stateColors) || {}).length;
+      if (colored < GALLERY_PUBLISH_MIN_STATES) {
+        showMessage('Color at least ' + GALLERY_PUBLISH_MIN_STATES + ' states before publishing', 'info');
+        return;
+      }
+      const hash = encodeStateToURL();
+      const title = appState.mapTitle;
+      const subtitle = appState.mapSubtitle;
+      gallerySaveMine(hash, title, subtitle);
+      showMessage('Publishing to Gallery…', 'info');
+      const res = await gallerySetPublic(hash, title, subtitle, true);
+      if (res && res.ok) {
+        showMessage('Published — it’s on Recent', 'success');
+        if (typeof trackEvent === 'function') trackEvent('gallery_publish', { title: title, from: 'create' });
+      } else if (res && res.reason === 'rate_limit') {
+        showMessage('Daily publish limit reached (' + (res.limit || galleryPublishDailyLimit()) + '/day). Try again tomorrow.', 'error');
+      } else if (res && res.reason === 'quality_floor') {
+        showMessage('Color at least ' + GALLERY_PUBLISH_MIN_STATES + ' states before publishing', 'info');
+      } else {
+        showMessage('Publish failed — check connection or run the Gallery migration', 'error');
+        if (typeof trackEvent === 'function') trackEvent('gallery_publish_fail', { reason: res && res.reason });
       }
     }
     // One-shot: push this browser's local My Maps into the cloud after Pro unlock.
@@ -6159,6 +6355,7 @@
           subtitle: m.subtitle || '',
           ts: m.ts || 0,
           cloud: false,
+          isPublic: false,
         };
       });
       (cloud || []).forEach(function(m) {
@@ -6171,6 +6368,8 @@
           ts: Math.max(m.ts || 0, (prev && prev.ts) || 0),
           cloud: true,
           id: m.id,
+          isPublic: !!m.isPublic,
+          isFeatured: !!m.isFeatured,
         };
       });
       return Object.keys(byHash)
@@ -6198,6 +6397,7 @@
         galleryWireMineBanner(body);
         return;
       }
+      const canPublish = galleryPublishSignedIn();
       html += '<div class="gallery-grid">';
       mine.forEach(function(m) {
         const editHref = '/design/make#' + m.hash;
@@ -6205,12 +6405,21 @@
         html += '<div class="gallery-card">'
           + '<img class="gallery-thumb" loading="lazy" alt="' + galleryEscape(m.title) + '" src="' + galleryEscape(galleryThumb(m.hash)) + '">'
           + '<div class="gallery-card-body">'
-          + '<div class="gallery-card-title">' + galleryEscape(m.title) + '</div>'
+          + '<div class="gallery-card-title">' + galleryEscape(m.title)
+          + (m.isPublic ? '<span class="gallery-pill">Public</span>' : '')
+          + '</div>'
           + '<div class="gallery-card-sub">' + galleryEscape(m.subtitle || '') + '</div>'
           + (when ? '<div class="gallery-card-meta">' + galleryEscape(when)
-            + (m.cloud ? ' · synced' : ' · this device') + '</div>' : '')
+            + (m.cloud ? ' · synced' : ' · this device')
+            + (m.isPublic ? ' · on Recent' : '')
+            + '</div>' : '')
           + '<div class="gallery-card-actions">'
           + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="' + galleryEscape(editHref) + '">Open</a>'
+          + (canPublish
+            ? (m.isPublic
+              ? '<button type="button" class="gallery-card-btn" data-unpublish="' + galleryEscape(m.hash) + '">Unpublish</button>'
+              : '<button type="button" class="gallery-card-btn" data-publish="' + galleryEscape(m.hash) + '">Publish</button>')
+            : '')
           + '<button type="button" class="gallery-card-btn" data-remove="' + galleryEscape(m.hash) + '">Remove</button>'
           + '</div></div></div>';
       });
@@ -6226,6 +6435,44 @@
           galleryRenderMine(body);
         });
       });
+      body.querySelectorAll('[data-publish]').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          const hash = btn.getAttribute('data-publish');
+          const row = mine.find(function(m) { return m.hash === hash; });
+          btn.disabled = true;
+          const res = await gallerySetPublic(hash, row && row.title, row && row.subtitle, true);
+          if (res && res.ok) {
+            showMessage('Published to Recent', 'success');
+            if (typeof trackEvent === 'function') trackEvent('gallery_publish', { title: row && row.title, from: 'mine' });
+            galleryRenderMine(body);
+          } else if (res && res.reason === 'rate_limit') {
+            btn.disabled = false;
+            showMessage('Daily publish limit reached (' + (res.limit || galleryPublishDailyLimit()) + '/day)', 'error');
+          } else if (res && res.reason === 'quality_floor') {
+            btn.disabled = false;
+            showMessage('Color at least ' + GALLERY_PUBLISH_MIN_STATES + ' states before publishing', 'info');
+          } else {
+            btn.disabled = false;
+            showMessage('Publish failed — try again later', 'error');
+          }
+        });
+      });
+      body.querySelectorAll('[data-unpublish]').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          const hash = btn.getAttribute('data-unpublish');
+          const row = mine.find(function(m) { return m.hash === hash; });
+          btn.disabled = true;
+          const res = await gallerySetPublic(hash, row && row.title, row && row.subtitle, false);
+          if (res && res.ok) {
+            showMessage('Unpublished — removed from Recent', 'success');
+            if (typeof trackEvent === 'function') trackEvent('gallery_unpublish', { title: row && row.title });
+            galleryRenderMine(body);
+          } else {
+            btn.disabled = false;
+            showMessage('Unpublish failed — try again later', 'error');
+          }
+        });
+      });
     }
     function galleryWireMineBanner(body) {
       const upgradeBtn = body.querySelector('[data-gallery-upgrade]');
@@ -6239,6 +6486,31 @@
         signInBtn.addEventListener('click', function() {
           if (typeof showUpgradeModal === 'function') showUpgradeModal('auth');
         });
+      }
+    }
+    async function galleryFetchOwnPublicFlags() {
+      // Lightweight: signed-in free users need Unpublish without full Pro cloud sync.
+      if (!galleryPublishSignedIn() || galleryCloudEnabled()) return null;
+      try {
+        const { data, error } = await supabaseClient
+          .from('user_maps')
+          .select('id,hash,is_public')
+          .eq('user_id', appState.currentUser.id)
+          .eq('is_deleted', false)
+          .eq('is_public', true)
+          .limit(GALLERY_MAX);
+        if (error) {
+          console.warn('user_maps public-flags fetch failed:', error.message || error);
+          return null;
+        }
+        const byHash = Object.create(null);
+        (data || []).forEach(function(row) {
+          if (row && row.hash) byHash[row.hash] = { id: row.id, isPublic: true };
+        });
+        return byHash;
+      } catch (err) {
+        console.warn('user_maps public-flags fetch error:', err);
+        return null;
       }
     }
     async function galleryRenderMine(body) {
@@ -6257,7 +6529,17 @@
       }
 
       const usingCloud = Array.isArray(cloud);
-      const mine = usingCloud ? galleryMergeMineLists(cloud, local) : local;
+      let mine = usingCloud ? galleryMergeMineLists(cloud, local) : local.slice();
+      if (!usingCloud && galleryPublishSignedIn()) {
+        const flags = await galleryFetchOwnPublicFlags();
+        if (flags) {
+          mine = mine.map(function(m) {
+            const f = flags[m.hash];
+            if (!f) return m;
+            return Object.assign({}, m, { isPublic: true, id: f.id || m.id });
+          });
+        }
+      }
 
       let bannerHtml = '';
       let statusHtml = '';
@@ -6290,15 +6572,79 @@
         cloud: usingCloud,
       });
     }
-    function galleryRenderComingSoon(body, label) {
-      body.innerHTML = '<div class="gallery-empty">'
-        + '<div class="gallery-empty-icon">✨</div>'
-        + '<h3>' + label + ' is coming soon</h3>'
-        + '<p>Community publish is next. Your own maps already sync under <strong>My Maps</strong>'
-        + (typeof isPro === 'function' && isPro() ? ' with Pro' : '')
-        + '.</p>'
-        + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="/design/gallery/mine">Go to My Maps</a>'
-        + '</div>';
+    function galleryWirePublicCards(body) {
+      body.querySelectorAll('[data-report]').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+          if (!galleryPublishSignedIn()) {
+            if (typeof showUpgradeModal === 'function') showUpgradeModal('auth');
+            showMessage('Sign in to report a map', 'info');
+            return;
+          }
+          const mapId = btn.getAttribute('data-report');
+          const reason = window.prompt('Why are you reporting this map? (spam, offensive, other)');
+          if (reason == null) return;
+          btn.disabled = true;
+          const res = await galleryReportMap(mapId, reason);
+          if (res && res.ok) {
+            showMessage('Report submitted — thanks', 'success');
+            if (typeof trackEvent === 'function') trackEvent('gallery_report', { map_id: mapId });
+          } else {
+            btn.disabled = false;
+            showMessage('Could not submit report', 'error');
+          }
+        });
+      });
+    }
+    async function galleryRenderPublic(body, opts) {
+      opts = opts || {};
+      const featured = !!opts.featured;
+      const label = featured ? 'Featured' : 'Recent';
+      body.innerHTML = '<div class="gallery-sync-status"><span class="gallery-sync-dot"></span> Loading ' + label + '…</div>';
+      const res = await galleryFetchPublicMaps({ featured: featured });
+      if (!res.ok) {
+        body.innerHTML = '<div class="gallery-empty">'
+          + '<div class="gallery-empty-icon">🗺️</div>'
+          + '<h3>Couldn’t load ' + label + '</h3>'
+          + '<p>Public gallery needs the Supabase migration applied. Your <strong>My Maps</strong> still work.</p>'
+          + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="/design/gallery/mine">Go to My Maps</a>'
+          + '</div>';
+        return;
+      }
+      const maps = res.maps || [];
+      if (!maps.length) {
+        body.innerHTML = '<div class="gallery-empty">'
+          + '<div class="gallery-empty-icon">' + (featured ? '✨' : '📣') + '</div>'
+          + '<h3>' + (featured ? 'No featured maps yet' : 'No public maps yet') + '</h3>'
+          + '<p>' + (featured
+            ? 'Editorial picks show up here. Browse <strong>Recent</strong> or publish your own.'
+            : 'Color at least 3 states, then <strong>Publish to Gallery</strong> from Share or My Maps.')
+          + '</p>'
+          + (featured
+            ? '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="/design/gallery/recent">Browse Recent</a>'
+            : '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="/design/make">Make a map</a>')
+          + '</div>';
+        return;
+      }
+      let html = '<div class="gallery-grid">';
+      maps.forEach(function(m) {
+        const openHref = '/design/make#' + m.hash;
+        const when = galleryFormatWhen(m.ts);
+        html += '<div class="gallery-card">'
+          + '<img class="gallery-thumb" loading="lazy" alt="' + galleryEscape(m.title) + '" src="' + galleryEscape(galleryThumb(m.hash)) + '">'
+          + '<div class="gallery-card-body">'
+          + '<div class="gallery-card-title">' + galleryEscape(m.title)
+          + (m.isFeatured ? '<span class="gallery-pill">Featured</span>' : '')
+          + '</div>'
+          + '<div class="gallery-card-sub">' + galleryEscape(m.subtitle || '') + '</div>'
+          + (when ? '<div class="gallery-card-meta">' + galleryEscape(when) + '</div>' : '')
+          + '<div class="gallery-card-actions">'
+          + '<a class="gallery-card-btn gallery-card-btn--primary" data-route href="' + galleryEscape(openHref) + '">Open</a>'
+          + (m.id ? '<button type="button" class="gallery-card-btn" data-report="' + galleryEscape(m.id) + '">Report</button>' : '')
+          + '</div></div></div>';
+      });
+      html += '</div>';
+      body.innerHTML = html;
+      galleryWirePublicCards(body);
     }
     function galleryRender(tab) {
       const body = document.getElementById('galleryBody');
@@ -6307,14 +6653,14 @@
         a.classList.toggle('is-active', a.getAttribute('href') === '/design/gallery/' + tab);
       });
       if (tab === 'mine') galleryRenderMine(body);
-      else if (tab === 'featured') galleryRenderComingSoon(body, 'Featured');
-      else galleryRenderComingSoon(body, 'Recent');
+      else if (tab === 'featured') galleryRenderPublic(body, { featured: true });
+      else galleryRenderPublic(body, { featured: false });
     }
     Modes.Gallery = {
       enter(route) {
         const el = document.getElementById('modeGallery');
         if (el) el.style.display = 'flex';
-        const tab = (route && route.sub) || 'mine';
+        const tab = (route && route.sub) || 'recent';
         galleryRender(tab);
       },
       exit() {
@@ -6322,7 +6668,7 @@
         if (el) el.style.display = 'none';
       },
       meta(route) {
-        const tab = (route && route.sub) || 'mine';
+        const tab = (route && route.sub) || 'recent';
         const label = tab === 'mine' ? 'My Maps' : tab === 'featured' ? 'Featured' : 'Recent';
         return {
           title: 'Gallery · ' + label + ' — Tappymaps',
@@ -13301,6 +13647,8 @@
       // Gallery (Phase 4) — save the current map locally (free; no Pro gate).
       const saveGalBtn = document.getElementById('saveToGalleryBtn');
       if (saveGalBtn) saveGalBtn.addEventListener('click', saveCurrentMapToGallery);
+      const publishGalBtn = document.getElementById('publishToGalleryBtn');
+      if (publishGalBtn) publishGalBtn.addEventListener('click', publishCurrentMapToGallery);
       document.getElementById('saveConfigBtn').addEventListener('click', () => {
         if (!gateProFeature('save config')) return;
         saveConfig();

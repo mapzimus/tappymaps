@@ -30,6 +30,19 @@ jobs:
       - name: Validate index.html script blocks
         run: node scripts/validate.mjs
 
+  api:
+    name: API unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Supabase and Stripe are stubbed via a loader hook, so no install and no
+      # credentials are needed.
+      - name: Subscription / webhook tests
+        run: node scripts/api-subscription-test.mjs
+
   smoke:
     name: Smoke (real browser)
     runs-on: ubuntu-latest

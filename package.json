@@ -10,8 +10,9 @@
     "smoke:checkout": "node scripts/checkout-plan-smoke.mjs",
     "smoke:export-aspect": "node scripts/export-aspect-smoke.mjs",
     "smoke:gallery-public": "node scripts/gallery-public-smoke.mjs",
-    "test": "node scripts/validate.mjs",
-    "dev": "node scripts/devserver.mjs --stub-api"
+    "test": "node scripts/validate.mjs && node scripts/api-subscription-test.mjs",
+    "dev": "node scripts/devserver.mjs --stub-api",
+    "test:api": "node scripts/api-subscription-test.mjs"
   },
   "dependencies": {
     "stripe": "^17.0.0",

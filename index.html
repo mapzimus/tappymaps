@@ -5354,6 +5354,12 @@
     const appState = {
       selectedColor: ACCENT,
       stateColors: {},
+      // Counties live here, not in a separate module-level object. They used to
+      // be split: clicks wrote a bare `const countyColors` while history, the
+      // legend-recolor path and the mobile IIFE all read appState.countyColors.
+      // The two never synced, so undo restored an always-empty map and wiped
+      // every county the user had coloured.
+      countyColors: {},
       stateLabels: {},
       legendEntries: [],
       mapTitle: 'My US Map',
@@ -8195,8 +8201,20 @@
       const suffix = (mode && mode !== 'classic') ? '_' + mode : '';
       return 'tappymaps_arcade_' + gameId + suffix + '_best';
     }
+    // localStorage is user-writable and shared with anything else on the origin.
+    // A stored "score" was being interpolated straight into innerHTML, so a
+    // hand-edited key executed script every time the Arcade hub rendered.
+    // Coercing at the read boundary kills the whole class rather than patching
+    // each render site: a score is a number, and nothing else gets through.
+    function arcadeCleanBest(raw) {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+      const score = Number(raw.score);
+      if (!Number.isFinite(score)) return null;
+      const medal = ['gold', 'silver', 'bronze', 'none'].includes(raw.medal) ? raw.medal : 'none';
+      return { score: Math.max(0, Math.round(score)), medal: medal };
+    }
     function arcadeGetBest(gameId, mode) {
-      try { return JSON.parse(localStorage.getItem(arcadeBestKey(gameId, mode))) || null; }
+      try { return arcadeCleanBest(JSON.parse(localStorage.getItem(arcadeBestKey(gameId, mode)))); }
       catch (_) { return null; }
     }
     function arcadeMedalFor(game, score) {
@@ -8312,7 +8330,7 @@
           div.className = 'arcade-tile';
           const buttons = Object.keys(game.modes).map(m => {
             const best = arcadeGetBest(game.id, m);
-            const label = game.modes[m].label + (best ? ' · ' + medalFor(best) + best.score : ' →');
+            const label = game.modes[m].label + (best ? ' · ' + medalFor(best) + escapeHTML(best.score) : ' →');
             const q = m === (game.defaultMode || 'classic') ? '' : '?mode=' + m;
             return '<a class="arcade-tile-mode-btn" data-route href="/games/arcade/' + game.id + q + '">' + label + '</a>';
           }).join('');
@@ -8333,7 +8351,7 @@
             '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
             '<div class="arcade-tile-meta">' +
               (best
-                ? '<span class="arcade-tile-medal">' + medalFor(best) + '</span><span>Best <span class="arcade-tile-best">' + best.score + '</span></span>'
+                ? '<span class="arcade-tile-medal">' + medalFor(best) + '</span><span>Best <span class="arcade-tile-best">' + escapeHTML(best.score) + '</span></span>'
                 : '<span class="arcade-tile-best">Play →</span>') +
             '</div>';
           grid.appendChild(a);
@@ -8486,7 +8504,23 @@
     function progSetPlayerName(n) { try { localStorage.setItem('tappymaps_player_name', (n || '').slice(0, 12)); } catch (_) {} }
     function progLbKey(gameId, mode) { return gameId + ((mode && mode !== 'classic') ? ':' + mode : ''); }
     function progAllBoards() { try { return JSON.parse(localStorage.getItem('tappymaps_leaderboard') || '{}') || {}; } catch (_) { return {}; } }
-    function progGetBoard(gameId, mode) { return progAllBoards()[progLbKey(gameId, mode)] || []; }
+    // Same reasoning as arcadeCleanBest: leaderboard rows come from
+    // localStorage and reach innerHTML, so they are typed on the way in.
+    function progCleanRow(raw) {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+      const score = Number(raw.score);
+      if (!Number.isFinite(score)) return null;
+      return {
+        score: Math.max(0, Math.round(score)),
+        name: typeof raw.name === 'string' ? raw.name.slice(0, 12) : '',
+        medal: ['gold', 'silver', 'bronze'].includes(raw.medal) ? raw.medal : null,
+        ts: Number.isFinite(Number(raw.ts)) ? Number(raw.ts) : 0,
+      };
+    }
+    function progGetBoard(gameId, mode) {
+      const rows = progAllBoards()[progLbKey(gameId, mode)];
+      return Array.isArray(rows) ? rows.map(progCleanRow).filter(Boolean) : [];
+    }
     function progQualifies(gameId, mode, score) {
       if (!(score > 0)) return false;
       const board = progGetBoard(gameId, mode);
@@ -8538,7 +8572,7 @@
               '<li><span class="lb-rank">' + (i + 1) + '</span>'
               + '<span class="lb-name">' + escapeHTML(e.name || 'YOU') + '</span>'
               + '<span class="lb-medal">' + (ARCADE_MEDAL_EMOJI[e.medal] || '') + '</span>'
-              + '<span class="lb-score">' + e.score + '</span></li>').join('') + '</ol>';
+              + '<span class="lb-score">' + escapeHTML(e.score) + '</span></li>').join('') + '</ol>';
           }
           html += '</div>';
         });
@@ -10452,6 +10486,14 @@
       var numClasses = 5;
       var breaks = [];
       for (var i = 0; i <= numClasses; i++) breaks.push(mn + (mx - mn) * (i / numClasses));
+      // Clear first. This used to paint only the states present in the response
+      // and leave everything else untouched, so a state coloured by the PREVIOUS
+      // dataset kept its old fill while the legend below now described a
+      // different measure entirely. With a partial response — ACS returns
+      // -666666666 for suppressed estimates, and those get dropped — 45 states
+      // could be showing last dataset's values under this dataset's key. A map
+      // that displays the wrong number confidently is worse than one that fails.
+      appState.stateColors = {};
       Object.entries(data).forEach(function(e) { appState.stateColors[e[0]] = scale(e[1]).hex(); });
       appState.legendEntries = [];
       for (var i = 0; i < numClasses; i++) {
@@ -10949,7 +10991,11 @@
     function applyHistorySnapshot(snap) {
       if (!snap) return;
       appState.stateColors = snap.stateColors || {};
-      appState.countyColors = snap.countyColors || {};
+      // Mutate in place: `countyColors` aliases this object, and reassigning
+      // would silently detach every county click handler from history.
+      const snapCounties = snap.countyColors || {};
+      Object.keys(appState.countyColors).forEach(function(k) { delete appState.countyColors[k]; });
+      Object.assign(appState.countyColors, snapCounties);
       appState.legendEntries = (snap.legendEntries || []).map(function(e) { return Object.assign({}, e); });
       if (snap.selectedColor) appState.selectedColor = snap.selectedColor;
       appState.mapTitle = snap.mapTitle || 'My US Map';
@@ -10965,8 +11011,18 @@
       if (srcEl) { srcEl.textContent = appState.mapSource; srcEl.style.opacity = appState.mapSource ? '1' : '0'; }
       var si = document.getElementById('sourceInput'); if (si) si.value = appState.mapSource;
       var msi = document.getElementById('mobileSourceInput'); if (msi) msi.value = appState.mapSource;
-      // Re-render
-      if (typeof renderMap === 'function') renderMap();
+      // Re-render. In county view, renderMap() would draw the national state
+      // map over the counties — undo used to replace a 254-path county map with
+      // the 51-path state map and leave a county stats bar above it. Repaint
+      // the existing county paths from the restored store instead.
+      if (countyMode) {
+        document.querySelectorAll('#statesGroup path[data-county]').forEach(function(pathEl) {
+          const fips = String(pathEl.getAttribute('data-county')).padStart(5, '0');
+          pathEl.style.fill = appState.countyColors[fips] || '';
+        });
+      } else if (typeof renderMap === 'function') {
+        renderMap();
+      }
       updateLegendBuilder();
       updateLegendDisplay();
       updateStatsBar();
@@ -13649,8 +13705,22 @@
       window._activeDataMap = { dataset: dataset, data: data };
 
       renderMap(); updateLegendBuilder(); updateLegendDisplay(); updateStatsBar(); updateURL();
-      showMessage(dataset.title + ' data loaded for ' + Object.keys(data).length + ' states', 'success');
-      trackEvent('data_map_loaded', { dataset: dataset.id });
+
+      // Say plainly when the data is incomplete. "loaded for 6 states" read as
+      // success while 45 states sat uncoloured; a user publishing that map has
+      // no idea it is missing four fifths of the country.
+      var covered = Object.keys(data).length;
+      var expected = 51; // 50 states + DC, the ACS state-level universe
+      if (covered < expected) {
+        showMessage(
+          dataset.title + ': only ' + covered + ' of ' + expected +
+          ' states returned data — the rest are shown uncoloured.',
+          'error'
+        );
+      } else {
+        showMessage(dataset.title + ' data loaded for ' + covered + ' states', 'success');
+      }
+      trackEvent('data_map_loaded', { dataset: dataset.id, covered: covered });
     }
 
     // === Data Map Ramp Picker ===
@@ -13833,7 +13903,10 @@
     let countyStateName = null;
     let countyTotal = 0;
     let countyTopology = null;
-    const countyColors = {};
+    // Alias, not a second store — see appState.countyColors above. Everything
+    // that mutates counties must go through this object identity, so
+    // applyHistorySnapshot mutates it in place rather than reassigning.
+    const countyColors = appState.countyColors;
 
     async function loadCountyView(stateFips) {
       try {

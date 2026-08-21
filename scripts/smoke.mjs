@@ -120,7 +120,39 @@ try {
   const exportResult = await page.evaluate(async () => {
     // Put something on the map so a blank result is unambiguous.
     ['California', 'Texas', 'Florida', 'New York'].forEach((s) => { appState.stateColors[s] = '#0EA5E9'; });
+    appState.legendEntries = [{ color: '#0EA5E9', label: 'Smoke legend entry' }];
+    if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
     if (typeof renderMap === 'function') renderMap();
+    const titleEl = document.getElementById('mapTitle');
+    if (titleEl) titleEl.textContent = 'Smoke export title';
+
+    // Composition invariants are asserted by snapshotting the DOM at the exact
+    // moment the rasterizer is handed the node — a pixel heuristic is too
+    // coarse to notice a silently hidden legend, which is precisely the kind
+    // of regression that looks fine in the editor and only shows up in the
+    // downloaded file.
+    const atCapture = {};
+    const snap = () => {
+      for (const id of ['logoWatermark', 'mapTitle', 'legendDisplay']) {
+        const el = document.getElementById(id);
+        if (!el) { atCapture[id] = 'MISSING'; continue; }
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        atCapture[id] = (cs.display !== 'none' && cs.visibility !== 'hidden' &&
+                         Number(cs.opacity) !== 0 && r.width > 0 && r.height > 0) ? 'visible' : 'hidden';
+      }
+    };
+    const wrap = (obj, key) => {
+      if (!obj || typeof obj[key] !== 'function') return;
+      const orig = obj[key].bind(obj);
+      obj[key] = (...a) => { snap(); return orig(...a); };
+    };
+    wrap(window.domtoimage, 'toPng');
+    if (typeof window.html2canvas === 'function') {
+      const orig = window.html2canvas;
+      window.html2canvas = (...a) => { snap(); return orig(...a); };
+    }
+
     try {
       const canvas = await captureMapImage();
       if (!canvas || !canvas.width) return { error: 'no canvas returned' };
@@ -130,9 +162,9 @@ try {
       for (let i = 0; i < data.length; i += 4 * 997) {           // sparse sample
         seen.add(`${data[i]},${data[i + 1]},${data[i + 2]}`);
       }
-      return { w: canvas.width, h: canvas.height, distinctColors: seen.size };
+      return { w: canvas.width, h: canvas.height, distinctColors: seen.size, atCapture };
     } catch (e) {
-      return { error: e.message };
+      return { error: e.message, atCapture };
     }
   });
   check('captureMapImage returns a canvas', !exportResult.error, exportResult.error || '');
@@ -142,6 +174,11 @@ try {
     check('export canvas is not blank', exportResult.distinctColors > 5,
       `${exportResult.distinctColors} distinct sampled colors`);
   }
+  const at = exportResult.atCapture || {};
+  // Phase 0 §9: the logo is mandatory on every export for every tier.
+  check('logo is visible at capture time', at.logoWatermark === 'visible', at.logoWatermark || 'not observed');
+  check('map title is visible at capture time', at.mapTitle === 'visible', at.mapTitle || 'not observed');
+  check('legend is visible at capture time', at.legendDisplay === 'visible', at.legendDisplay || 'not observed');
 
   // ---- Routes ---------------------------------------------------------------
   console.log('\nRoutes');

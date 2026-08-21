@@ -592,6 +592,30 @@
       border: 2px solid transparent;
       cursor: pointer;
       transition: border-color var(--duration-normal), transform var(--duration-normal);
+      /* These are <button>s now (they were unlabelled, untabbable divs), so
+         neutralise the UA button styling that would otherwise show through. */
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      display: block;
+    }
+
+    /* Visible focus for everything the keyboard can now reach. Without this the
+       map and palette are operable but you cannot see where you are, which is
+       not much better than not being operable at all. */
+    .color-swatch:focus-visible,
+    .state-path:focus-visible {
+      outline: 3px solid var(--accent, #0EA5E9);
+      outline-offset: 2px;
+    }
+    .state-path:focus-visible {
+      /* SVG outlines clip against the viewBox; a stroke reads more reliably. */
+      outline: none;
+      stroke: var(--accent, #0EA5E9);
+      stroke-width: 2.5;
+      paint-order: stroke;
     }
 
     .color-swatch:hover {
@@ -9936,6 +9960,30 @@
         if (!nonColorable.has(stateName)) {
           pathEl.addEventListener('click', (e) => onStateClick(e, stateName));
           pathEl.addEventListener('contextmenu', (e) => onStateRightClick(e, stateName));
+
+          // Colouring a state is the core task of this product, and it used to
+          // be impossible without a pointer: every path was tabIndex -1 and
+          // would not even take focus. Expose them as real buttons so the map
+          // is operable by keyboard and legible to a screen reader.
+          pathEl.setAttribute('role', 'button');
+          pathEl.setAttribute('tabindex', '0');
+          pathEl.setAttribute('aria-label', stateName);
+          pathEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+              e.preventDefault();
+              onStateClick(e, stateName);
+            } else if (e.key === 'Delete' || e.key === 'Backspace') {
+              // Parity with right-click-to-clear, which a keyboard cannot reach.
+              e.preventDefault();
+              onStateRightClick(e, stateName);
+            }
+          });
+          pathEl.addEventListener('focus', (e) => showTooltip(e, stateName));
+          pathEl.addEventListener('blur', hideTooltip);
+        } else {
+          // Decorative to assistive tech: it carries no action and is excluded
+          // from the "X of 50 states coloured" count.
+          pathEl.setAttribute('aria-hidden', 'true');
         }
         pathEl.addEventListener('mouseenter', (e) => showTooltip(e, stateName));
         pathEl.addEventListener('mousemove', (e) => moveTooltip(e));
@@ -10109,12 +10157,18 @@
       grid.innerHTML = '';
 
       appState.presetColors.forEach(color => {
-        const swatch = document.createElement('div');
+        // A <button>, not a <div>: these were unlabelled and untabbable, so the
+        // only way to choose a colour was to click one. Buttons give keyboard
+        // focus and Enter/Space activation for free, and aria-pressed conveys
+        // which colour is currently selected.
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
         swatch.className = 'color-swatch';
-        if (color === appState.selectedColor) {
-          swatch.classList.add('active');
-        }
+        const isActive = color === appState.selectedColor;
+        if (isActive) swatch.classList.add('active');
         swatch.style.backgroundColor = color;
+        swatch.setAttribute('aria-label', 'Colour ' + color);
+        swatch.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         swatch.addEventListener('click', () => selectColor(color));
         grid.appendChild(swatch);
       });

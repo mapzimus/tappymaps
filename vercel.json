@@ -2,13 +2,22 @@
   "framework": null,
   "outputDirectory": ".",
   "crons": [
-    { "path": "/api/keepalive", "schedule": "0 12 * * *" }
+    {
+      "path": "/api/keepalive",
+      "schedule": "0 12 * * *"
+    }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/s/:hash", "destination": "/api/share?h=:hash" },
     {
-      "source": "/((?!api|assets|favicon|.*\\.(?:png|svg|ico|webmanifest|json)).*)",
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    },
+    {
+      "source": "/s/:hash",
+      "destination": "/api/share?h=:hash"
+    },
+    {
+      "source": "/((?!api|assets|favicon|.*\\.(?:png|svg|ico|webmanifest|json|txt|xml)).*)",
       "destination": "/index.html"
     }
   ],
@@ -16,13 +25,19 @@
     {
       "source": "/index.html",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
       ]
     },
     {
       "source": "/",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
       ]
     }
   ]

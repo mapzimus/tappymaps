@@ -4322,11 +4322,11 @@
         <a data-route href="/games/arcade/find-state">Find the State</a>
         <a data-route href="/games/arcade/stat-duel">Stat Duel</a>
         <a data-route href="/games/draft">GeoDraft</a>
-        <a data-route href="/design/gallery/recent">Gallery</a>
+        <a data-route href="/design/gallery/mine">Gallery</a>
       </nav>
     </main>
     <footer class="hub-footer">
-      <a href="/design/gallery/recent" data-route>gallery</a>
+      <a href="/design/gallery/mine" data-route>gallery</a>
       <span class="hub-footer-sep"> · </span>
       <a href="/about" data-route>about</a>
       <span class="hub-footer-sep"> · </span>
@@ -5131,7 +5131,7 @@
           </button>
           <button class="btn secondary" id="saveToGalleryBtn">⭐ Save to My Maps</button>
           <button class="btn secondary" id="publishToGalleryBtn">📣 Publish to Gallery</button>
-          <a class="btn secondary" id="viewGalleryBtn" data-route href="/design/gallery/recent" style="text-decoration:none; display:block; text-align:center;">🖼 View Gallery</a>
+          <a class="btn secondary" id="viewGalleryBtn" data-route href="/design/gallery/mine" style="text-decoration:none; display:block; text-align:center;">🖼 View Gallery</a>
           <button class="btn secondary btn-pro" id="saveConfigBtn">💾 Save Config
             <span class="pro-badge">PRO</span>
           </button>
@@ -6147,12 +6147,22 @@
       try { const a = JSON.parse(localStorage.getItem(GALLERY_MINE_KEY)); return Array.isArray(a) ? a : []; }
       catch (_) { return []; }
     }
+    // Returns whether the write actually landed. It used to swallow the failure
+    // and the caller showed a success toast regardless, so in Safari private
+    // mode or on a full quota a user was told "Saved" and got nothing — then
+    // found an empty gallery with no idea why.
     function gallerySaveMine(hash, title, subtitle) {
-      if (!hash) return;
+      if (!hash) return false;
       let mine = galleryGetMine().filter(m => m.hash !== hash);   // de-dupe, move to front
       mine.unshift({ hash, title: title || 'Untitled map', subtitle: subtitle || '', ts: Date.now() });
       if (mine.length > GALLERY_MAX) mine = mine.slice(0, GALLERY_MAX);
-      try { localStorage.setItem(GALLERY_MINE_KEY, JSON.stringify(mine)); } catch (_) {}
+      try {
+        localStorage.setItem(GALLERY_MINE_KEY, JSON.stringify(mine));
+        return true;
+      } catch (err) {
+        console.warn('My Maps save failed:', err && err.name);
+        return false;
+      }
     }
     function galleryRemoveMine(hash) {
       const mine = galleryGetMine().filter(m => m.hash !== hash);
@@ -6463,7 +6473,14 @@
       const hash = encodeStateToURL();
       const title = appState.mapTitle;
       const subtitle = appState.mapSubtitle;
-      gallerySaveMine(hash, title, subtitle);
+      const savedLocally = gallerySaveMine(hash, title, subtitle);
+      if (!savedLocally) {
+        // Say so rather than claiming success. The share link still carries the
+        // whole map, so offer the thing that does work.
+        showMessage('Could not save on this device — storage is full or blocked. Use Share to copy a link instead.', 'error');
+        if (typeof trackEvent === 'function') trackEvent('gallery_save_failed', { reason: 'local_storage' });
+        return;
+      }
 
       if (!appState.currentUser) {
         showMessage('Saved on this device — sign in with Pro to sync across devices', 'success');
@@ -6815,7 +6832,10 @@
       enter(route) {
         const el = document.getElementById('modeGallery');
         if (el) el.style.display = 'flex';
-        const tab = (route && route.sub) || 'recent';
+        // 'mine' is local-first and always works. Recent/Featured need the
+        // user_maps table; until that migration is applied they can only show
+        // an error, so they must not be the default landing tab.
+        const tab = (route && route.sub) || 'mine';
         galleryRender(tab);
       },
       exit() {
@@ -6823,7 +6843,7 @@
         if (el) el.style.display = 'none';
       },
       meta(route) {
-        const tab = (route && route.sub) || 'recent';
+        const tab = (route && route.sub) || 'mine';
         const label = tab === 'mine' ? 'My Maps' : tab === 'featured' ? 'Featured' : 'Recent';
         return {
           title: 'Gallery · ' + label + ' — Tappymaps',

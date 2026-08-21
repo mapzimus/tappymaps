@@ -5270,6 +5270,7 @@
           <button class="btn" id="upgradeClassroomBtn" style="width: 100%; padding: 12px; font-size: 13px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #0EA5E9, #0369A1);">
             Classroom $12/mo — class codes + worksheet packs
           </button>
+          <button class="btn secondary" id="manageBillingBtn" style="width: 100%; font-size: 11px; padding: 8px; margin-bottom: 6px; display: none;">Manage subscription &amp; billing</button>
           <button class="btn secondary" id="authSignOutBtn" style="width: 100%; font-size: 10px; padding: 6px;">Sign Out</button>
         </div>
 
@@ -11757,6 +11758,38 @@
       }
     }
 
+    /**
+     * Open the Stripe billing portal — cancel, change card, download invoices.
+     * The product advertises "Cancel anytime" and had no path to do any of it.
+     */
+    async function openBillingPortal() {
+      const btn = document.getElementById('manageBillingBtn');
+      const restore = btn ? btn.textContent : '';
+      try {
+        if (btn) { btn.disabled = true; btn.textContent = 'Opening…'; }
+        if (!supabaseClient) { showMessage('Sign in to manage your subscription', 'error'); return; }
+        const session = await supabaseClient.auth.getSession();
+        const token = session?.data?.session?.access_token;
+        if (!token) { showMessage('Sign in to manage your subscription', 'error'); return; }
+
+        const res = await fetch('/api/stripe/portal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        });
+        const body = await res.json().catch(function() { return {}; });
+        if (!res.ok || !body.url) {
+          showMessage(body.error || 'Could not open the billing portal. Please try again.', 'error');
+          return;
+        }
+        window.location.href = body.url;
+      } catch (err) {
+        console.error('Billing portal:', err);
+        showMessage('Could not reach the billing portal — check your connection.', 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = restore; }
+      }
+    }
+
     function updateAuthHeaderUI() {
       // Update sidebar header to show auth status
       let authIndicator = document.getElementById('authIndicator');
@@ -11778,6 +11811,14 @@
           authIndicator.textContent = '';
         }
       }
+      // Only subscribers have something to manage; a free user seeing a
+      // "Manage subscription" button that 404s is worse than not seeing one.
+      const billingBtn = document.getElementById('manageBillingBtn');
+      if (billingBtn) {
+        const subscribed = !!(appState.currentUser && (appState.proUnlocked || appState.classroomUnlocked));
+        billingBtn.style.display = subscribed ? '' : 'none';
+      }
+
       // Mirror auth/pro state onto the Create top-bar account button — on mobile
       // (routed modes) it is the only visible account affordance, since the
       // legacy account menu is suppressed.
@@ -14623,6 +14664,8 @@
       if (signInBtn) signInBtn.addEventListener('click', authSignIn);
       const signOutBtn = document.getElementById('authSignOutBtn');
       if (signOutBtn) signOutBtn.addEventListener('click', authSignOut);
+      const billingBtn = document.getElementById('manageBillingBtn');
+      if (billingBtn) billingBtn.addEventListener('click', openBillingPortal);
       const monthlyBtn = document.getElementById('upgradeMonthlyBtn');
       if (monthlyBtn) monthlyBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('monthly'); });
       const annualBtn = document.getElementById('upgradeAnnualBtn');

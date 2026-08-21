@@ -12,5 +12,13 @@ export default class Stripe {
     this.webhooks = { constructEvent: (b) => JSON.parse(b.toString('utf8')) };
     this.checkout = { sessions: { create: async () => ({ url: 'https://stub' }) } };
     this.customers = { list: async () => ({ data: [] }) };
+    this.billingPortal = {
+      sessions: {
+        create: async (args) => {
+          globalThis.__TEST.portalArgs = args;
+          return { url: 'https://billing.stripe.test/session_stub' };
+        },
+      },
+    };
   }
 }

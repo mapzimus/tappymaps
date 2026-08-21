@@ -28,6 +28,7 @@ register('./test-stubs/loader.mjs', import.meta.url);
 
 const { default: verifyHandler } = await import('../api/stripe/verify-subscription.js');
 const webhookMod = await import('../api/stripe/webhook.js');
+const { default: portalHandler } = await import('../api/stripe/portal.js');
 
 // ---- helpers --------------------------------------------------------------
 function makeReqRes(overrides = {}) {
@@ -148,6 +149,53 @@ await test('missing bearer token is rejected', async () => {
   const { req, res } = makeReqRes({ headers: { origin: 'https://tappymaps.com' } });
   await verifyHandler(req, res);
   assert.equal(res.statusCode, 401);
+});
+
+// ---- billing portal -------------------------------------------------------
+console.log('\nbilling portal');
+
+function portalReqRes(overrides = {}) {
+  const { req, res } = makeReqRes({ method: 'POST', ...overrides });
+  return { req, res };
+}
+
+await test('subscriber gets a portal URL', async () => {
+  globalThis.__TEST.row = { user_id: 'u1', stripe_customer_id: 'cus_123' };
+  const { req, res } = portalReqRes();
+  await portalHandler(req, res);
+  assert.equal(res.statusCode, 200);
+  assert.ok(res.body.url, 'expected a portal url');
+});
+
+await test('free user with no subscription gets an actionable 404', async () => {
+  globalThis.__TEST.row = null;
+  const { req, res } = portalReqRes();
+  await portalHandler(req, res);
+  assert.equal(res.statusCode, 404);
+  assert.match(res.body.error, /No subscription/i);
+});
+
+await test('unauthenticated request is rejected', async () => {
+  const { req, res } = portalReqRes({ headers: { origin: 'https://tappymaps.com' } });
+  await portalHandler(req, res);
+  assert.equal(res.statusCode, 401);
+});
+
+await test('GET is not allowed', async () => {
+  const { req, res } = portalReqRes({ method: 'GET' });
+  await portalHandler(req, res);
+  assert.equal(res.statusCode, 405);
+});
+
+await test('return_url is pinned to an allowed origin, never taken from the request', async () => {
+  globalThis.__TEST.row = { user_id: 'u1', stripe_customer_id: 'cus_123' };
+  const { req, res } = portalReqRes({
+    headers: { authorization: 'Bearer t', origin: 'https://evil.example' },
+  });
+  await portalHandler(req, res);
+  assert.equal(res.statusCode, 200);
+  const used = globalThis.__TEST.portalArgs?.return_url || '';
+  assert.ok(used.startsWith('https://tappymaps.com'), `return_url was ${used}`);
 });
 
 // ---- webhook raw body -----------------------------------------------------

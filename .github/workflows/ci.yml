@@ -1,11 +1,17 @@
 name: CI
 
-# Advisory CI: runs on every push and PR, reports red/green, but is NOT a
-# required check — it does not block merges (no branch protection rule wired).
-# Validate-only by design: it compiles both inline <script> blocks in
-# index.html so a syntax error can't silently reach master and kill init().
-# The browser smoke test (scripts/smoke.mjs) is committed for local use but
-# intentionally NOT run here, to keep CI to a few seconds.
+# Runs on every push and PR. Reports red/green; whether it BLOCKS merges is a
+# branch-protection setting on the repo, not something this file controls.
+#
+# Two jobs:
+#   validate — compiles both inline <script> blocks in index.html so a syntax
+#              error can't silently reach master and kill init(). Seconds.
+#   smoke    — boots the real app in Chromium through scripts/devserver.mjs
+#              (production rewrites + /api stubs + vendored CDN libs) and
+#              asserts it actually works: 51 states render, a click colors a
+#              state, an export produces a non-blank canvas, both games start.
+#              ~10s locally. This is the job that catches runtime TDZ errors
+#              and broken mode handlers, which `node --check` is blind to.
 
 on:
   push:
@@ -20,6 +26,41 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Validate index.html script blocks
         run: node scripts/validate.mjs
+
+  api:
+    name: API unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # Supabase and Stripe are stubbed via a loader hook, so no install and no
+      # credentials are needed.
+      - name: Subscription / webhook tests
+        run: node scripts/api-subscription-test.mjs
+
+  smoke:
+    name: Smoke (real browser)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      # devserver.mjs caches the third-party libs + TopoJSON under .cache/vendor
+      # on first run; keeping it across runs saves ~1MB of CDN fetches.
+      - name: Cache vendored libs
+        uses: actions/cache@v4
+        with:
+          path: .cache/vendor
+          key: tappymaps-vendor-v1
+      - name: Smoke test
+        run: node scripts/smoke.mjs

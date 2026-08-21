@@ -38,3 +38,6 @@ node_modules/
 .env
 .env.local
 .vercel
+
+# Local vendor cache for scripts/devserver.mjs (third-party libs + TopoJSON)
+.cache/

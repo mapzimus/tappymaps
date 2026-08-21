@@ -1,0 +1,23 @@
+# Normalize line endings so Windows checkouts stop emitting CRLF/LF warnings
+# on every edit to index.html. Text files are stored LF in the repo and
+# checked out with the platform's native endings.
+* text=auto
+
+# Always LF — these are read by tooling that dislikes CRLF.
+*.mjs      text eol=lf
+*.js       text eol=lf
+*.json     text eol=lf
+*.sql      text eol=lf
+*.yml      text eol=lf
+*.md       text eol=lf
+*.html     text eol=lf
+
+# Binary
+*.png      binary
+*.jpg      binary
+*.ico      binary
+*.woff2    binary
+
+# index.html is one 744KB file that every change touches; collapsing it in
+# diffs keeps PR reviews readable without hiding the change itself.
+index.html linguist-generated=false

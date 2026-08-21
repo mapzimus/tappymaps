@@ -14,15 +14,24 @@ export const config = {
   },
 };
 
-// Helper to get raw body
-async function getRawBody(req) {
+// Helper to get raw body.
+//
+// Must collect Buffers and concat them, NOT `data += chunk`. String
+// concatenation decodes each chunk independently as UTF-8, so a multi-byte
+// character straddling a chunk boundary decodes to replacement characters and
+// the reconstructed body no longer matches the bytes Stripe signed — signature
+// verification then fails intermittently, only for payloads containing
+// non-ASCII (an accented customer name is enough) and only when the split
+// lands mid-character. Stripe retries, so it presents as a flaky webhook
+// rather than an obvious break.
+export async function getRawBody(req) {
   return new Promise((resolve, reject) => {
-    let data = '';
+    const chunks = [];
     req.on('data', (chunk) => {
-      data += chunk;
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     });
     req.on('end', () => {
-      resolve(data);
+      resolve(Buffer.concat(chunks));
     });
     req.on('error', reject);
   });
@@ -60,11 +69,35 @@ export default async function handler(req, res) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const userId = session.client_reference_id;
+        let userId = session.client_reference_id;
+
+        // A session without client_reference_id used to `break` straight to a
+        // 200, which tells Stripe the event was handled and permanently drops
+        // a subscription the customer has already paid for. Recover by email
+        // first; if that fails, fail loudly so Stripe retries and the failure
+        // is visible in the dashboard rather than silently swallowed.
+        if (!userId) {
+          const email = session.customer_details?.email || session.customer_email;
+          if (email) {
+            const { data: found, error: lookupError } = await supabase
+              .from('user_subscriptions')
+              .select('user_id')
+              .eq('stripe_customer_id', session.customer)
+              .maybeSingle();
+            if (!lookupError && found?.user_id) {
+              userId = found.user_id;
+              console.warn(`checkout.session.completed: recovered user ${userId} via stripe_customer_id`);
+            }
+          }
+        }
 
         if (!userId) {
-          console.warn('checkout.session.completed: no client_reference_id');
-          break;
+          console.error(
+            'checkout.session.completed: no client_reference_id and no recoverable user for session ' +
+            session.id + ' (customer ' + session.customer + ') — returning 500 so Stripe retries'
+          );
+          res.status(500).json({ error: 'Cannot attribute checkout session to a user' });
+          return;
         }
 
         // Retrieve the subscription from Stripe

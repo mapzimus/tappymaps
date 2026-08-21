@@ -11665,7 +11665,16 @@
 
       // Signed-in free user — check server
       try {
-        const session = await window._supabase.auth.getSession();
+        // NB: the client is `supabaseClient` (declared above). This read used
+        // to be `window._supabase`, which is never assigned anywhere — so the
+        // first line of this try threw a TypeError on every call, the catch
+        // below returned serverError, and no signed-in free user could export
+        // at all. /api/stripe/track-export was therefore never reached and the
+        // server-side 3/month quota never actually ran.
+        if (!supabaseClient) {
+          return { allowed: false, isPro: false, remaining: 0, serverError: true };
+        }
+        const session = await supabaseClient.auth.getSession();
         const token = session?.data?.session?.access_token;
         if (!token) {
           return { allowed: false, isPro: false, remaining: 0, needsSignUp: true };
@@ -11706,7 +11715,8 @@
       }
 
       try {
-        const session = await window._supabase.auth.getSession();
+        if (!supabaseClient) return;
+        const session = await supabaseClient.auth.getSession();
         const token = session?.data?.session?.access_token;
         if (!token) return;
 

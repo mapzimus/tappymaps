@@ -11176,12 +11176,41 @@
         legendTitle: appState.legendTitle,
         source: appState.mapSource
       };
-      return btoa(JSON.stringify(state));
+      return utf8ToBase64(JSON.stringify(state));
+    }
+
+    // btoa() only accepts code points below U+0100, so a raw btoa(JSON) threw
+    // InvalidCharacterError on any non-Latin-1 character. That is not an edge
+    // case here: applyDataMap() joins legend ranges with an en dash (U+2013),
+    // so EVERY data map produced a title the encoder could not handle — and an
+    // emoji in a map title did the same. The throw propagated out of
+    // encodeStateToURL, so updateURL, copyShareLink, copyEmbedLink and the
+    // async saveCurrentMapToGallery all failed with no toast and no saved map.
+    //
+    // Encoding the UTF-8 bytes first fixes it. ASCII input produces byte-identical
+    // output to the old btoa path, so links shared before this change still decode.
+    function utf8ToBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+
+    function base64ToUtf8(b64) {
+      // Tolerate the URL-safe alphabet and stripped padding: chat apps, mail
+      // clients and Reddit rewrite links, and losing a map to a missing '='
+      // is a bad outcome for something we can simply accept.
+      let s = String(b64).trim().replace(/-/g, '+').replace(/_/g, '/');
+      while (s.length % 4) s += '=';
+      const binary = atob(s);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
     }
 
     function decodeStateFromURL(encoded) {
       try {
-        const state = JSON.parse(atob(encoded));
+        const state = JSON.parse(base64ToUtf8(encoded));
         return state;
       } catch (e) {
         console.error('Failed to decode URL state:', e);
@@ -11816,6 +11845,36 @@
       return 'landscape';
     }
 
+    // color-mix() resolved to rgba(), because html2canvas cannot parse modern
+    // CSS colour functions. getComputedStyle already resolves color-mix in
+    // browsers that support it; the manual path covers those that don't, and
+    // any unexpected format degrades to the opaque surface colour rather than
+    // throwing.
+    function resolveLegendBackground(legendEl) {
+      const OPACITY = 0.78;   // matches the color-mix percentage in .legend-group
+      try {
+        const computed = getComputedStyle(legendEl).backgroundColor;
+        const m = /^rgba?\(([^)]+)\)$/.exec(computed || '');
+        if (m) {
+          const parts = m[1].split(/[,\s/]+/).filter(Boolean).map(Number);
+          const [r, g, b] = parts;
+          if ([r, g, b].every(Number.isFinite)) {
+            const a = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : OPACITY;
+            return `rgba(${r}, ${g}, ${b}, ${a})`;
+          }
+        }
+        const surface = getComputedStyle(document.documentElement)
+          .getPropertyValue('--surface').trim();
+        if (/^#[0-9a-f]{6}$/i.test(surface)) {
+          const n = parseInt(surface.slice(1), 16);
+          return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${OPACITY})`;
+        }
+        return surface || 'rgba(26, 26, 46, 0.78)';
+      } catch (_) {
+        return 'rgba(26, 26, 46, 0.78)';
+      }
+    }
+
     async function captureMapImage(options) {
       options = options || {};
       const statsBar = document.getElementById('statsBar');
@@ -11847,6 +11906,7 @@
       const origContainerPos = mapContainer.style.position;
       const origContainerFlex = mapContainer.style.flex;
       const origContainerFlexBasis = mapContainer.style.flexBasis;
+      const origContainerMaxH = mapContainer.style.maxHeight;
       const origLegendStyle = legendEl ? legendEl.style.cssText : '';
       const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
 
@@ -11883,6 +11943,15 @@
       // keeps its real ~844px height and the capture crops the bottom.
       mapContainer.style.flex = 'none';
       mapContainer.style.flexBasis = 'auto';
+      // The Create shell caps the map with `#createMap > #mapContainer
+      // { max-height: 100% }`. An inline height does NOT beat max-height, so
+      // the capture frame was silently clamped to the on-screen height for
+      // every aspect taller than landscape: square, portrait and story all
+      // came out at ~856px instead of 1084 / 1355 / 1927. That also made the
+      // export-only legend clamp below inert, which is why the story preset
+      // pasted the legend over New England. Lift the cap for the capture and
+      // put it back in the finally block.
+      mapContainer.style.maxHeight = 'none';
       mapContainer.style.width = captureWidth + 'px';
       mapContainer.style.height = captureHeight + 'px';
       mapContainer.style.overflow = 'hidden';
@@ -11946,6 +12015,15 @@
         else if (corner === 'top-left') { legendEl.style.top = titleClearance + 'px'; legendEl.style.left = inset + 'px'; }
         legendEl.style.maxHeight = (captureHeight - titleClearance - inset) + 'px';
         legendEl.style.overflow = 'hidden';
+
+        // Resolve the frosted-glass background to a plain rgba() for the
+        // capture. .legend-group uses color-mix(), which html2canvas cannot
+        // parse — it throws "Attempting to parse an unsupported color
+        // function". That made the fallback path dead exactly when it was
+        // needed most: for maps that HAVE a legend. dom-to-image is unaffected
+        // and renders the resolved colour identically, so this costs nothing
+        // on the primary path. Restored by the cssText reset in finally.
+        legendEl.style.background = resolveLegendBackground(legendEl);
       }
 
       const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
@@ -12042,6 +12120,7 @@
         mapContainer.style.overflow = origOverflow;
         mapContainer.style.flex = origContainerFlex;
         mapContainer.style.flexBasis = origContainerFlexBasis;
+        mapContainer.style.maxHeight = origContainerMaxH;
 
         svg.style.flex = origSvgFlex;
         svg.style.minHeight = origSvgMinH;

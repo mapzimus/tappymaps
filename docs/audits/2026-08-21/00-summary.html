@@ -1,0 +1,432 @@
+<title>Tappymaps Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+  /* ---- tokens: light is the base, both themes defined at token level ---- */
+  :root {
+    --paper:        #F7F9FA;
+    --surface:      #FFFFFF;
+    --surface-sunk: #EEF3F5;
+    --ink:          #0F1B24;
+    --ink-soft:     #40525E;
+    --ink-faint:    #6B7A85;
+    --rule:         #D8E1E6;
+    --rule-soft:    #E7EDF0;
+
+    /* Deliberately darker than the brand #0EA5E9: the audit measured the
+       brand accent at 2.77:1 on white, which fails AA. */
+    --accent:       #0E7C99;
+    --accent-soft:  #E3F1F5;
+
+    --p0:      #B3261E;  --p0-bg:  #FBE9E7;
+    --p1:      #9A5B08;  --p1-bg:  #FDF0DC;
+    --p2:      #46606E;  --p2-bg:  #E8EEF1;
+    --p3:      #6B7A85;  --p3-bg:  #EEF2F4;
+    --shipped: #12694F;  --shipped-bg: #E0F1EA;
+
+    --radius: 6px;
+    --measure: 68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:        #0C161D;
+      --surface:      #12212B;
+      --surface-sunk: #0E1A23;
+      --ink:          #E8EFF2;
+      --ink-soft:     #A9BAC4;
+      --ink-faint:    #7C8F9B;
+      --rule:         #233742;
+      --rule-soft:    #1A2A34;
+
+      --accent:       #4FC3E8;
+      --accent-soft:  #10303C;
+
+      --p0:      #FF9C93;  --p0-bg:  #3A1714;
+      --p1:      #E7B25E;  --p1-bg:  #33240C;
+      --p2:      #9DB6C2;  --p2-bg:  #1A2A33;
+      --p3:      #8095A1;  --p3-bg:  #172429;
+      --shipped: #63D6AC;  --shipped-bg: #0D2C23;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:        #0C161D;
+    --surface:      #12212B;
+    --surface-sunk: #0E1A23;
+    --ink:          #E8EFF2;
+    --ink-soft:     #A9BAC4;
+    --ink-faint:    #7C8F9B;
+    --rule:         #233742;
+    --rule-soft:    #1A2A34;
+    --accent:       #4FC3E8;
+    --accent-soft:  #10303C;
+    --p0:      #FF9C93;  --p0-bg:  #3A1714;
+    --p1:      #E7B25E;  --p1-bg:  #33240C;
+    --p2:      #9DB6C2;  --p2-bg:  #1A2A33;
+    --p3:      #8095A1;  --p3-bg:  #172429;
+    --shipped: #63D6AC;  --shipped-bg: #0D2C23;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Instrument Sans", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* ---- masthead ---- */
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 56px 0 20px;
+    margin-bottom: 40px;
+  }
+  .eyebrow {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h1 {
+    font-family: Outfit, system-ui, sans-serif;
+    font-weight: 700; font-size: clamp(34px, 6vw, 54px);
+    line-height: 1.03; letter-spacing: -0.02em;
+    margin: 0 0 16px; text-wrap: balance;
+  }
+  .standfirst {
+    font-size: clamp(17px, 2.2vw, 20px);
+    color: var(--ink-soft); max-width: var(--measure);
+    margin: 0 0 24px;
+  }
+  .meta {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px; color: var(--ink-faint);
+    display: flex; flex-wrap: wrap; gap: 8px 22px;
+  }
+
+  /* ---- tally ---- */
+  .tally {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 1px; background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius); overflow: hidden;
+    margin: 0 0 14px;
+  }
+  .tally div { background: var(--surface); padding: 18px 16px; }
+  .tally .n {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 30px; font-weight: 600; line-height: 1;
+    font-variant-numeric: tabular-nums; display: block; margin-bottom: 6px;
+  }
+  .tally .k {
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 600;
+  }
+  .n-p0 { color: var(--p0); } .n-p1 { color: var(--p1); }
+  .n-p2 { color: var(--p2); } .n-p3 { color: var(--p3); }
+  .n-fixed { color: var(--shipped); }
+
+  /* ---- sections ---- */
+  section { margin-top: 56px; scroll-margin-top: 70px; }
+  h2 {
+    font-family: Outfit, system-ui, sans-serif;
+    font-size: 27px; font-weight: 600; letter-spacing: -0.01em;
+    margin: 0 0 6px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  h3 {
+    font-family: Outfit, system-ui, sans-serif;
+    font-size: 18px; font-weight: 600; margin: 32px 0 10px;
+  }
+  .lede { color: var(--ink-soft); max-width: var(--measure); margin: 12px 0 0; }
+  p { max-width: var(--measure); }
+
+  /* ---- finding list ---- */
+  ul.findings { list-style: none; margin: 20px 0 0; padding: 0;
+    display: flex; flex-direction: column; gap: 1px;
+    background: var(--rule-soft); border: 1px solid var(--rule);
+    border-radius: var(--radius); overflow: hidden; }
+  ul.findings > li {
+    background: var(--surface); padding: 15px 18px;
+    display: grid; grid-template-columns: 46px 1fr auto; gap: 14px; align-items: baseline;
+  }
+  .sev {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    padding: 3px 7px; border-radius: 3px; text-align: center;
+  }
+  .sev-P0 { color: var(--p0); background: var(--p0-bg); }
+  .sev-P1 { color: var(--p1); background: var(--p1-bg); }
+  .sev-P2 { color: var(--p2); background: var(--p2-bg); }
+  .sev-P3 { color: var(--p3); background: var(--p3-bg); }
+  .f-title { font-weight: 500; }
+  .f-note { display: block; color: var(--ink-faint); font-size: 14px; margin-top: 3px; }
+  .f-note code, p code, li code, td code {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.86em; background: var(--surface-sunk);
+    padding: 1px 5px; border-radius: 3px;
+  }
+  .state {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 99px; white-space: nowrap;
+  }
+  .state-fixed { color: var(--shipped); background: var(--shipped-bg); }
+  .state-open  { color: var(--ink-faint); background: var(--surface-sunk); }
+
+  /* ---- domain table ---- */
+  .scroller { overflow-x: auto; margin-top: 20px;
+    border: 1px solid var(--rule); border-radius: var(--radius); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 15px; }
+  th, td { text-align: left; padding: 11px 16px; border-bottom: 1px solid var(--rule-soft); }
+  thead th {
+    background: var(--surface-sunk); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-faint);
+    border-bottom: 1px solid var(--rule);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums; text-align: right; }
+  tbody td:first-child { font-weight: 500; }
+
+  /* ---- callout ---- */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 18px 22px; border-radius: 0 var(--radius) var(--radius) 0;
+    margin: 24px 0;
+  }
+  .callout p { margin: 0; max-width: none; }
+  .callout p + p { margin-top: 10px; }
+  .callout strong { font-weight: 600; }
+
+  pre {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12.5px; line-height: 1.55;
+    background: var(--surface-sunk); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: var(--radius);
+    padding: 15px 18px; overflow-x: auto; margin: 18px 0;
+  }
+
+  /* ---- nav ---- */
+  nav.jump {
+    position: sticky; top: 0; z-index: 5;
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+    padding: 10px 0; margin-bottom: -1px;
+  }
+  nav.jump .inner {
+    max-width: 980px; margin: 0 auto; padding: 0 24px;
+    display: flex; gap: 20px; overflow-x: auto;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  nav.jump a { color: var(--ink-faint); text-decoration: none; white-space: nowrap; padding: 2px 0; }
+  nav.jump a:hover, nav.jump a:focus-visible { color: var(--accent); }
+
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  ul.plain { padding-left: 20px; max-width: var(--measure); }
+  ul.plain li { margin-bottom: 7px; }
+
+  footer {
+    margin-top: 72px; padding-top: 22px; border-top: 1px solid var(--rule);
+    color: var(--ink-faint); font-size: 14px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+  @media (max-width: 620px) {
+    ul.findings > li { grid-template-columns: 46px 1fr; }
+    ul.findings > li .state { grid-column: 2; justify-self: start; margin-top: 6px; }
+  }
+</style>
+
+<nav class="jump"><div class="inner">
+  <a href="#summary">Summary</a>
+  <a href="#shipped">Shipped</a>
+  <a href="#p0">The 13 P0s</a>
+  <a href="#domains">By domain</a>
+  <a href="#rebuild">Rebuild</a>
+  <a href="#next">Next</a>
+</div></nav>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">Full-app audit · 21 August 2026</p>
+  <h1>169 findings, 13 of them serious</h1>
+  <p class="standfirst">Ten agents drove the real app in real browsers across eight domains. The pattern that matters isn't any single bug — it's that almost none of them made a sound.</p>
+  <div class="meta">
+    <span>tappymaps.com</span>
+    <span>index.html · 15,809 lines</span>
+    <span>3,887 lines of findings</span>
+  </div>
+</header>
+
+<section id="summary">
+  <h2>Summary</h2>
+
+  <div class="tally">
+    <div><span class="n n-p0">13</span><span class="k">P0 critical</span></div>
+    <div><span class="n n-p1">46</span><span class="k">P1 major</span></div>
+    <div><span class="n n-p2">71</span><span class="k">P2 polish</span></div>
+    <div><span class="n n-p3">39</span><span class="k">P3 minor</span></div>
+    <div><span class="n n-fixed">7 / 13</span><span class="k">P0 shipped</span></div>
+  </div>
+
+  <p class="lede">Every finding below was reproduced in a browser. Nothing here is static analysis dressed up as a bug.</p>
+
+  <div class="callout">
+    <p><strong>The through-line: this app fails silently.</strong> Across eight domains and hundreds of probe runs, the console was almost always clean. Sharing was broken for every data map — no error. The signed-in export tier had never worked — the user was told to check their connection. Undo destroyed county maps — no warning. Saves reported success and stored nothing.</p>
+    <p>That is why these survived so long. The app doesn't tell you when it breaks, and it doesn't tell the user either.</p>
+  </div>
+
+  <h3>How this was found</h3>
+  <p>Before any auditing, the project's own safety net turned out to be the first bug. <code>npm run smoke</code> reported <em>"all 10 routes booted clean"</em> on a page where zero states had rendered and every third-party library had failed to load — a broad <code>net::ERR</code> in its ignore list swallowed total CDN failure.</p>
+  <pre>WHAT SMOKE SAW  : mode=design/make          -> reported "ok"
+WHAT WAS REAL   : statePaths: 0, chroma/topojson/domtoimage/supabase all undefined
+errors after its IGNORE list : 0   &lt;- why it reported green</pre>
+  <p>That was rewritten first, into 24 functional assertions, and then adversarially tested against injected regressions. It now runs in CI on every push.</p>
+</section>
+
+<section id="shipped">
+  <h2>What has shipped</h2>
+  <p class="lede">Six commits, all verified in a browser before pushing. <code>validate</code>, 18 unit tests, 11 API tests and the 24-check smoke suite pass on each.</p>
+
+  <ul class="findings">
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Sharing was broken for every data map<span class="f-note"><code>encodeStateToURL</code> was a bare <code>btoa()</code>, which rejects anything above U+00FF. Data-map legends join ranges with an en dash, so <em>every</em> data map threw — silently killing Share, Embed, the URL hash and Save to My Maps. Also fixes accented characters corrupting OG images.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Signed-in free users could never export<span class="f-note"><code>window._supabase</code> is read twice and assigned nowhere. Both calls threw, the catch returned "check your connection", and <code>/api/stripe/track-export</code> was never reached — so the server-enforced quota had never run in production.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Three of four export presets were silently clamped<span class="f-note">A <code>max-height: 100%</code> rule capped the capture frame, which an inline height cannot override. Square, portrait and story rendered at the on-screen height — which also made the legend clamp inert, pasting the legend over New England.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">The export fallback did not work<span class="f-note">html2canvas throws on the legend's <code>color-mix()</code> background, so the safety net was dead precisely for maps that have a legend.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Undo destroyed county maps<span class="f-note">County colours lived in two stores that never synced. Undo restored an always-empty one and drew the 51-path national map over the 254-path county view.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">The core task had no keyboard path<span class="f-note">All 51 state paths were <code>tabIndex -1</code> and the 24 colour swatches were unlabelled <code>&lt;div&gt;</code>s. A Tab walk reached zero of each. Now 50 states and 24 swatches, with Enter/Space to colour and Delete to clear.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Data maps painted stale values under a fresh legend<span class="f-note">Only states present in the response were recoloured; the rest kept the previous dataset's fills while the legend described a different measure. Partial responses are reachable — ACS suppresses estimates as <code>-666666666</code>.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P1">P1</span><span class="f-title">Billing: entitlement lifetime, webhook integrity, dropped checkouts<span class="f-note">A stale row granted Pro forever after one dropped webhook; <code>past_due</code> revoked access mid-paid-period; the webhook's raw body was assembled by string concatenation (corrupt at 8 of 35 split offsets on non-ASCII); a checkout without <code>client_reference_id</code> returned 200 and dropped a paid subscription. 11 tests added.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P1">P1</span><span class="f-title">Gallery landed everyone on a dead tab<span class="f-note">Every entry point pointed at Recent, which reads a table that doesn't exist — so 100% of visitors met an error. Now defaults to My Maps, which is local-first.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P1">P1</span><span class="f-title">Saves reported success when nothing was stored<span class="f-note">The localStorage write was wrapped in <code>catch (_) {}</code> and success was shown regardless.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P1">P1</span><span class="f-title">robots.txt and sitemap.xml returned the whole app<span class="f-note">The rewrite exclusion listed <code>json</code> but not <code>txt</code> or <code>xml</code>, so both served 744KB of HTML. On a client-rendered app that was a crawler's only route map.</span></span><span class="state state-fixed">Shipped</span></li>
+
+    <li><span class="sev sev-P2">P2</span><span class="f-title">Stored XSS through localStorage scores<span class="f-note">Arcade bests and leaderboard rows reached <code>innerHTML</code> unescaped, with <code>escapeHTML(e.name)</code> on the line above. Scores are now coerced to numbers at the read boundary, removing the class rather than patching each site.</span></span><span class="state state-fixed">Shipped</span></li>
+  </ul>
+</section>
+
+<section id="p0">
+  <h2>The six P0s still open</h2>
+  <p class="lede">Two are architectural and need a decision. Four are data-correctness bugs in CSV import and one Census dataset.</p>
+
+  <ul class="findings">
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Every Pro and Classroom entitlement is a client-side boolean<span class="f-note">Two console assignments unlock county view, Census maps, CSV import, cloud sync, SVG export, class codes and the worksheet pack. <code>loadCountyView</code> and <code>captureMapImage</code> are window globals that skip their gates entirely.</span></span><span class="state state-open">Open</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Anonymous exports are ungated and unwatermarked<span class="f-note">One localStorage key, and anonymous exports are deliberately clean. A private window yields unlimited full-resolution unbranded exports — better output than Pro advertises.</span></span><span class="state state-open">Open</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Mean Commute Time is systematically understated<span class="f-note">A universe mismatch that re-orders the map. The audit recommends pulling the dataset until fixed. Of 39 datasets, 33 are trustworthy as-is.</span></span><span class="state state-open">Open</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">CSV import silently drops rows, then reports them as coloured<span class="f-note">Three distinct paths, each ending "All rows matched": unparseable values, a headerless paste discarding row 1, and parenthesised negatives.</span></span><span class="state state-open">Open</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">Category imports past 12 reuse palette colours<span class="f-note">The legend caps at 12, so states get painted a colour the legend attributes to a different category. Two states shared <code>#0EA5E9</code> while the legend listed only one.</span></span><span class="state state-open">Open</span></li>
+
+    <li><span class="sev sev-P0">P0</span><span class="f-title">A single-value or single-row CSV throws and wipes the map<span class="f-note">The user's existing work is destroyed by a malformed paste.</span></span><span class="state state-open">Open</span></li>
+  </ul>
+</section>
+
+<section id="domains">
+  <h2>By domain</h2>
+
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Domain</th><th class="num">P0</th><th class="num">P1</th><th class="num">P2</th><th class="num">P3</th><th class="num">Total</th><th>Headline</th></tr></thead>
+    <tbody>
+      <tr><td>Data maps &amp; CSV</td><td class="num">5</td><td class="num">10</td><td class="num">9</td><td class="num">9</td><td class="num">33</td><td>Parser is good; the reporting layer lies about it</td></tr>
+      <tr><td>Monetization</td><td class="num">3</td><td class="num">6</td><td class="num">14</td><td class="num">8</td><td class="num">31</td><td>Serverless layer is solid; the client never asks it anything</td></tr>
+      <tr><td>a11y / SEO / perf</td><td class="num">1</td><td class="num">8</td><td class="num">9</td><td class="num">4</td><td class="num">22</td><td>Fast and leak-free, but unusable by keyboard and unindexable</td></tr>
+      <tr><td>Gallery / embed / mobile</td><td class="num">0</td><td class="num">7</td><td class="num">11</td><td class="num">3</td><td class="num">21</td><td>Usable on a phone, not good on it — geometry, not architecture</td></tr>
+      <tr><td>Create editor</td><td class="num">2</td><td class="num">6</td><td class="num">9</td><td class="num">3</td><td class="num">20</td><td>Coloring, legends and templates all solid; persistence isn't</td></tr>
+      <tr><td>Games</td><td class="num">0</td><td class="num">2</td><td class="num">11</td><td class="num">6</td><td class="num">19</td><td>Genuinely fun; difficulty ladder is an illusion</td></tr>
+      <tr><td>Export</td><td class="num">2</td><td class="num">6</td><td class="num">4</td><td class="num">2</td><td class="num">14</td><td>Landscape path is excellent; damage is all at the edges</td></tr>
+      <tr><td>Code health</td><td class="num">0</td><td class="num">1</td><td class="num">4</td><td class="num">4</td><td class="num">9</td><td>Single-file still earns its keep; no TDZ hazards remain</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Three findings worth reading in full</h3>
+
+  <p><strong>The GeoDraft difficulty ladder doesn't exist.</strong> Difficulty sets who picks first, not how well the AI plays — and pick order decides the round. Across 4,800 simulated matches, validated against real play:</p>
+  <div class="scroller">
+  <table>
+    <thead><tr><th>Player</th><th class="num">Easy</th><th class="num">Normal</th><th class="num">Hard</th></tr></thead>
+    <tbody>
+      <tr><td>Perfect</td><td class="num">100.0%</td><td class="num">100.0%</td><td class="num">84.0%</td></tr>
+      <tr><td>Good</td><td class="num">99.0%</td><td class="num">87.3%</td><td class="num">42.0%</td></tr>
+      <tr><td>Casual</td><td class="num">78.5%</td><td class="num">37.0%</td><td class="num">5.0%</td></tr>
+      <tr><td>Random</td><td class="num">2.8%</td><td class="num">0.5%</td><td class="num">0.0%</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Three settings, two of them identical for anyone who knows US geography, and one a cliff.</p>
+
+  <p><strong>The payload is smaller than it looks.</strong> 744KB raw, but <strong>174KB gzipped</strong> — the size panic is unfounded. The real waste is that <strong>677KB of 971KB of parsed JavaScript never executes</strong>, three CDN scripts block <code>&lt;head&gt;</code> with no <code>defer</code>, and <code>no-store</code> on <code>/</code> re-downloads everything on every visit. Desktop boot is genuinely fast (FCP 144ms, zero long tasks, no memory leak across 140 navigations); slow 3G with 4× CPU throttling is 7.7s to usable.</p>
+
+  <p><strong>The static game data is correct.</strong> All ten bundled GeoDraft tables were checked against ground truth across all 50 states — electoral votes sum to 535, presidential birthplaces to 45. Worth stating plainly, because it's the part a rewrite would most easily lose.</p>
+</section>
+
+<section id="rebuild">
+  <h2>The rebuild</h2>
+  <p class="lede">You asked for a genuine from-scratch rewrite, with my objection on the table. It's underway — and the first move was to make sure it can't lose anything.</p>
+
+  <p>All 23 data tables were lifted out of <code>index.html</code> mechanically, never retyped, and verified byte-identical against the running app:</p>
+  <pre>FIPS_TO_STATE       51   DATA_MAP_DATASETS   39   TEMPLATES           28
+THEME_LIST          16   COLOR_RAMPS         10   DRAFT_AREA          50
+DRAFT_STATEHOOD     50   DRAFT_EV            50   DRAFT_BORDERS       50
+...23 tables total — all byte-identical to the live app.</pre>
+
+  <p>On top of that, the modules that fix a whole class of bug rather than one instance:</p>
+  <ul class="plain">
+    <li><strong>One map renderer.</strong> The old app grew five near-duplicate SVG builders — editor, Arcade, two GeoDraft boards, Hub, plus a sixth server-side — which is why an export and an OG image could disagree about the same map.</li>
+    <li><strong>A total URL-state codec.</strong> 18 adversarial tests. Rejects <code>__proto__</code> without polluting the prototype, survives every hostile input tried, tolerates the URL-safe base64 and stripped padding that chat apps inflict on share links, and still decodes every legacy link.</li>
+    <li><strong>Safe storage.</strong> Every read shape-guarded, every write reporting whether it landed — the thing that made a corrupt key brick the old app and a full quota lose a save in silence.</li>
+    <li><strong>DOM built escaped by construction</strong>, so the <code>innerHTML</code> XSS class has nowhere to live.</li>
+  </ul>
+
+  <div class="callout">
+    <p><strong>My honest read, restated once.</strong> The value in those 15,809 lines was never the code — it's the knowledge encoded in it: export capture fidelity, legend anchoring against the SVG content rect rather than the container, the three-layer Chrome autofill defeat, 39 audited ACS variable codes.</p>
+    <p>A rewrite that re-derives those meets them again as fresh bugs. So the approach is to carry the knowledge forward deliberately — extract and verify the data, rebuild the structure — rather than starting from an empty file and hoping. That is what "from the ground up, knowing what we know now" should mean.</p>
+  </div>
+</section>
+
+<section id="next">
+  <h2>What needs you</h2>
+  <ul class="plain">
+    <li><strong>The database.</strong> The client queries <code>user_maps</code>, <code>map_reports</code>, <code>gallery_publish_counts</code> and <code>classroom_codes</code>. None exist in the live project — the migrations were written and never run. Cloud sync, the public gallery, and the $12/mo Classroom tier have therefore never worked. You said redo it; the new schema is being designed rather than the old migrations replayed.</li>
+    <li><strong>Taking money.</strong> There is no cancellation path, no billing portal, and no Terms, Privacy or refund policy anywhere — while the UI says "Cancel anytime". The Stripe billing portal endpoint is on the list. The policies are yours or a lawyer's.</li>
+    <li><strong>Two P0s are product decisions, not bugs.</strong> Client-side entitlements and unwatermarked anonymous exports can't be fully closed in a client-rendered app. What <em>can</em> be server-enforced is the quota, the Census proxy, and anything behind Supabase RLS. Worth deciding how much leakage is acceptable before engineering against it.</li>
+  </ul>
+</section>
+
+<footer>
+  Ten agents · eight domains · 3,887 lines of findings, every one reproduced in a browser.<br>
+  Full per-domain reports and evidence screenshots accompany this summary.
+</footer>
+
+</div>

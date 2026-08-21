@@ -4453,8 +4453,8 @@
   <div class="mode" id="modeComingSoon" style="display:none">
     <div class="coming-soon-inner">
       <h2 class="coming-soon-label" id="comingSoonLabel">This</h2>
-      <p class="coming-soon-body">is coming in <strong id="comingSoonPhase">a future phase</strong>.</p>
-      <p class="coming-soon-sub">In the meantime, want to make a map?</p>
+      <p class="coming-soon-body" id="comingSoonBody">is coming in <strong id="comingSoonPhase">a future phase</strong>.</p>
+      <p class="coming-soon-sub" id="comingSoonSub">In the meantime, want to make a map?</p>
       <a href="/" data-route class="coming-soon-back">← Back to Tappymaps</a>
     </div>
   </div>
@@ -5590,7 +5590,20 @@
         if (!el) return;
         el.style.display = 'flex';
         document.getElementById('comingSoonLabel').textContent = route.label || 'This';
-        document.getElementById('comingSoonPhase').textContent = route.phaseTarget || 'a future phase';
+        const bodyEl = document.getElementById('comingSoonBody');
+        const subEl = document.getElementById('comingSoonSub');
+        // A route may supply its own sentence. The 404 needs one: reusing the
+        // "<label> is coming in <phase>" template rendered as
+        // "Page not found / is coming in the Tappymaps URL tree."
+        if (bodyEl) {
+          if (route.body) {
+            bodyEl.textContent = route.body;
+          } else {
+            bodyEl.innerHTML = 'is coming in <strong id="comingSoonPhase"></strong>.';
+            document.getElementById('comingSoonPhase').textContent = route.phaseTarget || 'a future phase';
+          }
+        }
+        if (subEl) subEl.textContent = route.sub || 'In the meantime, want to make a map?';
       },
       exit() {
         const el = document.getElementById('modeComingSoon');
@@ -5653,9 +5666,22 @@
     Router.register('about', Modes.Marketing);
     Router.register('pricing', Modes.Marketing);
     Router.register('__notFound__', {
-      enter(route) { Modes.ComingSoon.enter({ ...route, label: 'Page not found', phaseTarget: 'the Tappymaps URL tree' }); },
+      enter(route) {
+        Modes.ComingSoon.enter({
+          ...route,
+          label: 'Page not found',
+          body: "That link doesn't lead anywhere — it may have moved, or the address may have a typo.",
+          sub: 'Want to make a map instead?',
+        });
+      },
       exit() { Modes.ComingSoon.exit(); },
-      meta(route) { return Modes.ComingSoon.meta({ ...route, label: 'Not found', phaseTarget: 'Tappymaps' }); },
+      meta(route) {
+        return {
+          title: 'Page not found — Tappymaps',
+          description: "That page doesn't exist. Make a colored map of the United States instead — tap states, build a legend, share or export.",
+          canonical: 'https://tappymaps.com' + window.location.pathname,
+        };
+      },
     });
 
     // --- Hub mode (Phase 1) -----------------------------------------------
@@ -11642,6 +11668,11 @@
     }
 
     // Anonymous first-export check (localStorage, for users who haven't signed up yet)
+    // Mirrors FREE_MONTHLY_LIMIT in api/stripe/track-export.js. Used only for
+    // the optimistic display before the server's `check` response arrives —
+    // the server remains the authority on what is actually allowed.
+    const FREE_MONTHLY_EXPORTS = 3;
+
     function getAnonymousExportUsed() {
       return localStorage.getItem('tappymaps_anon_export') === 'true';
     }
@@ -11754,7 +11785,12 @@
         return;
       }
 
-      const remaining = appState._cachedRemaining ?? 2;
+      // Default to the full monthly allowance, not a literal 2. A fresh
+      // signed-in user has made no exports, so before the first `check`
+      // response lands the honest number is the whole limit — understating it
+      // by a third is a bad first impression of the free tier. The server is
+      // still the authority; this is only what we show until it answers.
+      const remaining = appState._cachedRemaining ?? FREE_MONTHLY_EXPORTS;
       counter.innerHTML = remaining === 0
         ? '<strong id="exportCountNum" style="color: #ff6b6b;">0</strong> free exports remaining — <a href="#" onclick="showUpgradeModal(); return false;" style="color: #0EA5E9; text-decoration: underline;">upgrade to Pro</a>'
         : `<strong id="exportCountNum">${remaining}</strong> free export${remaining !== 1 ? 's' : ''} remaining this month`;

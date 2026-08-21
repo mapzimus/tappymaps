@@ -6143,6 +6143,29 @@
     const GALLERY_PUBLISH_MIN_STATES = 3;
     const GALLERY_PUBLISH_LIMIT_FREE = 5;
     const GALLERY_PUBLISH_LIMIT_PRO = 20;
+    // Long enough for a slow connection, short enough that nobody stares at a
+    // spinner wondering whether their maps are gone.
+    const GALLERY_CLOUD_TIMEOUT_MS = 6000;
+
+    /**
+     * Race a promise against a timer so a hung request degrades to local data
+     * instead of blocking the render. Resolves { timedOut, value } and never
+     * rejects — a rejected cloud call is just an absent one.
+     */
+    function galleryWithTimeout(promise, ms) {
+      return new Promise(function(resolve) {
+        let settled = false;
+        const timer = setTimeout(function() {
+          if (settled) return;
+          settled = true;
+          resolve({ timedOut: true, value: null });
+        }, ms);
+        Promise.resolve(promise).then(
+          function(value) { if (!settled) { settled = true; clearTimeout(timer); resolve({ timedOut: false, value: value }); } },
+          function() { if (!settled) { settled = true; clearTimeout(timer); resolve({ timedOut: false, value: null }); } }
+        );
+      });
+    }
     function galleryGetMine() {
       try { const a = JSON.parse(localStorage.getItem(GALLERY_MINE_KEY)); return Array.isArray(a) ? a : []; }
       catch (_) { return []; }
@@ -6694,16 +6717,58 @@
       let cloudError = false;
       const wantCloud = galleryCloudEnabled();
 
+      // Paint what we already have before waiting on anything. The maps are in
+      // localStorage; making the user watch a spinner for them while a remote
+      // call decides whether to answer is backwards. Cloud results merge in
+      // when they arrive.
+      // Any path that awaits a remote call gets the local paint first — the
+      // free signed-in case still fetches publish flags, which hangs just as
+      // readily as the Pro sync does.
+      const willAwaitRemote = wantCloud || galleryPublishSignedIn();
+
+      // The upsell/sign-in banner is a function of auth state alone, so it can
+      // be decided now and shown in both the immediate paint and the final one.
+      const signedIn = !!(appState && appState.currentUser);
+      const proNow = typeof isPro === 'function' && isPro();
+      let bannerHtml = '';
+      if (!wantCloud && signedIn && !proNow) {
+        bannerHtml = '<div class="gallery-sync-banner">'
+          + '<p><strong>On this device only.</strong> Upgrade to Pro to sync My Maps across phones and laptops.</p>'
+          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-upgrade>Go Pro</button>'
+          + '</div>';
+      } else if (!signedIn) {
+        bannerHtml = '<div class="gallery-sync-banner">'
+          + '<p><strong>Saved in this browser.</strong> Sign in with Pro to keep My Maps across devices.</p>'
+          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-signin>Sign in</button>'
+          + '</div>';
+      }
+
+      if (willAwaitRemote && local.length) {
+        galleryRenderMineCards(body, local, {
+          bannerHtml: bannerHtml,
+          statusHtml: '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Checking for synced maps…</span></div>',
+          cloud: false,
+        });
+      }
+
       if (wantCloud) {
-        await galleryMigrateLocalToCloud();
-        cloud = await galleryFetchCloudMine();
-        if (cloud === null) cloudError = true;
+        // Bound every cloud call. Without a timeout a Supabase request that
+        // never resolves left this stuck on "Loading My Maps…" forever, with
+        // the user's maps sitting right there in localStorage, unreachable.
+        // Their own saved work must not be hidden behind someone else's uptime.
+        const timed = await galleryWithTimeout((async function() {
+          await galleryMigrateLocalToCloud();
+          return await galleryFetchCloudMine();
+        })(), GALLERY_CLOUD_TIMEOUT_MS);
+        if (timed.timedOut || timed.value === null) cloudError = true;
+        else cloud = timed.value;
       }
 
       const usingCloud = Array.isArray(cloud);
       let mine = usingCloud ? galleryMergeMineLists(cloud, local) : local.slice();
       if (!usingCloud && galleryPublishSignedIn()) {
-        const flags = await galleryFetchOwnPublicFlags();
+        const flagsResult = await galleryWithTimeout(galleryFetchOwnPublicFlags(), GALLERY_CLOUD_TIMEOUT_MS);
+        const flags = flagsResult.timedOut ? null : flagsResult.value;
         if (flags) {
           mine = mine.map(function(m) {
             const f = flags[m.hash];
@@ -6713,26 +6778,17 @@
         }
       }
 
-      let bannerHtml = '';
       let statusHtml = '';
       if (wantCloud) {
         statusHtml = '<div class="gallery-sync-status">'
           + '<span class="gallery-sync-dot' + (cloudError ? ' is-local' : '') + '"></span>'
           + '<span>' + (cloudError
-            ? 'Pro sync unavailable — showing maps on this device'
+            ? 'Cloud sync unavailable — showing the maps saved on this device'
             : 'Synced with Pro')
           + '</span></div>';
-      } else if (appState && appState.currentUser && typeof isPro === 'function' && !isPro()) {
-        bannerHtml = '<div class="gallery-sync-banner">'
-          + '<p><strong>On this device only.</strong> Upgrade to Pro to sync My Maps across phones and laptops.</p>'
-          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-upgrade>Go Pro</button>'
-          + '</div>';
+      } else if (signedIn && !proNow) {
         statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
-      } else if (!appState || !appState.currentUser) {
-        bannerHtml = '<div class="gallery-sync-banner">'
-          + '<p><strong>Saved in this browser.</strong> Sign in with Pro to keep My Maps across devices.</p>'
-          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-signin>Sign in</button>'
-          + '</div>';
+      } else if (!signedIn) {
         statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
       } else {
         statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
@@ -6772,7 +6828,12 @@
       const featured = !!opts.featured;
       const label = featured ? 'Featured' : 'Recent';
       body.innerHTML = '<div class="gallery-sync-status"><span class="gallery-sync-dot"></span> Loading ' + label + '…</div>';
-      const res = await galleryFetchPublicMaps({ featured: featured });
+      // Same bound as My Maps: Recent and Featured used to sit on "Loading…"
+      // indefinitely whenever the request neither resolved nor rejected.
+      const timed = await galleryWithTimeout(galleryFetchPublicMaps({ featured: featured }), GALLERY_CLOUD_TIMEOUT_MS);
+      const res = timed.timedOut
+        ? { ok: false, maps: [], reason: 'Timed out reaching the gallery service' }
+        : timed.value;
       if (!res.ok) {
         body.innerHTML = '<div class="gallery-empty">'
           + '<div class="gallery-empty-icon">🗺️</div>'
@@ -13199,6 +13260,11 @@
       return -1;
     }
 
+    // Set by applyParsedChoropleth so the status line can report what was
+    // silently discarded. Reset on every import.
+    let csvDroppedValues = [];
+    let csvOverflowCategories = [];
+
     function csvShowStatus(opts) {
       const el = document.getElementById('csvImportStatus');
       if (!el) return;
@@ -13227,7 +13293,24 @@
           html += '<li>…and ' + (unmatched.length - 40) + ' more</li>';
         }
         html += '</ul>';
-      } else {
+      }
+      const dropped = opts.dropped || [];
+      if (dropped.length) {
+        html += '<div class="csv-import-status-detail">'
+          + escapeHTML(dropped.length + ' state' + (dropped.length === 1 ? '' : 's')
+            + ' had a value that could not be read and are left uncoloured: '
+            + dropped.slice(0, 12).join(', ') + (dropped.length > 12 ? ', …' : ''))
+          + '</div>';
+      }
+      const overflow = opts.overflow || [];
+      if (overflow.length) {
+        html += '<div class="csv-import-status-detail">'
+          + escapeHTML(overflow.length + ' categor' + (overflow.length === 1 ? 'y was' : 'ies were')
+            + ' grouped as "Other" — the legend holds 12: '
+            + overflow.slice(0, 12).join(', ') + (overflow.length > 12 ? ', …' : ''))
+          + '</div>';
+      }
+      if (!unmatched.length && !dropped.length && !overflow.length) {
         html += '<div class="csv-import-status-detail">All rows matched.</div>';
       }
       el.innerHTML = html;
@@ -13244,6 +13327,8 @@
       // rows: [{ state, rawState, value?, category?, color? }]
       meta = meta || {};
       const resolve = csvBuildStateResolver();
+      csvDroppedValues = [];
+      csvOverflowCategories = [];
       const matchedRows = [];
       const unmatched = [];
       const seen = Object.create(null);
@@ -13285,14 +13370,27 @@
           return { matched: 0, unmatched: unmatched };
         }
         const data = {};
+        // Rows whose value could not be parsed get no colour. They used to be
+        // dropped here and still counted as "coloured" further down, so a paste
+        // with non-numeric cells reported more states than it painted and said
+        // "All rows matched". Track them and report them by name.
+        const unusableValues = [];
         matchedRows.forEach(function(r) {
           if (typeof r.value === 'number' && isFinite(r.value)) data[r.state] = r.value;
+          else unusableValues.push(r.state);
         });
+        csvDroppedValues = unusableValues;
         const values = Object.values(data);
         const mn = Math.min.apply(null, values);
         const mx = Math.max.apply(null, values);
+        // Every caller does `scale(v).hex()`, so the degenerate branch must
+        // return a chroma object too. It returned a plain string, so a CSV
+        // with one row — or with every value identical — threw on `.hex()`
+        // AFTER stateColors had already been cleared, wiping the user's map
+        // and painting nothing in its place.
+        const flatColor = chroma(CSV_NUMERIC_RAMP[Math.floor(CSV_NUMERIC_RAMP.length / 2)]);
         const scale = (mn === mx)
-          ? function() { return chroma(CSV_NUMERIC_RAMP[Math.floor(CSV_NUMERIC_RAMP.length / 2)]).hex(); }
+          ? function() { return flatColor; }
           : chroma.scale(CSV_NUMERIC_RAMP).domain([mn, mx]);
         Object.keys(data).forEach(function(state) {
           appState.stateColors[state] = scale(data[state]).hex();
@@ -13303,18 +13401,33 @@
           breaks.push(mn + (mx - mn) * (i / numClasses));
         }
         appState.legendEntries = [];
-        for (let i = 0; i < numClasses; i++) {
-          const lo = breaks[i], hi = breaks[i + 1];
-          const mid = (lo + hi) / 2;
-          appState.legendEntries.push({
-            label: Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString(),
-            color: scale(mid).hex()
-          });
+        if (mn === mx) {
+          // One distinct value: "12 – 12" buckets tell the reader nothing.
+          appState.legendEntries.push({ label: mn.toLocaleString(), color: flatColor.hex() });
+        } else {
+          for (let i = 0; i < numClasses; i++) {
+            const lo = breaks[i], hi = breaks[i + 1];
+            const mid = (lo + hi) / 2;
+            appState.legendEntries.push({
+              label: Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString(),
+              color: scale(mid).hex()
+            });
+          }
         }
         appState.legendTitle = meta.legendTitle || 'Value';
       } else {
         const categoryColors = Object.create(null);
         let colorIdx = 0;
+        // The palette holds 12 colours and the legend shows 12 entries. The old
+        // code wrapped with `% palette.length`, so category 13 was painted the
+        // same colour as category 1 — and then sliced out of the legend, which
+        // therefore attributed that colour to a different category entirely.
+        // The map stated something false. Beyond the cap, roll categories into
+        // a single explicit "Other" bucket and say how many were folded in.
+        const CATEGORY_CAP = Math.min(CSV_CATEGORICAL_PALETTE.length, MAX_LEGEND_ENTRIES) - 1;
+        const OTHER_COLOR = '#8b95a1';
+        const overflowCategories = [];
+
         matchedRows.forEach(function(r) {
           if (r.color && /^#?[0-9a-fA-F]{6}$/.test(r.color)) {
             const hex = r.color.charAt(0) === '#' ? r.color : ('#' + r.color);
@@ -13325,14 +13438,36 @@
           }
           const cat = (r.category != null && String(r.category).trim() !== '') ? String(r.category).trim() : 'Other';
           if (!categoryColors[cat]) {
-            categoryColors[cat] = CSV_CATEGORICAL_PALETTE[colorIdx % CSV_CATEGORICAL_PALETTE.length];
-            colorIdx++;
+            if (colorIdx < CATEGORY_CAP) {
+              categoryColors[cat] = CSV_CATEGORICAL_PALETTE[colorIdx];
+              colorIdx++;
+            } else {
+              if (overflowCategories.indexOf(cat) === -1) overflowCategories.push(cat);
+              categoryColors[cat] = OTHER_COLOR;
+            }
           }
           appState.stateColors[r.state] = categoryColors[cat];
         });
-        appState.legendEntries = Object.keys(categoryColors)
-          .slice(0, MAX_LEGEND_ENTRIES)
-          .map(function(label) { return { label: label, color: categoryColors[label] }; });
+
+        // Build the legend from distinct COLOURS, so every colour on the map
+        // has exactly one truthful label.
+        const seenColors = Object.create(null);
+        const entries = [];
+        Object.keys(categoryColors).forEach(function(label) {
+          const color = categoryColors[label];
+          if (color === OTHER_COLOR) return;
+          if (seenColors[color]) return;
+          seenColors[color] = true;
+          entries.push({ label: label, color: color });
+        });
+        if (overflowCategories.length) {
+          entries.push({
+            label: 'Other (' + overflowCategories.length + ' more categories)',
+            color: OTHER_COLOR,
+          });
+        }
+        appState.legendEntries = entries.slice(0, MAX_LEGEND_ENTRIES);
+        csvOverflowCategories = overflowCategories;
         appState.legendTitle = meta.legendTitle || 'Category';
       }
 
@@ -13365,16 +13500,23 @@
       updateStatsBar();
       updateURL();
 
-      const matchedCount = Object.keys(seen).length;
+      // Count what was actually PAINTED, not what merely matched a state name.
+      // These used to be the same number, so rows dropped for an unparseable
+      // value were still reported as coloured.
+      const matchedCount = Object.keys(appState.stateColors).length;
       csvShowStatus({
         matched: matchedCount,
         unmatched: unmatched,
+        dropped: csvDroppedValues,
+        overflow: csvOverflowCategories,
         mode: useNumeric ? 'numeric' : 'category'
       });
+      const problems = unmatched.length + csvDroppedValues.length;
       showMessage(
         'Mapped ' + matchedCount + ' state' + (matchedCount === 1 ? '' : 's')
-          + (unmatched.length ? (' · ' + unmatched.length + ' unmatched') : ''),
-        unmatched.length ? 'info' : 'success'
+          + (unmatched.length ? (' · ' + unmatched.length + ' unmatched') : '')
+          + (csvDroppedValues.length ? (' · ' + csvDroppedValues.length + ' with unreadable values') : ''),
+        problems ? 'info' : 'success'
       );
       if (typeof trackEvent === 'function') {
         trackEvent('csv_import_applied', {

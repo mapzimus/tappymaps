@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Focused A1 smoke: Create → Data spreadsheet import (sample + Pro gate + unmatched).
-import { spawn } from 'node:child_process';
+import { start as startDevServer } from './devserver.mjs';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -29,15 +29,23 @@ function waitForPort(port, timeoutMs = 5000) {
   });
 }
 
-const server = spawn('python3', ['-m', 'http.server', String(PORT)], { cwd: root, stdio: 'ignore' });
+// Serve through scripts/devserver.mjs: production rewrites, /api stubs, and
+// locally-vendored CDN libs. `python -m http.server` served none of that, so
+// these scripts drove an app whose map had never loaded.
+const server = await startDevServer({ port: PORT, stubApi: true, quiet: true });
 let failed = 0;
 const assert = (cond, msg) => { if (!cond) { console.error('FAIL:', msg); failed++; } else console.log('ok:', msg); };
 
 try {
-  await waitForPort(PORT);
+  // Resolve a browser rather than assuming a system Chrome path that does not
+  // exist on most machines (this used to fail before running a single check).
+  const launchArgs = ['--no-sandbox', '--disable-dev-shm-usage'];
+  if (process.env.HTTPS_PROXY || process.env.HTTP_PROXY) {
+    launchArgs.push('--proxy-bypass-list=127.0.0.1;localhost');
+  }
   const browser = await chromium.launch({
-    executablePath: process.env.SMOKE_CHROMIUM || '/usr/local/bin/google-chrome',
-    args: ['--no-sandbox', '--disable-dev-shm-usage']
+    ...(process.env.SMOKE_CHROMIUM ? { executablePath: process.env.SMOKE_CHROMIUM } : {}),
+    args: launchArgs
   });
   const page = await browser.newPage();
   const pageErrors = [];
@@ -121,7 +129,7 @@ try {
 
   await browser.close();
 } finally {
-  server.kill('SIGTERM');
+  await server.close();
 }
 
 if (failed) {

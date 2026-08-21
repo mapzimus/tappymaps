@@ -205,6 +205,40 @@ try {
   check('map title is visible at capture time', at.mapTitle === 'visible', at.mapTitle || 'not observed');
   check('legend is visible at capture time', at.legendDisplay === 'visible', at.legendDisplay || 'not observed');
 
+  // ---- Export quota (signed-in free tier) -----------------------------------
+  // This path shipped broken: checkExportPermission read `window._supabase`,
+  // which is never assigned, so the first line of its try block threw, the
+  // catch returned serverError, and no signed-in free user could export at
+  // all — meaning /api/stripe/track-export was never reached and the
+  // server-side 3/month quota never ran. Nothing tested it, so nothing caught
+  // it. This asserts the request is genuinely made.
+  console.log('\nExport quota');
+  const quotaHits = [];
+  const onQuotaRequest = (r) => { if (r.url().includes('track-export')) quotaHits.push(r.method()); };
+  page.on('request', onQuotaRequest);
+  const quota = await page.evaluate(async () => {
+    const prevUser = appState.currentUser, prevPro = appState.proUnlocked;
+    try {
+      appState.currentUser = { id: 'smoke_user', email: 'free@example.test' };
+      appState.proUnlocked = false;
+      if (!supabaseClient) return { error: 'no supabaseClient' };
+      const realGetSession = supabaseClient.auth.getSession;
+      supabaseClient.auth.getSession = async () => ({ data: { session: { access_token: 'smoke-jwt' } } });
+      const perm = await checkExportPermission();
+      supabaseClient.auth.getSession = realGetSession;
+      return { perm };
+    } catch (e) {
+      return { error: e.message };
+    } finally {
+      appState.currentUser = prevUser; appState.proUnlocked = prevPro;
+    }
+  });
+  page.off('request', onQuotaRequest);
+  check('signed-in free user reaches the quota endpoint', quotaHits.length === 1,
+    quotaHits.length ? '' : 'track-export was never requested');
+  check('quota check returns a server verdict', !quota.error && quota.perm && quota.perm.allowed === true,
+    quota.error || JSON.stringify(quota.perm));
+
   // ---- Routes ---------------------------------------------------------------
   console.log('\nRoutes');
   for (const route of ROUTES) {

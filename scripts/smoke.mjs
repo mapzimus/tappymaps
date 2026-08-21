@@ -82,6 +82,31 @@ try {
   page.on('console', (m) => { if (m.type() === 'error' && !ignorable(m.text())) errors.push('console: ' + m.text()); });
   page.on('pageerror', (e) => { if (!ignorable(e.message)) errors.push('pageerror: ' + e.message); });
 
+  // Hermetic by construction: everything the app needs is served from the dev
+  // server, so any request leaving localhost is a third-party dependency. Block
+  // them and record the origins rather than letting an external service's
+  // health decide whether this suite passes. (It already bit us once: CI went
+  // red on /design/gallery/recent because Supabase returned 404 there, while
+  // the same route passed locally where Supabase was simply unreachable. That
+  // 404 is a real product bug — see the audit — but it is not this test's job
+  // to detect, and a suite that flips on someone else's uptime gets ignored.)
+  const externalOrigins = new Map();
+  await page.route('**/*', (route) => {
+    const url = route.request().url();
+    if (/^https?:\/\/(127\.0\.0\.1|localhost)(:|\/)/.test(url) || url.startsWith('data:') || url.startsWith('blob:')) {
+      return route.continue();
+    }
+    const origin = (() => { try { return new URL(url).origin; } catch { return url.slice(0, 40); } })();
+    externalOrigins.set(origin, (externalOrigins.get(origin) || 0) + 1);
+    // Fulfil rather than abort: an aborted request logs its own console error,
+    // which would be noise this suite then had to special-case away — and a
+    // broad "ignore network errors" rule is exactly what made the previous
+    // smoke test blind. An empty-but-valid response keeps the app on its
+    // normal no-data path and leaves the console genuinely clean.
+    const body = /\/rest\/v1\//.test(url) ? '[]' : '{}';
+    return route.fulfill({ status: 200, contentType: 'application/json', body });
+  });
+
   // ---- Boot -----------------------------------------------------------------
   console.log('\nBoot');
   await page.goto(`${server.url}/design/make`, { waitUntil: 'domcontentloaded', timeout: 45000 });
@@ -244,6 +269,16 @@ try {
   console.log('\nConsole');
   check('zero unignored console/page errors', errors.length === 0, `${errors.length} error(s)`);
   for (const e of errors) console.log('     - ' + e.slice(0, 200));
+
+  // Informational, never a failure: which third parties the app reached for.
+  // A new origin appearing here is worth a look — it means a runtime dependency
+  // was added that this suite deliberately does not exercise.
+  if (externalOrigins.size) {
+    console.log('\nBlocked external origins (informational)');
+    for (const [origin, n] of [...externalOrigins].sort((a, b) => b[1] - a[1])) {
+      console.log(`  · ${origin} (${n} request${n === 1 ? '' : 's'})`);
+    }
+  }
 
 } catch (e) {
   failures.push('harness error: ' + e.message);

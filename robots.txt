@@ -1,0 +1,10 @@
+# https://tappymaps.com
+User-agent: *
+Allow: /
+
+# Embeds and share images are for humans and unfurlers, not the index — they
+# duplicate content that already lives on a canonical route.
+Disallow: /embed
+Disallow: /api/
+
+Sitemap: https://tappymaps.com/sitemap.xml

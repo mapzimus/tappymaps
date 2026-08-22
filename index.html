@@ -592,6 +592,30 @@
       border: 2px solid transparent;
       cursor: pointer;
       transition: border-color var(--duration-normal), transform var(--duration-normal);
+      /* These are <button>s now (they were unlabelled, untabbable divs), so
+         neutralise the UA button styling that would otherwise show through. */
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      appearance: none;
+      -webkit-appearance: none;
+      display: block;
+    }
+
+    /* Visible focus for everything the keyboard can now reach. Without this the
+       map and palette are operable but you cannot see where you are, which is
+       not much better than not being operable at all. */
+    .color-swatch:focus-visible,
+    .state-path:focus-visible {
+      outline: 3px solid var(--accent, #0EA5E9);
+      outline-offset: 2px;
+    }
+    .state-path:focus-visible {
+      /* SVG outlines clip against the viewBox; a stroke reads more reliably. */
+      outline: none;
+      stroke: var(--accent, #0EA5E9);
+      stroke-width: 2.5;
+      paint-order: stroke;
     }
 
     .color-swatch:hover {
@@ -4298,11 +4322,11 @@
         <a data-route href="/games/arcade/find-state">Find the State</a>
         <a data-route href="/games/arcade/stat-duel">Stat Duel</a>
         <a data-route href="/games/draft">GeoDraft</a>
-        <a data-route href="/design/gallery/recent">Gallery</a>
+        <a data-route href="/design/gallery/mine">Gallery</a>
       </nav>
     </main>
     <footer class="hub-footer">
-      <a href="/design/gallery/recent" data-route>gallery</a>
+      <a href="/design/gallery/mine" data-route>gallery</a>
       <span class="hub-footer-sep"> · </span>
       <a href="/about" data-route>about</a>
       <span class="hub-footer-sep"> · </span>
@@ -4453,8 +4477,8 @@
   <div class="mode" id="modeComingSoon" style="display:none">
     <div class="coming-soon-inner">
       <h2 class="coming-soon-label" id="comingSoonLabel">This</h2>
-      <p class="coming-soon-body">is coming in <strong id="comingSoonPhase">a future phase</strong>.</p>
-      <p class="coming-soon-sub">In the meantime, want to make a map?</p>
+      <p class="coming-soon-body" id="comingSoonBody">is coming in <strong id="comingSoonPhase">a future phase</strong>.</p>
+      <p class="coming-soon-sub" id="comingSoonSub">In the meantime, want to make a map?</p>
       <a href="/" data-route class="coming-soon-back">← Back to Tappymaps</a>
     </div>
   </div>
@@ -5107,7 +5131,7 @@
           </button>
           <button class="btn secondary" id="saveToGalleryBtn">⭐ Save to My Maps</button>
           <button class="btn secondary" id="publishToGalleryBtn">📣 Publish to Gallery</button>
-          <a class="btn secondary" id="viewGalleryBtn" data-route href="/design/gallery/recent" style="text-decoration:none; display:block; text-align:center;">🖼 View Gallery</a>
+          <a class="btn secondary" id="viewGalleryBtn" data-route href="/design/gallery/mine" style="text-decoration:none; display:block; text-align:center;">🖼 View Gallery</a>
           <button class="btn secondary btn-pro" id="saveConfigBtn">💾 Save Config
             <span class="pro-badge">PRO</span>
           </button>
@@ -5246,6 +5270,7 @@
           <button class="btn" id="upgradeClassroomBtn" style="width: 100%; padding: 12px; font-size: 13px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #0EA5E9, #0369A1);">
             Classroom $12/mo — class codes + worksheet packs
           </button>
+          <button class="btn secondary" id="manageBillingBtn" style="width: 100%; font-size: 11px; padding: 8px; margin-bottom: 6px; display: none;">Manage subscription &amp; billing</button>
           <button class="btn secondary" id="authSignOutBtn" style="width: 100%; font-size: 10px; padding: 6px;">Sign Out</button>
         </div>
 
@@ -5354,6 +5379,12 @@
     const appState = {
       selectedColor: ACCENT,
       stateColors: {},
+      // Counties live here, not in a separate module-level object. They used to
+      // be split: clicks wrote a bare `const countyColors` while history, the
+      // legend-recolor path and the mobile IIFE all read appState.countyColors.
+      // The two never synced, so undo restored an always-empty map and wiped
+      // every county the user had coloured.
+      countyColors: {},
       stateLabels: {},
       legendEntries: [],
       mapTitle: 'My US Map',
@@ -5590,7 +5621,20 @@
         if (!el) return;
         el.style.display = 'flex';
         document.getElementById('comingSoonLabel').textContent = route.label || 'This';
-        document.getElementById('comingSoonPhase').textContent = route.phaseTarget || 'a future phase';
+        const bodyEl = document.getElementById('comingSoonBody');
+        const subEl = document.getElementById('comingSoonSub');
+        // A route may supply its own sentence. The 404 needs one: reusing the
+        // "<label> is coming in <phase>" template rendered as
+        // "Page not found / is coming in the Tappymaps URL tree."
+        if (bodyEl) {
+          if (route.body) {
+            bodyEl.textContent = route.body;
+          } else {
+            bodyEl.innerHTML = 'is coming in <strong id="comingSoonPhase"></strong>.';
+            document.getElementById('comingSoonPhase').textContent = route.phaseTarget || 'a future phase';
+          }
+        }
+        if (subEl) subEl.textContent = route.sub || 'In the meantime, want to make a map?';
       },
       exit() {
         const el = document.getElementById('modeComingSoon');
@@ -5653,9 +5697,22 @@
     Router.register('about', Modes.Marketing);
     Router.register('pricing', Modes.Marketing);
     Router.register('__notFound__', {
-      enter(route) { Modes.ComingSoon.enter({ ...route, label: 'Page not found', phaseTarget: 'the Tappymaps URL tree' }); },
+      enter(route) {
+        Modes.ComingSoon.enter({
+          ...route,
+          label: 'Page not found',
+          body: "That link doesn't lead anywhere — it may have moved, or the address may have a typo.",
+          sub: 'Want to make a map instead?',
+        });
+      },
       exit() { Modes.ComingSoon.exit(); },
-      meta(route) { return Modes.ComingSoon.meta({ ...route, label: 'Not found', phaseTarget: 'Tappymaps' }); },
+      meta(route) {
+        return {
+          title: 'Page not found — Tappymaps',
+          description: "That page doesn't exist. Make a colored map of the United States instead — tap states, build a legend, share or export.",
+          canonical: 'https://tappymaps.com' + window.location.pathname,
+        };
+      },
     });
 
     // --- Hub mode (Phase 1) -----------------------------------------------
@@ -6087,16 +6144,49 @@
     const GALLERY_PUBLISH_MIN_STATES = 3;
     const GALLERY_PUBLISH_LIMIT_FREE = 5;
     const GALLERY_PUBLISH_LIMIT_PRO = 20;
+    // Long enough for a slow connection, short enough that nobody stares at a
+    // spinner wondering whether their maps are gone.
+    const GALLERY_CLOUD_TIMEOUT_MS = 6000;
+
+    /**
+     * Race a promise against a timer so a hung request degrades to local data
+     * instead of blocking the render. Resolves { timedOut, value } and never
+     * rejects — a rejected cloud call is just an absent one.
+     */
+    function galleryWithTimeout(promise, ms) {
+      return new Promise(function(resolve) {
+        let settled = false;
+        const timer = setTimeout(function() {
+          if (settled) return;
+          settled = true;
+          resolve({ timedOut: true, value: null });
+        }, ms);
+        Promise.resolve(promise).then(
+          function(value) { if (!settled) { settled = true; clearTimeout(timer); resolve({ timedOut: false, value: value }); } },
+          function() { if (!settled) { settled = true; clearTimeout(timer); resolve({ timedOut: false, value: null }); } }
+        );
+      });
+    }
     function galleryGetMine() {
       try { const a = JSON.parse(localStorage.getItem(GALLERY_MINE_KEY)); return Array.isArray(a) ? a : []; }
       catch (_) { return []; }
     }
+    // Returns whether the write actually landed. It used to swallow the failure
+    // and the caller showed a success toast regardless, so in Safari private
+    // mode or on a full quota a user was told "Saved" and got nothing — then
+    // found an empty gallery with no idea why.
     function gallerySaveMine(hash, title, subtitle) {
-      if (!hash) return;
+      if (!hash) return false;
       let mine = galleryGetMine().filter(m => m.hash !== hash);   // de-dupe, move to front
       mine.unshift({ hash, title: title || 'Untitled map', subtitle: subtitle || '', ts: Date.now() });
       if (mine.length > GALLERY_MAX) mine = mine.slice(0, GALLERY_MAX);
-      try { localStorage.setItem(GALLERY_MINE_KEY, JSON.stringify(mine)); } catch (_) {}
+      try {
+        localStorage.setItem(GALLERY_MINE_KEY, JSON.stringify(mine));
+        return true;
+      } catch (err) {
+        console.warn('My Maps save failed:', err && err.name);
+        return false;
+      }
     }
     function galleryRemoveMine(hash) {
       const mine = galleryGetMine().filter(m => m.hash !== hash);
@@ -6407,7 +6497,14 @@
       const hash = encodeStateToURL();
       const title = appState.mapTitle;
       const subtitle = appState.mapSubtitle;
-      gallerySaveMine(hash, title, subtitle);
+      const savedLocally = gallerySaveMine(hash, title, subtitle);
+      if (!savedLocally) {
+        // Say so rather than claiming success. The share link still carries the
+        // whole map, so offer the thing that does work.
+        showMessage('Could not save on this device — storage is full or blocked. Use Share to copy a link instead.', 'error');
+        if (typeof trackEvent === 'function') trackEvent('gallery_save_failed', { reason: 'local_storage' });
+        return;
+      }
 
       if (!appState.currentUser) {
         showMessage('Saved on this device — sign in with Pro to sync across devices', 'success');
@@ -6621,16 +6718,58 @@
       let cloudError = false;
       const wantCloud = galleryCloudEnabled();
 
+      // Paint what we already have before waiting on anything. The maps are in
+      // localStorage; making the user watch a spinner for them while a remote
+      // call decides whether to answer is backwards. Cloud results merge in
+      // when they arrive.
+      // Any path that awaits a remote call gets the local paint first — the
+      // free signed-in case still fetches publish flags, which hangs just as
+      // readily as the Pro sync does.
+      const willAwaitRemote = wantCloud || galleryPublishSignedIn();
+
+      // The upsell/sign-in banner is a function of auth state alone, so it can
+      // be decided now and shown in both the immediate paint and the final one.
+      const signedIn = !!(appState && appState.currentUser);
+      const proNow = typeof isPro === 'function' && isPro();
+      let bannerHtml = '';
+      if (!wantCloud && signedIn && !proNow) {
+        bannerHtml = '<div class="gallery-sync-banner">'
+          + '<p><strong>On this device only.</strong> Upgrade to Pro to sync My Maps across phones and laptops.</p>'
+          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-upgrade>Go Pro</button>'
+          + '</div>';
+      } else if (!signedIn) {
+        bannerHtml = '<div class="gallery-sync-banner">'
+          + '<p><strong>Saved in this browser.</strong> Sign in with Pro to keep My Maps across devices.</p>'
+          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-signin>Sign in</button>'
+          + '</div>';
+      }
+
+      if (willAwaitRemote && local.length) {
+        galleryRenderMineCards(body, local, {
+          bannerHtml: bannerHtml,
+          statusHtml: '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Checking for synced maps…</span></div>',
+          cloud: false,
+        });
+      }
+
       if (wantCloud) {
-        await galleryMigrateLocalToCloud();
-        cloud = await galleryFetchCloudMine();
-        if (cloud === null) cloudError = true;
+        // Bound every cloud call. Without a timeout a Supabase request that
+        // never resolves left this stuck on "Loading My Maps…" forever, with
+        // the user's maps sitting right there in localStorage, unreachable.
+        // Their own saved work must not be hidden behind someone else's uptime.
+        const timed = await galleryWithTimeout((async function() {
+          await galleryMigrateLocalToCloud();
+          return await galleryFetchCloudMine();
+        })(), GALLERY_CLOUD_TIMEOUT_MS);
+        if (timed.timedOut || timed.value === null) cloudError = true;
+        else cloud = timed.value;
       }
 
       const usingCloud = Array.isArray(cloud);
       let mine = usingCloud ? galleryMergeMineLists(cloud, local) : local.slice();
       if (!usingCloud && galleryPublishSignedIn()) {
-        const flags = await galleryFetchOwnPublicFlags();
+        const flagsResult = await galleryWithTimeout(galleryFetchOwnPublicFlags(), GALLERY_CLOUD_TIMEOUT_MS);
+        const flags = flagsResult.timedOut ? null : flagsResult.value;
         if (flags) {
           mine = mine.map(function(m) {
             const f = flags[m.hash];
@@ -6640,26 +6779,17 @@
         }
       }
 
-      let bannerHtml = '';
       let statusHtml = '';
       if (wantCloud) {
         statusHtml = '<div class="gallery-sync-status">'
           + '<span class="gallery-sync-dot' + (cloudError ? ' is-local' : '') + '"></span>'
           + '<span>' + (cloudError
-            ? 'Pro sync unavailable — showing maps on this device'
+            ? 'Cloud sync unavailable — showing the maps saved on this device'
             : 'Synced with Pro')
           + '</span></div>';
-      } else if (appState && appState.currentUser && typeof isPro === 'function' && !isPro()) {
-        bannerHtml = '<div class="gallery-sync-banner">'
-          + '<p><strong>On this device only.</strong> Upgrade to Pro to sync My Maps across phones and laptops.</p>'
-          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-upgrade>Go Pro</button>'
-          + '</div>';
+      } else if (signedIn && !proNow) {
         statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
-      } else if (!appState || !appState.currentUser) {
-        bannerHtml = '<div class="gallery-sync-banner">'
-          + '<p><strong>Saved in this browser.</strong> Sign in with Pro to keep My Maps across devices.</p>'
-          + '<button type="button" class="gallery-card-btn gallery-card-btn--primary" data-gallery-signin>Sign in</button>'
-          + '</div>';
+      } else if (!signedIn) {
         statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
       } else {
         statusHtml = '<div class="gallery-sync-status"><span class="gallery-sync-dot is-local"></span><span>Local My Maps</span></div>';
@@ -6699,7 +6829,12 @@
       const featured = !!opts.featured;
       const label = featured ? 'Featured' : 'Recent';
       body.innerHTML = '<div class="gallery-sync-status"><span class="gallery-sync-dot"></span> Loading ' + label + '…</div>';
-      const res = await galleryFetchPublicMaps({ featured: featured });
+      // Same bound as My Maps: Recent and Featured used to sit on "Loading…"
+      // indefinitely whenever the request neither resolved nor rejected.
+      const timed = await galleryWithTimeout(galleryFetchPublicMaps({ featured: featured }), GALLERY_CLOUD_TIMEOUT_MS);
+      const res = timed.timedOut
+        ? { ok: false, maps: [], reason: 'Timed out reaching the gallery service' }
+        : timed.value;
       if (!res.ok) {
         body.innerHTML = '<div class="gallery-empty">'
           + '<div class="gallery-empty-icon">🗺️</div>'
@@ -6759,7 +6894,10 @@
       enter(route) {
         const el = document.getElementById('modeGallery');
         if (el) el.style.display = 'flex';
-        const tab = (route && route.sub) || 'recent';
+        // 'mine' is local-first and always works. Recent/Featured need the
+        // user_maps table; until that migration is applied they can only show
+        // an error, so they must not be the default landing tab.
+        const tab = (route && route.sub) || 'mine';
         galleryRender(tab);
       },
       exit() {
@@ -6767,7 +6905,7 @@
         if (el) el.style.display = 'none';
       },
       meta(route) {
-        const tab = (route && route.sub) || 'recent';
+        const tab = (route && route.sub) || 'mine';
         const label = tab === 'mine' ? 'My Maps' : tab === 'featured' ? 'Featured' : 'Recent';
         return {
           title: 'Gallery · ' + label + ' — Tappymaps',
@@ -8169,8 +8307,20 @@
       const suffix = (mode && mode !== 'classic') ? '_' + mode : '';
       return 'tappymaps_arcade_' + gameId + suffix + '_best';
     }
+    // localStorage is user-writable and shared with anything else on the origin.
+    // A stored "score" was being interpolated straight into innerHTML, so a
+    // hand-edited key executed script every time the Arcade hub rendered.
+    // Coercing at the read boundary kills the whole class rather than patching
+    // each render site: a score is a number, and nothing else gets through.
+    function arcadeCleanBest(raw) {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+      const score = Number(raw.score);
+      if (!Number.isFinite(score)) return null;
+      const medal = ['gold', 'silver', 'bronze', 'none'].includes(raw.medal) ? raw.medal : 'none';
+      return { score: Math.max(0, Math.round(score)), medal: medal };
+    }
     function arcadeGetBest(gameId, mode) {
-      try { return JSON.parse(localStorage.getItem(arcadeBestKey(gameId, mode))) || null; }
+      try { return arcadeCleanBest(JSON.parse(localStorage.getItem(arcadeBestKey(gameId, mode)))); }
       catch (_) { return null; }
     }
     function arcadeMedalFor(game, score) {
@@ -8286,7 +8436,7 @@
           div.className = 'arcade-tile';
           const buttons = Object.keys(game.modes).map(m => {
             const best = arcadeGetBest(game.id, m);
-            const label = game.modes[m].label + (best ? ' · ' + medalFor(best) + best.score : ' →');
+            const label = game.modes[m].label + (best ? ' · ' + medalFor(best) + escapeHTML(best.score) : ' →');
             const q = m === (game.defaultMode || 'classic') ? '' : '?mode=' + m;
             return '<a class="arcade-tile-mode-btn" data-route href="/games/arcade/' + game.id + q + '">' + label + '</a>';
           }).join('');
@@ -8307,7 +8457,7 @@
             '<p class="arcade-tile-tag">' + game.tagline + '</p>' +
             '<div class="arcade-tile-meta">' +
               (best
-                ? '<span class="arcade-tile-medal">' + medalFor(best) + '</span><span>Best <span class="arcade-tile-best">' + best.score + '</span></span>'
+                ? '<span class="arcade-tile-medal">' + medalFor(best) + '</span><span>Best <span class="arcade-tile-best">' + escapeHTML(best.score) + '</span></span>'
                 : '<span class="arcade-tile-best">Play →</span>') +
             '</div>';
           grid.appendChild(a);
@@ -8460,7 +8610,23 @@
     function progSetPlayerName(n) { try { localStorage.setItem('tappymaps_player_name', (n || '').slice(0, 12)); } catch (_) {} }
     function progLbKey(gameId, mode) { return gameId + ((mode && mode !== 'classic') ? ':' + mode : ''); }
     function progAllBoards() { try { return JSON.parse(localStorage.getItem('tappymaps_leaderboard') || '{}') || {}; } catch (_) { return {}; } }
-    function progGetBoard(gameId, mode) { return progAllBoards()[progLbKey(gameId, mode)] || []; }
+    // Same reasoning as arcadeCleanBest: leaderboard rows come from
+    // localStorage and reach innerHTML, so they are typed on the way in.
+    function progCleanRow(raw) {
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+      const score = Number(raw.score);
+      if (!Number.isFinite(score)) return null;
+      return {
+        score: Math.max(0, Math.round(score)),
+        name: typeof raw.name === 'string' ? raw.name.slice(0, 12) : '',
+        medal: ['gold', 'silver', 'bronze'].includes(raw.medal) ? raw.medal : null,
+        ts: Number.isFinite(Number(raw.ts)) ? Number(raw.ts) : 0,
+      };
+    }
+    function progGetBoard(gameId, mode) {
+      const rows = progAllBoards()[progLbKey(gameId, mode)];
+      return Array.isArray(rows) ? rows.map(progCleanRow).filter(Boolean) : [];
+    }
     function progQualifies(gameId, mode, score) {
       if (!(score > 0)) return false;
       const board = progGetBoard(gameId, mode);
@@ -8512,7 +8678,7 @@
               '<li><span class="lb-rank">' + (i + 1) + '</span>'
               + '<span class="lb-name">' + escapeHTML(e.name || 'YOU') + '</span>'
               + '<span class="lb-medal">' + (ARCADE_MEDAL_EMOJI[e.medal] || '') + '</span>'
-              + '<span class="lb-score">' + e.score + '</span></li>').join('') + '</ol>';
+              + '<span class="lb-score">' + escapeHTML(e.score) + '</span></li>').join('') + '</ol>';
           }
           html += '</div>';
         });
@@ -9876,6 +10042,30 @@
         if (!nonColorable.has(stateName)) {
           pathEl.addEventListener('click', (e) => onStateClick(e, stateName));
           pathEl.addEventListener('contextmenu', (e) => onStateRightClick(e, stateName));
+
+          // Colouring a state is the core task of this product, and it used to
+          // be impossible without a pointer: every path was tabIndex -1 and
+          // would not even take focus. Expose them as real buttons so the map
+          // is operable by keyboard and legible to a screen reader.
+          pathEl.setAttribute('role', 'button');
+          pathEl.setAttribute('tabindex', '0');
+          pathEl.setAttribute('aria-label', stateName);
+          pathEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+              e.preventDefault();
+              onStateClick(e, stateName);
+            } else if (e.key === 'Delete' || e.key === 'Backspace') {
+              // Parity with right-click-to-clear, which a keyboard cannot reach.
+              e.preventDefault();
+              onStateRightClick(e, stateName);
+            }
+          });
+          pathEl.addEventListener('focus', (e) => showTooltip(e, stateName));
+          pathEl.addEventListener('blur', hideTooltip);
+        } else {
+          // Decorative to assistive tech: it carries no action and is excluded
+          // from the "X of 50 states coloured" count.
+          pathEl.setAttribute('aria-hidden', 'true');
         }
         pathEl.addEventListener('mouseenter', (e) => showTooltip(e, stateName));
         pathEl.addEventListener('mousemove', (e) => moveTooltip(e));
@@ -10049,12 +10239,18 @@
       grid.innerHTML = '';
 
       appState.presetColors.forEach(color => {
-        const swatch = document.createElement('div');
+        // A <button>, not a <div>: these were unlabelled and untabbable, so the
+        // only way to choose a colour was to click one. Buttons give keyboard
+        // focus and Enter/Space activation for free, and aria-pressed conveys
+        // which colour is currently selected.
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
         swatch.className = 'color-swatch';
-        if (color === appState.selectedColor) {
-          swatch.classList.add('active');
-        }
+        const isActive = color === appState.selectedColor;
+        if (isActive) swatch.classList.add('active');
         swatch.style.backgroundColor = color;
+        swatch.setAttribute('aria-label', 'Colour ' + color);
+        swatch.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         swatch.addEventListener('click', () => selectColor(color));
         grid.appendChild(swatch);
       });
@@ -10426,6 +10622,14 @@
       var numClasses = 5;
       var breaks = [];
       for (var i = 0; i <= numClasses; i++) breaks.push(mn + (mx - mn) * (i / numClasses));
+      // Clear first. This used to paint only the states present in the response
+      // and leave everything else untouched, so a state coloured by the PREVIOUS
+      // dataset kept its old fill while the legend below now described a
+      // different measure entirely. With a partial response — ACS returns
+      // -666666666 for suppressed estimates, and those get dropped — 45 states
+      // could be showing last dataset's values under this dataset's key. A map
+      // that displays the wrong number confidently is worse than one that fails.
+      appState.stateColors = {};
       Object.entries(data).forEach(function(e) { appState.stateColors[e[0]] = scale(e[1]).hex(); });
       appState.legendEntries = [];
       for (var i = 0; i < numClasses; i++) {
@@ -10923,7 +11127,11 @@
     function applyHistorySnapshot(snap) {
       if (!snap) return;
       appState.stateColors = snap.stateColors || {};
-      appState.countyColors = snap.countyColors || {};
+      // Mutate in place: `countyColors` aliases this object, and reassigning
+      // would silently detach every county click handler from history.
+      const snapCounties = snap.countyColors || {};
+      Object.keys(appState.countyColors).forEach(function(k) { delete appState.countyColors[k]; });
+      Object.assign(appState.countyColors, snapCounties);
       appState.legendEntries = (snap.legendEntries || []).map(function(e) { return Object.assign({}, e); });
       if (snap.selectedColor) appState.selectedColor = snap.selectedColor;
       appState.mapTitle = snap.mapTitle || 'My US Map';
@@ -10939,8 +11147,18 @@
       if (srcEl) { srcEl.textContent = appState.mapSource; srcEl.style.opacity = appState.mapSource ? '1' : '0'; }
       var si = document.getElementById('sourceInput'); if (si) si.value = appState.mapSource;
       var msi = document.getElementById('mobileSourceInput'); if (msi) msi.value = appState.mapSource;
-      // Re-render
-      if (typeof renderMap === 'function') renderMap();
+      // Re-render. In county view, renderMap() would draw the national state
+      // map over the counties — undo used to replace a 254-path county map with
+      // the 51-path state map and leave a county stats bar above it. Repaint
+      // the existing county paths from the restored store instead.
+      if (countyMode) {
+        document.querySelectorAll('#statesGroup path[data-county]').forEach(function(pathEl) {
+          const fips = String(pathEl.getAttribute('data-county')).padStart(5, '0');
+          pathEl.style.fill = appState.countyColors[fips] || '';
+        });
+      } else if (typeof renderMap === 'function') {
+        renderMap();
+      }
       updateLegendBuilder();
       updateLegendDisplay();
       updateStatsBar();
@@ -11150,12 +11368,41 @@
         legendTitle: appState.legendTitle,
         source: appState.mapSource
       };
-      return btoa(JSON.stringify(state));
+      return utf8ToBase64(JSON.stringify(state));
+    }
+
+    // btoa() only accepts code points below U+0100, so a raw btoa(JSON) threw
+    // InvalidCharacterError on any non-Latin-1 character. That is not an edge
+    // case here: applyDataMap() joins legend ranges with an en dash (U+2013),
+    // so EVERY data map produced a title the encoder could not handle — and an
+    // emoji in a map title did the same. The throw propagated out of
+    // encodeStateToURL, so updateURL, copyShareLink, copyEmbedLink and the
+    // async saveCurrentMapToGallery all failed with no toast and no saved map.
+    //
+    // Encoding the UTF-8 bytes first fixes it. ASCII input produces byte-identical
+    // output to the old btoa path, so links shared before this change still decode.
+    function utf8ToBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+
+    function base64ToUtf8(b64) {
+      // Tolerate the URL-safe alphabet and stripped padding: chat apps, mail
+      // clients and Reddit rewrite links, and losing a map to a missing '='
+      // is a bad outcome for something we can simply accept.
+      let s = String(b64).trim().replace(/-/g, '+').replace(/_/g, '/');
+      while (s.length % 4) s += '=';
+      const binary = atob(s);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return new TextDecoder().decode(bytes);
     }
 
     function decodeStateFromURL(encoded) {
       try {
-        const state = JSON.parse(atob(encoded));
+        const state = JSON.parse(base64ToUtf8(encoded));
         return state;
       } catch (e) {
         console.error('Failed to decode URL state:', e);
@@ -11511,6 +11758,38 @@
       }
     }
 
+    /**
+     * Open the Stripe billing portal — cancel, change card, download invoices.
+     * The product advertises "Cancel anytime" and had no path to do any of it.
+     */
+    async function openBillingPortal() {
+      const btn = document.getElementById('manageBillingBtn');
+      const restore = btn ? btn.textContent : '';
+      try {
+        if (btn) { btn.disabled = true; btn.textContent = 'Opening…'; }
+        if (!supabaseClient) { showMessage('Sign in to manage your subscription', 'error'); return; }
+        const session = await supabaseClient.auth.getSession();
+        const token = session?.data?.session?.access_token;
+        if (!token) { showMessage('Sign in to manage your subscription', 'error'); return; }
+
+        const res = await fetch('/api/stripe/portal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+        });
+        const body = await res.json().catch(function() { return {}; });
+        if (!res.ok || !body.url) {
+          showMessage(body.error || 'Could not open the billing portal. Please try again.', 'error');
+          return;
+        }
+        window.location.href = body.url;
+      } catch (err) {
+        console.error('Billing portal:', err);
+        showMessage('Could not reach the billing portal — check your connection.', 'error');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = restore; }
+      }
+    }
+
     function updateAuthHeaderUI() {
       // Update sidebar header to show auth status
       let authIndicator = document.getElementById('authIndicator');
@@ -11532,6 +11811,14 @@
           authIndicator.textContent = '';
         }
       }
+      // Only subscribers have something to manage; a free user seeing a
+      // "Manage subscription" button that 404s is worse than not seeing one.
+      const billingBtn = document.getElementById('manageBillingBtn');
+      if (billingBtn) {
+        const subscribed = !!(appState.currentUser && (appState.proUnlocked || appState.classroomUnlocked));
+        billingBtn.style.display = subscribed ? '' : 'none';
+      }
+
       // Mirror auth/pro state onto the Create top-bar account button — on mobile
       // (routed modes) it is the only visible account affordance, since the
       // legacy account menu is suppressed.
@@ -11642,6 +11929,11 @@
     }
 
     // Anonymous first-export check (localStorage, for users who haven't signed up yet)
+    // Mirrors FREE_MONTHLY_LIMIT in api/stripe/track-export.js. Used only for
+    // the optimistic display before the server's `check` response arrives —
+    // the server remains the authority on what is actually allowed.
+    const FREE_MONTHLY_EXPORTS = 3;
+
     function getAnonymousExportUsed() {
       return localStorage.getItem('tappymaps_anon_export') === 'true';
     }
@@ -11754,7 +12046,12 @@
         return;
       }
 
-      const remaining = appState._cachedRemaining ?? 2;
+      // Default to the full monthly allowance, not a literal 2. A fresh
+      // signed-in user has made no exports, so before the first `check`
+      // response lands the honest number is the whole limit — understating it
+      // by a third is a bad first impression of the free tier. The server is
+      // still the authority; this is only what we show until it answers.
+      const remaining = appState._cachedRemaining ?? FREE_MONTHLY_EXPORTS;
       counter.innerHTML = remaining === 0
         ? '<strong id="exportCountNum" style="color: #ff6b6b;">0</strong> free exports remaining — <a href="#" onclick="showUpgradeModal(); return false;" style="color: #0EA5E9; text-decoration: underline;">upgrade to Pro</a>'
         : `<strong id="exportCountNum">${remaining}</strong> free export${remaining !== 1 ? 's' : ''} remaining this month`;
@@ -11778,6 +12075,36 @@
       const key = (options && options.aspect) || appState.exportAspect || 'landscape';
       if (EXPORT_ASPECT_RATIOS[key]) return key;
       return 'landscape';
+    }
+
+    // color-mix() resolved to rgba(), because html2canvas cannot parse modern
+    // CSS colour functions. getComputedStyle already resolves color-mix in
+    // browsers that support it; the manual path covers those that don't, and
+    // any unexpected format degrades to the opaque surface colour rather than
+    // throwing.
+    function resolveLegendBackground(legendEl) {
+      const OPACITY = 0.78;   // matches the color-mix percentage in .legend-group
+      try {
+        const computed = getComputedStyle(legendEl).backgroundColor;
+        const m = /^rgba?\(([^)]+)\)$/.exec(computed || '');
+        if (m) {
+          const parts = m[1].split(/[,\s/]+/).filter(Boolean).map(Number);
+          const [r, g, b] = parts;
+          if ([r, g, b].every(Number.isFinite)) {
+            const a = parts.length > 3 && Number.isFinite(parts[3]) ? parts[3] : OPACITY;
+            return `rgba(${r}, ${g}, ${b}, ${a})`;
+          }
+        }
+        const surface = getComputedStyle(document.documentElement)
+          .getPropertyValue('--surface').trim();
+        if (/^#[0-9a-f]{6}$/i.test(surface)) {
+          const n = parseInt(surface.slice(1), 16);
+          return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${OPACITY})`;
+        }
+        return surface || 'rgba(26, 26, 46, 0.78)';
+      } catch (_) {
+        return 'rgba(26, 26, 46, 0.78)';
+      }
     }
 
     async function captureMapImage(options) {
@@ -11811,6 +12138,7 @@
       const origContainerPos = mapContainer.style.position;
       const origContainerFlex = mapContainer.style.flex;
       const origContainerFlexBasis = mapContainer.style.flexBasis;
+      const origContainerMaxH = mapContainer.style.maxHeight;
       const origLegendStyle = legendEl ? legendEl.style.cssText : '';
       const subtitleWasEmpty = subtitleEl && subtitleEl.textContent.trim() === '';
 
@@ -11847,6 +12175,15 @@
       // keeps its real ~844px height and the capture crops the bottom.
       mapContainer.style.flex = 'none';
       mapContainer.style.flexBasis = 'auto';
+      // The Create shell caps the map with `#createMap > #mapContainer
+      // { max-height: 100% }`. An inline height does NOT beat max-height, so
+      // the capture frame was silently clamped to the on-screen height for
+      // every aspect taller than landscape: square, portrait and story all
+      // came out at ~856px instead of 1084 / 1355 / 1927. That also made the
+      // export-only legend clamp below inert, which is why the story preset
+      // pasted the legend over New England. Lift the cap for the capture and
+      // put it back in the finally block.
+      mapContainer.style.maxHeight = 'none';
       mapContainer.style.width = captureWidth + 'px';
       mapContainer.style.height = captureHeight + 'px';
       mapContainer.style.overflow = 'hidden';
@@ -11910,6 +12247,15 @@
         else if (corner === 'top-left') { legendEl.style.top = titleClearance + 'px'; legendEl.style.left = inset + 'px'; }
         legendEl.style.maxHeight = (captureHeight - titleClearance - inset) + 'px';
         legendEl.style.overflow = 'hidden';
+
+        // Resolve the frosted-glass background to a plain rgba() for the
+        // capture. .legend-group uses color-mix(), which html2canvas cannot
+        // parse — it throws "Attempting to parse an unsupported color
+        // function". That made the fallback path dead exactly when it was
+        // needed most: for maps that HAVE a legend. dom-to-image is unaffected
+        // and renders the resolved colour identically, so this costs nothing
+        // on the primary path. Restored by the cssText reset in finally.
+        legendEl.style.background = resolveLegendBackground(legendEl);
       }
 
       const bgColor = appState.bgColor || (appState.darkMode ? '#1a1a2e' : '#f5f5f5');
@@ -12006,6 +12352,7 @@
         mapContainer.style.overflow = origOverflow;
         mapContainer.style.flex = origContainerFlex;
         mapContainer.style.flexBasis = origContainerFlexBasis;
+        mapContainer.style.maxHeight = origContainerMaxH;
 
         svg.style.flex = origSvgFlex;
         svg.style.minHeight = origSvgMinH;
@@ -12954,6 +13301,11 @@
       return -1;
     }
 
+    // Set by applyParsedChoropleth so the status line can report what was
+    // silently discarded. Reset on every import.
+    let csvDroppedValues = [];
+    let csvOverflowCategories = [];
+
     function csvShowStatus(opts) {
       const el = document.getElementById('csvImportStatus');
       if (!el) return;
@@ -12982,7 +13334,24 @@
           html += '<li>…and ' + (unmatched.length - 40) + ' more</li>';
         }
         html += '</ul>';
-      } else {
+      }
+      const dropped = opts.dropped || [];
+      if (dropped.length) {
+        html += '<div class="csv-import-status-detail">'
+          + escapeHTML(dropped.length + ' state' + (dropped.length === 1 ? '' : 's')
+            + ' had a value that could not be read and are left uncoloured: '
+            + dropped.slice(0, 12).join(', ') + (dropped.length > 12 ? ', …' : ''))
+          + '</div>';
+      }
+      const overflow = opts.overflow || [];
+      if (overflow.length) {
+        html += '<div class="csv-import-status-detail">'
+          + escapeHTML(overflow.length + ' categor' + (overflow.length === 1 ? 'y was' : 'ies were')
+            + ' grouped as "Other" — the legend holds 12: '
+            + overflow.slice(0, 12).join(', ') + (overflow.length > 12 ? ', …' : ''))
+          + '</div>';
+      }
+      if (!unmatched.length && !dropped.length && !overflow.length) {
         html += '<div class="csv-import-status-detail">All rows matched.</div>';
       }
       el.innerHTML = html;
@@ -12999,6 +13368,8 @@
       // rows: [{ state, rawState, value?, category?, color? }]
       meta = meta || {};
       const resolve = csvBuildStateResolver();
+      csvDroppedValues = [];
+      csvOverflowCategories = [];
       const matchedRows = [];
       const unmatched = [];
       const seen = Object.create(null);
@@ -13040,14 +13411,27 @@
           return { matched: 0, unmatched: unmatched };
         }
         const data = {};
+        // Rows whose value could not be parsed get no colour. They used to be
+        // dropped here and still counted as "coloured" further down, so a paste
+        // with non-numeric cells reported more states than it painted and said
+        // "All rows matched". Track them and report them by name.
+        const unusableValues = [];
         matchedRows.forEach(function(r) {
           if (typeof r.value === 'number' && isFinite(r.value)) data[r.state] = r.value;
+          else unusableValues.push(r.state);
         });
+        csvDroppedValues = unusableValues;
         const values = Object.values(data);
         const mn = Math.min.apply(null, values);
         const mx = Math.max.apply(null, values);
+        // Every caller does `scale(v).hex()`, so the degenerate branch must
+        // return a chroma object too. It returned a plain string, so a CSV
+        // with one row — or with every value identical — threw on `.hex()`
+        // AFTER stateColors had already been cleared, wiping the user's map
+        // and painting nothing in its place.
+        const flatColor = chroma(CSV_NUMERIC_RAMP[Math.floor(CSV_NUMERIC_RAMP.length / 2)]);
         const scale = (mn === mx)
-          ? function() { return chroma(CSV_NUMERIC_RAMP[Math.floor(CSV_NUMERIC_RAMP.length / 2)]).hex(); }
+          ? function() { return flatColor; }
           : chroma.scale(CSV_NUMERIC_RAMP).domain([mn, mx]);
         Object.keys(data).forEach(function(state) {
           appState.stateColors[state] = scale(data[state]).hex();
@@ -13058,18 +13442,33 @@
           breaks.push(mn + (mx - mn) * (i / numClasses));
         }
         appState.legendEntries = [];
-        for (let i = 0; i < numClasses; i++) {
-          const lo = breaks[i], hi = breaks[i + 1];
-          const mid = (lo + hi) / 2;
-          appState.legendEntries.push({
-            label: Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString(),
-            color: scale(mid).hex()
-          });
+        if (mn === mx) {
+          // One distinct value: "12 – 12" buckets tell the reader nothing.
+          appState.legendEntries.push({ label: mn.toLocaleString(), color: flatColor.hex() });
+        } else {
+          for (let i = 0; i < numClasses; i++) {
+            const lo = breaks[i], hi = breaks[i + 1];
+            const mid = (lo + hi) / 2;
+            appState.legendEntries.push({
+              label: Math.round(lo).toLocaleString() + ' – ' + Math.round(hi).toLocaleString(),
+              color: scale(mid).hex()
+            });
+          }
         }
         appState.legendTitle = meta.legendTitle || 'Value';
       } else {
         const categoryColors = Object.create(null);
         let colorIdx = 0;
+        // The palette holds 12 colours and the legend shows 12 entries. The old
+        // code wrapped with `% palette.length`, so category 13 was painted the
+        // same colour as category 1 — and then sliced out of the legend, which
+        // therefore attributed that colour to a different category entirely.
+        // The map stated something false. Beyond the cap, roll categories into
+        // a single explicit "Other" bucket and say how many were folded in.
+        const CATEGORY_CAP = Math.min(CSV_CATEGORICAL_PALETTE.length, MAX_LEGEND_ENTRIES) - 1;
+        const OTHER_COLOR = '#8b95a1';
+        const overflowCategories = [];
+
         matchedRows.forEach(function(r) {
           if (r.color && /^#?[0-9a-fA-F]{6}$/.test(r.color)) {
             const hex = r.color.charAt(0) === '#' ? r.color : ('#' + r.color);
@@ -13080,14 +13479,36 @@
           }
           const cat = (r.category != null && String(r.category).trim() !== '') ? String(r.category).trim() : 'Other';
           if (!categoryColors[cat]) {
-            categoryColors[cat] = CSV_CATEGORICAL_PALETTE[colorIdx % CSV_CATEGORICAL_PALETTE.length];
-            colorIdx++;
+            if (colorIdx < CATEGORY_CAP) {
+              categoryColors[cat] = CSV_CATEGORICAL_PALETTE[colorIdx];
+              colorIdx++;
+            } else {
+              if (overflowCategories.indexOf(cat) === -1) overflowCategories.push(cat);
+              categoryColors[cat] = OTHER_COLOR;
+            }
           }
           appState.stateColors[r.state] = categoryColors[cat];
         });
-        appState.legendEntries = Object.keys(categoryColors)
-          .slice(0, MAX_LEGEND_ENTRIES)
-          .map(function(label) { return { label: label, color: categoryColors[label] }; });
+
+        // Build the legend from distinct COLOURS, so every colour on the map
+        // has exactly one truthful label.
+        const seenColors = Object.create(null);
+        const entries = [];
+        Object.keys(categoryColors).forEach(function(label) {
+          const color = categoryColors[label];
+          if (color === OTHER_COLOR) return;
+          if (seenColors[color]) return;
+          seenColors[color] = true;
+          entries.push({ label: label, color: color });
+        });
+        if (overflowCategories.length) {
+          entries.push({
+            label: 'Other (' + overflowCategories.length + ' more categories)',
+            color: OTHER_COLOR,
+          });
+        }
+        appState.legendEntries = entries.slice(0, MAX_LEGEND_ENTRIES);
+        csvOverflowCategories = overflowCategories;
         appState.legendTitle = meta.legendTitle || 'Category';
       }
 
@@ -13120,16 +13541,23 @@
       updateStatsBar();
       updateURL();
 
-      const matchedCount = Object.keys(seen).length;
+      // Count what was actually PAINTED, not what merely matched a state name.
+      // These used to be the same number, so rows dropped for an unparseable
+      // value were still reported as coloured.
+      const matchedCount = Object.keys(appState.stateColors).length;
       csvShowStatus({
         matched: matchedCount,
         unmatched: unmatched,
+        dropped: csvDroppedValues,
+        overflow: csvOverflowCategories,
         mode: useNumeric ? 'numeric' : 'category'
       });
+      const problems = unmatched.length + csvDroppedValues.length;
       showMessage(
         'Mapped ' + matchedCount + ' state' + (matchedCount === 1 ? '' : 's')
-          + (unmatched.length ? (' · ' + unmatched.length + ' unmatched') : ''),
-        unmatched.length ? 'info' : 'success'
+          + (unmatched.length ? (' · ' + unmatched.length + ' unmatched') : '')
+          + (csvDroppedValues.length ? (' · ' + csvDroppedValues.length + ' with unreadable values') : ''),
+        problems ? 'info' : 'success'
       );
       if (typeof trackEvent === 'function') {
         trackEvent('csv_import_applied', {
@@ -13534,8 +13962,22 @@
       window._activeDataMap = { dataset: dataset, data: data };
 
       renderMap(); updateLegendBuilder(); updateLegendDisplay(); updateStatsBar(); updateURL();
-      showMessage(dataset.title + ' data loaded for ' + Object.keys(data).length + ' states', 'success');
-      trackEvent('data_map_loaded', { dataset: dataset.id });
+
+      // Say plainly when the data is incomplete. "loaded for 6 states" read as
+      // success while 45 states sat uncoloured; a user publishing that map has
+      // no idea it is missing four fifths of the country.
+      var covered = Object.keys(data).length;
+      var expected = 51; // 50 states + DC, the ACS state-level universe
+      if (covered < expected) {
+        showMessage(
+          dataset.title + ': only ' + covered + ' of ' + expected +
+          ' states returned data — the rest are shown uncoloured.',
+          'error'
+        );
+      } else {
+        showMessage(dataset.title + ' data loaded for ' + covered + ' states', 'success');
+      }
+      trackEvent('data_map_loaded', { dataset: dataset.id, covered: covered });
     }
 
     // === Data Map Ramp Picker ===
@@ -13718,7 +14160,10 @@
     let countyStateName = null;
     let countyTotal = 0;
     let countyTopology = null;
-    const countyColors = {};
+    // Alias, not a second store — see appState.countyColors above. Everything
+    // that mutates counties must go through this object identity, so
+    // applyHistorySnapshot mutates it in place rather than reassigning.
+    const countyColors = appState.countyColors;
 
     async function loadCountyView(stateFips) {
       try {
@@ -14219,6 +14664,8 @@
       if (signInBtn) signInBtn.addEventListener('click', authSignIn);
       const signOutBtn = document.getElementById('authSignOutBtn');
       if (signOutBtn) signOutBtn.addEventListener('click', authSignOut);
+      const billingBtn = document.getElementById('manageBillingBtn');
+      if (billingBtn) billingBtn.addEventListener('click', openBillingPortal);
       const monthlyBtn = document.getElementById('upgradeMonthlyBtn');
       if (monthlyBtn) monthlyBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('monthly'); });
       const annualBtn = document.getElementById('upgradeAnnualBtn');

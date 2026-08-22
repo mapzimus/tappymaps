@@ -4,6 +4,95 @@
 
 ---
 
+## Where we are right now (2026-08-21) — full audit + fix pass
+
+**Read `docs/audits/2026-08-21/README.md` first.** Ten agents drove the live app
+in real browsers across eight domains: **169 findings — 13 P0, 46 P1, 71 P2,
+39 P3**, every one reproduced. Consolidated report: `00-summary.html`
+(also at https://claude.ai/code/artifact/d04d71d1-00d4-4860-9f91-f06294d28123).
+
+**The finding that frames all the others: this app fails silently.** The console
+was almost always clean while sharing was broken for every data map, the
+signed-in export tier had never once worked, undo destroyed county maps, and
+saves reported success and stored nothing.
+
+### Shipped
+
+**PR #41 (merged to master) — the safety net.**
+`npm run smoke` was reporting "all 10 routes booted clean" on a page where zero
+states had rendered and every third-party library had failed to load; a broad
+`net::ERR` in its ignore list swallowed total CDN failure. Rewritten around 24
+functional assertions, made hermetic (all external origins stubbed), and
+adversarially tested — an injected TDZ produces 13 failures while `validate`
+still passes. New `scripts/devserver.mjs` reproduces `vercel.json` (rewrites,
+`/api` stubs, vendored CDN libs). Smoke + API tests now run in CI.
+
+**PR #42 (open, draft, CI green) — the fixes.** 7 of 13 P0s:
+- `encodeStateToURL` was a bare `btoa()`, which throws above U+00FF. Data-map
+  legends join ranges with an en dash, so **every data map** silently killed
+  Share, Embed, the URL hash and Save. Now UTF-8; ASCII output is unchanged so
+  old links still decode.
+- `window._supabase` is read twice and assigned nowhere — the signed-in free
+  tier could never export and `/api/stripe/track-export` had **never run**.
+- `#createMap > #mapContainer { max-height: 100% }` capped the capture frame:
+  square/portrait/story rendered at on-screen height, which also made the
+  export-only legend clamp inert (legend over New England).
+- The html2canvas fallback threw on the legend's `color-mix()` — dead precisely
+  for maps that have a legend.
+- County colours lived in two stores that never synced; undo wiped them.
+- No keyboard path to the core task (0 focusable states, 0 focusable swatches).
+- Data maps painted stale fills under a fresh legend; CSV import lost rows
+  silently three different ways.
+- Plus: billing lifetime correctness, Stripe **billing portal**, gallery hanging
+  on "Loading My Maps…", saves claiming success when storage threw, stored XSS
+  via localStorage scores, robots.txt/sitemap.xml, keepalive cron auth.
+
+### The rewrite (user chose a genuine from-scratch rebuild)
+
+Foundation only — **not** a working replacement app yet. What exists under `src/`:
+- `src/data/*` — all **23 data tables** extracted mechanically by
+  `scripts/extract-data.mjs` and **verified byte-identical** to the running app
+  (39 ACS datasets, 28 templates, 50 draft categories, FIPS map, 16 themes,
+  10 ramps). Run `node scripts/extract-data.mjs --check` to confirm they haven't
+  drifted. **Never hand-edit these while index.html is still the live app.**
+- `src/map/geometry.js` + `src/map/render.js` — ONE map renderer, replacing five
+  near-duplicates (editor / Arcade / two GeoDraft boards / Hub / api/render).
+  States are real keyboard-operable buttons by construction.
+- `src/core/share-state.js` — total URL-state codec, 18 adversarial tests
+  (`test/share-state.test.mjs`). Rejects `__proto__` without polluting, survives
+  every hostile input tried, tolerates URL-safe base64 and stripped padding.
+- `src/core/storage.js` — every read shape-guarded, every write reports success.
+- `src/core/dom.js` — escaped by construction; kills the innerHTML XSS class.
+
+**Next for the rewrite:** the application layer (router, modes, editor, games)
+on top of these primitives, then a cutover behind the smoke suite. This is
+multi-session work.
+
+### Blocked on the owner
+
+1. **Four tables do not exist in the live database** — `user_maps`,
+   `map_reports`, `gallery_publish_counts`, `classroom_codes`. The migrations
+   are committed but were never run, so cloud My Maps sync, the public gallery,
+   and the **$12/mo Classroom tier** have never worked in production. Owner
+   asked for a fresh schema rather than replaying the old migrations — that
+   design is not written yet.
+2. **No Terms of Service, Privacy Policy or refund policy** while charging money.
+   The billing portal now exists; the policies do not.
+3. **Two P0s are product decisions, not bugs.** Client-side entitlements and
+   unwatermarked anonymous exports cannot be fully closed in a client-rendered
+   app. Decide the acceptable leakage before engineering against it.
+
+### Commands
+
+```bash
+npm run dev      # devserver on :8123 with production rewrites + /api stubs
+npm test         # validate + 18 unit tests + 16 API tests
+npm run smoke    # 24-check browser suite (needs playwright; pinned to 1.56.1)
+node scripts/extract-data.mjs --check   # data modules still match index.html
+```
+
+---
+
 ## Where we are right now (2026-06-13)
 
 **Production:** https://tappymaps.com — live, stable, auto-deploys on every push to `master` via Vercel.

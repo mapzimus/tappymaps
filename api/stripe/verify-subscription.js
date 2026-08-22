@@ -83,7 +83,12 @@ async function reconcileWithStripe(row, userId) {
   };
   if (periodStart) patch.current_period_start = new Date(periodStart * 1000).toISOString();
   if (periodEnd) patch.current_period_end = new Date(periodEnd * 1000).toISOString();
-  if (item?.price?.id) patch.price_id = item.price.id;
+  if (item?.price?.id) {
+    patch.price_id = item.price.id;
+    // Keep the tier RLS reads in step with the price on every repair, or a
+    // reconciled row could grant the wrong feature set in the database.
+    patch.tier = item.price.id === process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID ? 'classroom' : 'pro';
+  }
 
   const { error: repairError } = await supabase
     .from('user_subscriptions')

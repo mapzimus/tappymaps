@@ -37,6 +37,16 @@ export async function getRawBody(req) {
   });
 }
 
+// Resolve the Stripe price to the tier RLS checks. The database cannot know
+// Stripe price IDs, so it reads user_subscriptions.tier instead — which means
+// every write of a subscription row must set it, or the user's paid features
+// stay locked at the database level even though they are paying.
+function tierForPrice(priceId) {
+  if (!priceId) return null;
+  if (priceId === process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID) return 'classroom';
+  return 'pro';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -123,6 +133,7 @@ export default async function handler(req, res) {
               current_period_start: new Date(periodStart * 1000).toISOString(),
               current_period_end: new Date(periodEnd * 1000).toISOString(),
               price_id: firstItem.price.id,
+              tier: tierForPrice(firstItem.price.id),
               updated_at: new Date().toISOString(),
             },
             { onConflict: 'user_id' }
@@ -152,6 +163,7 @@ export default async function handler(req, res) {
             current_period_start: new Date(periodStart * 1000).toISOString(),
             current_period_end: new Date(periodEnd * 1000).toISOString(),
             price_id: firstItem.price.id,
+            tier: tierForPrice(firstItem.price.id),
             updated_at: new Date().toISOString(),
           })
           .eq('stripe_subscription_id', subscription.id);

@@ -6333,26 +6333,22 @@
     }
     async function galleryIncrementPublishCount() {
       if (!galleryPublishSignedIn()) return { ok: false, reason: 'not_signed_in' };
-      const day = galleryUtcDayKey();
+      // One RPC, not read-then-write. The client used to compute the next
+      // value and upsert it, so the limit was whatever the client said it was —
+      // and two parallel publishes could both read the same count and slip
+      // under it. gallery_claim_publish_slot() checks and increments in a
+      // single statement, with the tier deciding the real allowance.
       const limit = galleryPublishDailyLimit();
-      const current = await galleryFetchPublishCount();
-      if (current >= limit) {
-        return { ok: false, reason: 'rate_limit', remaining: 0, limit: limit };
-      }
-      const next = current + 1;
-      const { error } = await supabaseClient
-        .from('gallery_publish_counts')
-        .upsert({
-          user_id: appState.currentUser.id,
-          day: day,
-          count: next,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'user_id,day' });
+      const { data, error } = await supabaseClient.rpc('gallery_claim_publish_slot');
       if (error) {
-        console.warn('gallery_publish_counts upsert failed:', error.message || error);
+        console.warn('gallery_claim_publish_slot failed:', error.message || error);
         return { ok: false, reason: error.message || 'count_failed' };
       }
-      return { ok: true, remaining: Math.max(0, limit - next), limit: limit };
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row || !row.allowed) {
+        return { ok: false, reason: 'rate_limit', remaining: 0, limit: limit };
+      }
+      return { ok: true, remaining: row.remaining, limit: limit };
     }
     async function galleryFetchPublicMaps(opts) {
       opts = opts || {};
@@ -7040,16 +7036,16 @@
     async function classroomLoadAssignment(code) {
       code = classroomNormalizeCode(code);
       if (!code || !supabaseClient) return { ok: false, error: 'missing_code' };
-      const { data, error } = await supabaseClient
-        .from('classroom_codes')
-        .select('code,map_hash,title')
-        .eq('code', code)
-        .eq('is_active', true)
-        .maybeSingle();
-      if (error || !data || !data.map_hash) {
+      // Goes through classroom_lookup() rather than selecting the table.
+      // Students are not signed in, so a direct SELECT needed a policy open to
+      // anon — which also let anyone enumerate every active code, its teacher's
+      // UUID and their map. The function returns only this code's map and title.
+      const { data, error } = await supabaseClient.rpc('classroom_lookup', { lookup_code: code });
+      const row = Array.isArray(data) ? data[0] : data;
+      if (error || !row || !row.map_hash) {
         return { ok: false, error: (error && error.message) || 'not_found' };
       }
-      return { ok: true, hash: data.map_hash, title: data.title || 'Class map', code: data.code };
+      return { ok: true, hash: row.map_hash, title: row.title || 'Class map', code: row.code };
     }
 
     function classroomSleep(ms) {

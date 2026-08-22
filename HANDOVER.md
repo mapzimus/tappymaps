@@ -70,17 +70,21 @@ multi-session work.
 
 ### Blocked on the owner
 
-1. **Four tables do not exist in the live database** — `user_maps`,
-   `map_reports`, `gallery_publish_counts`, `classroom_codes`. The migrations
-   are committed but were never run, so cloud My Maps sync, the public gallery,
-   and the **$12/mo Classroom tier** have never worked in production. Owner
-   asked for a fresh schema rather than replaying the old migrations — that
-   design is not written yet.
+1. ~~Four tables do not exist in the live database.~~ **DONE** — schema v2
+   (`supabase/migrations/20260822_schema_v2.sql`, PR #43) is applied to the live
+   project. `user_maps`, `map_reports`, `gallery_publish_counts` and
+   `classroom_codes` now exist with the audit's RLS holes closed, and
+   entitlements are enforced in the database via `user_subscriptions.tier`
+   rather than in the UI only. Verified adversarially with the real anon key.
+   **If you touch billing code, keep writing `tier`** — RLS reads it, so a null
+   tier refuses a paying customer.
 2. **No Terms of Service, Privacy Policy or refund policy** while charging money.
-   The billing portal now exists; the policies do not.
+   The billing portal now exists; the policies do not. Still yours or a lawyer's.
 3. **Two P0s are product decisions, not bugs.** Client-side entitlements and
    unwatermarked anonymous exports cannot be fully closed in a client-rendered
    app. Decide the acceptable leakage before engineering against it.
+4. **Supabase leaked-password protection is disabled** — a one-switch change in
+   the Auth settings, flagged by the security advisors.
 
 ### Commands
 

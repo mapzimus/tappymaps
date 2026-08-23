@@ -40,10 +40,11 @@ export async function getRawBody(req) {
 // Resolve the Stripe price to the tier RLS checks. The database cannot know
 // Stripe price IDs, so it reads user_subscriptions.tier instead — which means
 // every write of a subscription row must set it, or the user's paid features
-// stay locked at the database level even though they are paying.
+// stay locked at the database level even though they are paying. There is one
+// paid tier today; keep this indirection so adding another is a one-line change
+// here rather than a schema migration.
 function tierForPrice(priceId) {
   if (!priceId) return null;
-  if (priceId === process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID) return 'classroom';
   return 'pro';
 }
 

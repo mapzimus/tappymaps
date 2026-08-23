@@ -1802,36 +1802,6 @@
       .pro-chip { cursor: pointer; }
       .pro-chip:hover { filter: brightness(1.05); }
 
-      /* Classroom tools (Create → Upgrade panel) */
-      .classroom-tools, .classroom-upsell {
-        margin-top: 18px; padding-top: 16px;
-        border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-      }
-      .classroom-tools-title {
-        margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--text);
-      }
-      .classroom-tools-lede {
-        margin: 0 0 12px; font-size: 12px; line-height: 1.45;
-        color: var(--text-muted, #8a9bb0);
-      }
-      .classroom-code-row {
-        display: flex; gap: 8px; align-items: center; margin-bottom: 10px;
-      }
-      .classroom-code-display {
-        flex: 1; display: block; padding: 10px 12px; border-radius: 10px;
-        background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-        border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--border));
-        font-family: ui-monospace, "Geist Mono", Menlo, Consolas, monospace;
-        font-size: 18px; font-weight: 700; letter-spacing: 0.18em; text-align: center;
-        color: var(--text);
-      }
-      .classroom-tools-actions {
-        display: grid; grid-template-columns: 1fr; gap: 8px;
-      }
-      .classroom-tools-hint {
-        margin: 10px 0 0; font-size: 11px; opacity: 0.65;
-      }
-
     @media (min-width: 901px) {
       .mobile-icon-bar, .mobile-panel, .mobile-panel-backdrop, .mobile-account-menu { display: none !important; }
     }
@@ -2707,21 +2677,6 @@
       .pricing-features { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; flex: 1; }
       .pricing-features li::before { content: '\2713'; color: var(--accent); margin-right: 9px; font-weight: 800; }
       .pricing-card .marketing-cta { width: 100%; text-align: center; box-sizing: border-box; }
-      .pricing-join {
-        margin-top: 28px; padding: 18px 20px; border-radius: 16px;
-        border: 1px dashed var(--border, #334155);
-        display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
-      }
-      .pricing-join label { font-size: 13px; font-weight: 600; margin-right: 4px; }
-      .pricing-join input {
-        flex: 1; min-width: 140px; padding: 10px 12px; border-radius: 10px;
-        border: 1px solid var(--border, #334155); background: var(--surface, #1e293b);
-        color: var(--text); font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase;
-      }
-      .pricing-join button {
-        padding: 10px 16px; border-radius: 10px; border: none; cursor: pointer;
-        background: var(--accent); color: #fff; font-weight: 700; font-size: 13px;
-      }
       .marketing-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px; border: 0; border-radius: 10px; background: var(--accent); color: white; font: inherit; font-weight: 750; text-decoration: none; cursor: pointer; }
       .marketing-cta:hover { filter: brightness(1.08); transform: translateY(-1px); }
       .marketing-foot { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border, rgba(148, 163, 184, .25)); color: var(--text-muted, var(--text)); font-size: 13px; }
@@ -4441,31 +4396,13 @@
           </div>
         </section>
 
-        <!-- Upgrade panel: Pro / Classroom feature surfacing -->
+        <!-- Upgrade panel: Pro feature surfacing -->
         <section class="create-panel-content" id="createPanelUpgrade" style="display:none">
           <h3 class="create-panel-heading">Tappymaps Pro</h3>
           <p class="create-panel-lede">Unlock spreadsheet → map, cloud My Maps sync, unlimited exports, Census data maps, county view, and exports without the tappymaps.com stamp.</p>
           <button type="button" class="create-action-btn create-action-btn--share" id="createUpgradeCTA" style="width:100%;margin-top:12px">
             Upgrade
           </button>
-          <div id="classroomTools" class="classroom-tools" style="display:none">
-            <h4 class="classroom-tools-title">Classroom tools</h4>
-            <p class="classroom-tools-lede">Share a class code and export a printable worksheet pack from the current map.</p>
-            <div class="classroom-code-row">
-              <code id="classroomCodeDisplay" class="classroom-code-display">————</code>
-              <button type="button" class="btn secondary" id="classroomCodeCopyBtn" style="margin:0;width:auto;padding:8px 12px;font-size:11px;">Copy link</button>
-            </div>
-            <div class="classroom-tools-actions">
-              <button type="button" class="btn" id="classroomCodeCreateBtn" style="margin:0;">Create / refresh class code</button>
-              <button type="button" class="btn secondary" id="classroomWorksheetBtn" style="margin:0;">Download worksheet pack</button>
-            </div>
-            <p class="classroom-tools-hint" id="classroomToolsHint">Students open the link or enter the code on Pricing.</p>
-          </div>
-          <div id="classroomUpsell" class="classroom-upsell">
-            <h4 class="classroom-tools-title">Teaching a class?</h4>
-            <p class="classroom-tools-lede">Classroom ($12/mo) adds class codes and a 3-PNG worksheet pack (blank, student, answer key) on top of Pro.</p>
-            <button type="button" class="btn" id="classroomUpsellBtn" style="width:100%;margin:0;">Get Classroom</button>
-          </div>
           <p class="create-panel-sub"><a href="/pricing" data-route style="color:inherit;">See full pricing →</a></p>
         </section>
         </div><!-- /.create-panel-scroll -->
@@ -4503,16 +4440,31 @@
           <article class="marketing-card"><h2>Data</h2><p>Explore ready-to-map public datasets or paste in your own state-level values.</p></article>
           <article class="marketing-card"><h2>Play</h2><p>Practice geography with short map games built on the same lightweight engine.</p></article>
         </div>
-        <p class="marketing-lede">Tappymaps is independently designed and built by <a href="https://maxwellhowegis.com/about/" style="color:var(--accent)">Maxwell Howe</a>, a Web GIS developer and high-school math teacher in Salem, Massachusetts.</p>
+        <p class="marketing-lede">Tappymaps is independently designed and built by <a href="https://maxwellhowegis.com/about/" style="color:var(--accent)">Maxwell Howe</a>, a Web GIS developer in Salem, Massachusetts.</p>
         <a class="marketing-cta" href="/design/make" data-route style="margin-top:28px">Make a map</a>
       </main>
 
       <main class="marketing-panel" id="marketingPricing">
         <p class="marketing-eyebrow">Simple pricing</p>
         <h1 class="marketing-title">Start free. Upgrade when you need more control.</h1>
-        <p class="marketing-lede">The editor and geography games are free. Pro is for creators. Classroom is for teachers who need class codes and printable worksheet packs.</p>
+        <p class="marketing-lede">The editor and the geography games are free forever. Pro is for people who make maps often and want them without limits.</p>
         <div class="pricing-grid">
-          <section class="pricing-card" aria-labelledby="proPlanTitle">
+          <section class="pricing-card" aria-labelledby="freePlanTitle">
+            <div>
+              <p class="pricing-card-eyebrow">Everyone</p>
+              <h2 class="pricing-name" id="freePlanTitle">Free</h2>
+              <p class="pricing-price">$0</p>
+              <p class="pricing-note">No account needed to start. Sign in to keep your maps.</p>
+              <ul class="pricing-features">
+                <li>The full map editor and all 16 themes</li>
+                <li>Every Arcade game and GeoDraft</li>
+                <li>Save maps and share a link</li>
+                <li>3 exports a month, with a small stamp</li>
+              </ul>
+            </div>
+            <a class="marketing-cta" href="/design/make" data-route>Make a map</a>
+          </section>
+          <section class="pricing-card pricing-card--featured" aria-labelledby="proPlanTitle">
             <div>
               <p class="pricing-card-eyebrow">Creators</p>
               <h2 class="pricing-name" id="proPlanTitle">Tappymaps Pro</h2>
@@ -4527,26 +4479,6 @@
             </div>
             <button class="marketing-cta" type="button" onclick="showUpgradeModal(); if(typeof trackEvent==='function') trackEvent('pricing_upgrade_click',{plan:'pro'});">Choose Pro</button>
           </section>
-          <section class="pricing-card pricing-card--featured" aria-labelledby="classroomPlanTitle">
-            <div>
-              <p class="pricing-card-eyebrow">Teachers</p>
-              <h2 class="pricing-name" id="classroomPlanTitle">Classroom</h2>
-              <p class="pricing-price">$12 <span>/ month</span></p>
-              <p class="pricing-note">Everything in Pro, plus tools built for class sets.</p>
-              <ul class="pricing-features">
-                <li>Everything in Pro</li>
-                <li>Class code → shared assignment map</li>
-                <li>Worksheet PNG pack (blank + student + answer key)</li>
-                <li>Built for US teachers first</li>
-              </ul>
-            </div>
-            <button class="marketing-cta" type="button" id="pricingClassroomBtn">Choose Classroom</button>
-          </section>
-        </div>
-        <div class="pricing-join">
-          <label for="classCodeJoinInput">Have a class code?</label>
-          <input id="classCodeJoinInput" type="text" maxlength="8" placeholder="ABC123" autocomplete="off" spellcheck="false">
-          <button type="button" id="classCodeJoinBtn">Join class</button>
         </div>
         <p class="marketing-foot">Questions about billing or the product? <a href="mailto:mhowe.gis@gmail.com">Email Maxwell</a>.</p>
       </main>
@@ -5267,9 +5199,6 @@
               $72/year<br><span style="font-size: 9px; font-weight: 400; opacity: 0.8;">save 33%</span>
             </button>
           </div>
-          <button class="btn" id="upgradeClassroomBtn" style="width: 100%; padding: 12px; font-size: 13px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(135deg, #0EA5E9, #0369A1);">
-            Classroom $12/mo — class codes + worksheet packs
-          </button>
           <button class="btn secondary" id="manageBillingBtn" style="width: 100%; font-size: 11px; padding: 8px; margin-bottom: 6px; display: none;">Manage subscription &amp; billing</button>
           <button class="btn secondary" id="authSignOutBtn" style="width: 100%; font-size: 10px; padding: 6px;">Sign Out</button>
         </div>
@@ -5413,7 +5342,6 @@
       darkMode: true,
       showLabels: true,
       proUnlocked: false,
-      classroomUnlocked: false,
       currentUser: null,
       subscription: null,
       topologyData: null,
@@ -5535,10 +5463,6 @@
         // 1-segment routes ('/tap-in', '/about', '/pricing', '/embed' — its state rides the #fragment)
         if (parts.length === 1) {
           return { mode: parts[0], sub: null };
-        }
-        // Class join: /class/ABC123 → { mode: 'class', sub: 'ABC123' }
-        if (parts.length === 2 && parts[0] === 'class') {
-          return { mode: 'class', sub: (parts[1] || '').toUpperCase() };
         }
         // 2-segment routes ('/design/make', '/design/gallery', '/games/arcade', '/games/draft')
         if (parts.length === 2) {
@@ -5686,9 +5610,9 @@
       meta(route) {
         const pricing = route.mode === 'pricing';
         return {
-          title: pricing ? 'Tappymaps Pricing — Pro $9 and Classroom $12' : 'About Tappymaps — A lightweight US map maker',
+          title: pricing ? 'Tappymaps Pricing — Free and Pro $9/month' : 'About Tappymaps — A lightweight US map maker',
           description: pricing
-            ? 'Make and play with US maps for free. Pro is $9/month. Classroom is $12/month for teachers — class codes and worksheet PNG packs.'
+            ? 'Make and play with US maps for free. Pro is $9/month for unlimited exports, Census data maps, county view and spreadsheet import.'
             : 'Tappymaps is a lightweight browser tool for making, sharing, and playing with maps of the United States.',
           canonical: 'https://tappymaps.com/' + (pricing ? 'pricing' : 'about'),
         };
@@ -6911,327 +6835,6 @@
       },
     };
     Router.register('design/gallery', Modes.Gallery);
-
-    // --- Classroom (class codes + worksheet PNG pack) ---------------------
-    // Classroom tier ($12/mo) includes Pro entitlements plus teacher tools.
-    // Class codes live in Supabase `classroom_codes`; worksheet packs are
-    // three sequential PNG downloads via captureMapImage().
-    const CLASSROOM_CODE_KEY = 'tappymaps_classroom_code';
-    function classroomNormalizeCode(raw) {
-      return String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-    }
-    function classroomGenerateCode() {
-      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let code = '';
-      for (let i = 0; i < 6; i++) code += alphabet[Math.floor(Math.random() * alphabet.length)];
-      return code;
-    }
-    function classroomRememberCode(code) {
-      try {
-        if (code) localStorage.setItem(CLASSROOM_CODE_KEY, code);
-        else localStorage.removeItem(CLASSROOM_CODE_KEY);
-      } catch (_) {}
-    }
-    function classroomCachedCode() {
-      try { return classroomNormalizeCode(localStorage.getItem(CLASSROOM_CODE_KEY) || ''); }
-      catch (_) { return ''; }
-    }
-    function classroomUpdateCodeDisplay(code) {
-      const el = document.getElementById('classroomCodeDisplay');
-      if (el) el.textContent = code || '————';
-      const hint = document.getElementById('classroomToolsHint');
-      if (hint && code) {
-        hint.textContent = 'Students open tappymaps.com/class/' + code + ' or enter the code on Pricing.';
-      }
-    }
-    async function classroomCreateOrRefreshCode() {
-      if (!isClassroom()) {
-        if (typeof openUpgradePanel === 'function') {
-          openUpgradePanel('Class codes are a Classroom feature ($12/mo).');
-        } else {
-          showUpgradeModal();
-          showMessage('Class codes are a Classroom feature ($12/mo)', 'info');
-        }
-        return null;
-      }
-      if (!supabaseClient || !appState.currentUser) {
-        showUpgradeModal('auth');
-        showMessage('Sign in to create a class code', 'info');
-        return null;
-      }
-      if (typeof encodeStateToURL !== 'function') return null;
-      const colored = Object.keys((appState && appState.stateColors) || {}).length;
-      if (colored < 1) {
-        showMessage('Color at least one state before creating a class code', 'info');
-        return null;
-      }
-      const hash = encodeStateToURL();
-      const title = (appState.mapTitle || 'Class map').slice(0, 200);
-      showMessage('Creating class code…', 'info');
-
-      // Soft-deactivate prior codes for this teacher, then insert a fresh one.
-      try {
-        await supabaseClient
-          .from('classroom_codes')
-          .update({ is_active: false, updated_at: new Date().toISOString() })
-          .eq('teacher_id', appState.currentUser.id)
-          .eq('is_active', true);
-      } catch (_) {}
-
-      let code = null;
-      for (let attempt = 0; attempt < 5; attempt++) {
-        const candidate = classroomGenerateCode();
-        const { error } = await supabaseClient.from('classroom_codes').upsert({
-          code: candidate,
-          teacher_id: appState.currentUser.id,
-          map_hash: hash,
-          title: title,
-          is_active: true,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'code' });
-        if (!error) { code = candidate; break; }
-        // Unique collision or RLS — try another code.
-        console.warn('classroom_codes upsert:', error.message || error);
-      }
-      if (!code) {
-        showMessage('Could not create class code — check your connection / Classroom migration', 'error');
-        return null;
-      }
-      classroomRememberCode(code);
-      classroomUpdateCodeDisplay(code);
-      showMessage('Class code ready: ' + code, 'success');
-      if (typeof trackEvent === 'function') trackEvent('classroom_code_create', { code: code });
-      return code;
-    }
-    async function classroomCopyLink() {
-      let code = classroomCachedCode();
-      if (!code) code = await classroomCreateOrRefreshCode();
-      if (!code) return;
-      const url = window.location.origin + '/class/' + code;
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(url);
-        } else {
-          const ta = document.createElement('textarea');
-          ta.value = url; document.body.appendChild(ta); ta.select();
-          document.execCommand('copy'); ta.remove();
-        }
-        showMessage('Class link copied', 'success');
-      } catch (_) {
-        showMessage('Class link: ' + url, 'info');
-      }
-    }
-    async function classroomJoinCode(raw) {
-      const code = classroomNormalizeCode(raw);
-      if (code.length < 4) {
-        showMessage('Enter a 6-character class code', 'info');
-        return;
-      }
-      if (typeof Router !== 'undefined' && Router.navigate) {
-        Router.navigate('/class/' + code);
-      } else {
-        window.location.href = '/class/' + code;
-      }
-    }
-    async function classroomLoadAssignment(code) {
-      code = classroomNormalizeCode(code);
-      if (!code || !supabaseClient) return { ok: false, error: 'missing_code' };
-      // Goes through classroom_lookup() rather than selecting the table.
-      // Students are not signed in, so a direct SELECT needed a policy open to
-      // anon — which also let anyone enumerate every active code, its teacher's
-      // UUID and their map. The function returns only this code's map and title.
-      const { data, error } = await supabaseClient.rpc('classroom_lookup', { lookup_code: code });
-      const row = Array.isArray(data) ? data[0] : data;
-      if (error || !row || !row.map_hash) {
-        return { ok: false, error: (error && error.message) || 'not_found' };
-      }
-      return { ok: true, hash: row.map_hash, title: row.title || 'Class map', code: row.code };
-    }
-
-    function classroomSleep(ms) {
-      return new Promise(function(r) { setTimeout(r, ms); });
-    }
-    async function classroomDownloadCanvas(canvas, filename) {
-      if (!canvas) return;
-      const link = document.createElement('a');
-      link.href = canvas.toDataURL('image/png');
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }
-    async function exportWorksheetPack() {
-      if (!isClassroom()) {
-        if (typeof openUpgradePanel === 'function') {
-          openUpgradePanel('Worksheet packs are a Classroom feature ($12/mo).');
-        } else {
-          showUpgradeModal();
-          showMessage('Worksheet packs are a Classroom feature ($12/mo)', 'info');
-        }
-        return;
-      }
-      if (typeof captureMapImage !== 'function') {
-        showMessage('Export engine not ready — try again', 'error');
-        return;
-      }
-      const colored = Object.keys((appState && appState.stateColors) || {}).length;
-      if (colored < 1) {
-        showMessage('Color at least one state to build an answer key', 'info');
-        return;
-      }
-
-      const snapshot = {
-        colors: Object.assign({}, appState.stateColors),
-        legend: (appState.legendEntries || []).map(function(e) { return { label: e.label, color: e.color }; }),
-        title: appState.mapTitle,
-        subtitle: appState.mapSubtitle,
-        legendTitle: appState.legendTitle,
-        source: appState.mapSource,
-      };
-      const slug = (snapshot.title || 'worksheet').toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'worksheet';
-
-      function restoreSnapshot() {
-        appState.stateColors = Object.assign({}, snapshot.colors);
-        appState.legendEntries = snapshot.legend.map(function(e) { return { label: e.label, color: e.color }; });
-        appState.mapTitle = snapshot.title;
-        appState.mapSubtitle = snapshot.subtitle;
-        appState.legendTitle = snapshot.legendTitle;
-        appState.mapSource = snapshot.source;
-        const titleEl = document.getElementById('mapTitle');
-        if (titleEl) titleEl.textContent = appState.mapTitle;
-        const subEl = document.getElementById('mapSubtitle');
-        if (subEl) subEl.textContent = appState.mapSubtitle || '';
-        const topTitle = document.getElementById('createMapTitleInput');
-        if (topTitle) topTitle.value = appState.mapTitle || '';
-        const legendTitleInput = document.getElementById('legendTitleInput');
-        if (legendTitleInput) legendTitleInput.value = appState.legendTitle || 'Legend';
-        if (typeof renderMap === 'function') renderMap();
-        if (typeof updateLegendBuilder === 'function') updateLegendBuilder();
-        if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
-        if (typeof updateStatsBar === 'function') updateStatsBar();
-      }
-
-      showMessage('Building worksheet pack (3 PNGs)…', 'info');
-      try {
-        // 1) Answer key — current map
-        let canvas = await captureMapImage();
-        await classroomDownloadCanvas(canvas, slug + '-answer-key.png');
-        await classroomSleep(450);
-
-        // 2) Blank outline — no fills, no legend entries
-        appState.stateColors = {};
-        appState.legendEntries = [];
-        appState.mapSubtitle = 'Blank outline';
-        const titleEl = document.getElementById('mapTitle');
-        if (titleEl) titleEl.textContent = appState.mapTitle;
-        const subEl = document.getElementById('mapSubtitle');
-        if (subEl) subEl.textContent = appState.mapSubtitle;
-        if (typeof renderMap === 'function') renderMap();
-        if (typeof updateLegendBuilder === 'function') updateLegendBuilder();
-        if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
-        canvas = await captureMapImage();
-        await classroomDownloadCanvas(canvas, slug + '-blank.png');
-        await classroomSleep(450);
-
-        // 3) Student worksheet — blank map + legend labels to color against
-        appState.stateColors = {};
-        appState.legendEntries = snapshot.legend.map(function(e) {
-          return { label: e.label, color: e.color };
-        });
-        appState.mapSubtitle = 'Color each state using the legend';
-        if (subEl) subEl.textContent = appState.mapSubtitle;
-        if (typeof renderMap === 'function') renderMap();
-        if (typeof updateLegendBuilder === 'function') updateLegendBuilder();
-        if (typeof updateLegendDisplay === 'function') updateLegendDisplay();
-        canvas = await captureMapImage();
-        await classroomDownloadCanvas(canvas, slug + '-student.png');
-
-        showMessage('Worksheet pack downloaded (answer key, blank, student)', 'success');
-        if (typeof trackEvent === 'function') {
-          trackEvent('classroom_worksheet_pack', { title: snapshot.title, states: colored });
-        }
-      } catch (err) {
-        console.error('Worksheet pack failed:', err);
-        showMessage('Worksheet pack failed — try again', 'error');
-      } finally {
-        restoreSnapshot();
-      }
-    }
-
-    Modes.ClassJoin = {
-      async enter(route) {
-        const code = classroomNormalizeCode(route && route.sub);
-        const host = document.getElementById('modeComingSoon');
-        if (host) {
-          host.style.display = 'flex';
-          const label = document.getElementById('comingSoonLabel');
-          const phase = document.getElementById('comingSoonPhase');
-          const body = host.querySelector('.coming-soon-body');
-          if (label) label.textContent = 'Class ' + (code || '');
-          if (phase) phase.textContent = 'a moment';
-          if (body) body.innerHTML = 'Opening your class map…';
-        }
-        if (!code) {
-          showMessage('Missing class code', 'error');
-          if (typeof Router !== 'undefined') Router.navigate('/pricing');
-          return;
-        }
-        const result = await classroomLoadAssignment(code);
-        if (!result.ok) {
-          showMessage('Class code not found — ask your teacher for a new one', 'error');
-          if (typeof Router !== 'undefined') Router.navigate('/pricing');
-          return;
-        }
-        if (typeof trackEvent === 'function') trackEvent('classroom_join', { code: code });
-        // Load into the editor the same way Gallery "Open" does.
-        if (typeof Router !== 'undefined') {
-          Router.navigate('/design/make#' + result.hash);
-        } else {
-          window.location.href = '/design/make#' + result.hash;
-        }
-        showMessage('Joined class map' + (result.title ? (': ' + result.title) : ''), 'success');
-      },
-      exit() {
-        const host = document.getElementById('modeComingSoon');
-        if (host) host.style.display = 'none';
-      },
-      meta(route) {
-        const code = classroomNormalizeCode(route && route.sub);
-        return {
-          title: 'Class ' + (code || '') + ' — Tappymaps',
-          description: 'Open a shared classroom map assignment on Tappymaps.',
-          canonical: 'https://tappymaps.com/class/' + (code || ''),
-        };
-      },
-    };
-    Router.register('class', Modes.ClassJoin);
-
-    function wireClassroomUI() {
-      if (wireClassroomUI._done) return;
-      wireClassroomUI._done = true;
-      const on = function(id, fn) {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('click', fn);
-      };
-      on('classroomCodeCreateBtn', function() { classroomCreateOrRefreshCode(); });
-      on('classroomCodeCopyBtn', function() { classroomCopyLink(); });
-      on('classroomWorksheetBtn', function() { exportWorksheetPack(); });
-      on('classroomUpsellBtn', function() { startClassroomCheckout(); });
-      on('pricingClassroomBtn', function() { startClassroomCheckout(); });
-      on('classCodeJoinBtn', function() {
-        const input = document.getElementById('classCodeJoinInput');
-        classroomJoinCode(input ? input.value : '');
-      });
-      const joinInput = document.getElementById('classCodeJoinInput');
-      if (joinInput) {
-        joinInput.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') classroomJoinCode(joinInput.value);
-        });
-      }
-      classroomUpdateCodeDisplay(classroomCachedCode());
-      updateClassroomUI();
-    }
 
     // ======================================================================
     // ARCADE (Phase 2) — shared game shell + Find the State
@@ -9857,11 +9460,10 @@
       updateProGates();
       await initializeAuth();
       handleCheckoutReturn();
-      // Initialize Data Maps cards + spreadsheet import UI + Classroom tools
+      // Initialize Data Maps cards + spreadsheet import UI
       renderDataMapCards('dataMapCards');
       renderDataMapCards('mobileDataMapCards');
       if (typeof wireCsvImportUI === 'function') wireCsvImportUI();
-      if (typeof wireClassroomUI === 'function') wireClassroomUI();
     }
 
     // ============================================================================
@@ -11525,24 +11127,6 @@
     function isPro() {
       return !!appState.proUnlocked;
     }
-    function isClassroom() {
-      return !!appState.classroomUnlocked;
-    }
-    function startClassroomCheckout() {
-      if (!appState.currentUser) {
-        showUpgradeModal();
-        showMessage('Sign in to start Classroom', 'info');
-        return;
-      }
-      startStripeCheckout('classroom');
-    }
-    function updateClassroomUI() {
-      const tools = document.getElementById('classroomTools');
-      const upsell = document.getElementById('classroomUpsell');
-      const on = isClassroom();
-      if (tools) tools.style.display = on ? '' : 'none';
-      if (upsell) upsell.style.display = on ? 'none' : '';
-    }
 
     // Opens the auth/upgrade modal. Pass mode='auth' to render as a pure
     // sign-in / sign-up surface (hides upgrade framing). Default mode='upgrade'
@@ -11602,12 +11186,10 @@
           } else {
             appState.currentUser = null;
             appState.proUnlocked = false;
-            appState.classroomUnlocked = false;
             appState.subscription = null;
           }
           updateAuthHeaderUI();
           updateProGates();
-          if (typeof updateClassroomUI === 'function') updateClassroomUI();
         });
       } catch (err) {
         console.error('Auth init error:', err);
@@ -11626,13 +11208,11 @@
         if (!session) return;
         token = session.access_token;
       }
-      // Auto-grant Pro + Classroom for admin accounts (teacher tooling QA)
+      // Auto-grant Pro for owner accounts (QA against the real paid surface)
       if (appState.currentUser && ADMIN_EMAILS.includes(appState.currentUser.email)) {
         appState.proUnlocked = true;
-        appState.classroomUnlocked = true;
-        appState.subscription = { status: 'admin', tier: 'classroom' };
+        appState.subscription = { status: 'admin', tier: 'pro' };
         updateProGates();
-        if (typeof updateClassroomUI === 'function') updateClassroomUI();
         if (typeof galleryMigrateLocalToCloud === 'function') {
           galleryMigrateLocalToCloud().catch(function() {});
         }
@@ -11645,10 +11225,8 @@
         if (res.ok) {
           const body = await res.json();
           appState.proUnlocked = !!body.isPro;
-          appState.classroomUnlocked = !!body.isClassroom;
           appState.subscription = body.subscription;
           updateProGates();
-          if (typeof updateClassroomUI === 'function') updateClassroomUI();
           if (body.isPro && typeof galleryMigrateLocalToCloud === 'function') {
             galleryMigrateLocalToCloud().catch(function() {});
           }
@@ -11706,25 +11284,21 @@
       await supabaseClient.auth.signOut();
       appState.currentUser = null;
       appState.proUnlocked = false;
-      appState.classroomUnlocked = false;
       appState.subscription = null;
       updateUpgradeModalUI();
       updateAuthHeaderUI();
       updateProGates();
-      if (typeof updateClassroomUI === 'function') updateClassroomUI();
       showMessage('Signed out', 'info');
     }
 
-    // plan: 'monthly' | 'annual' | 'classroom' — server resolves live Stripe
-    // price IDs from env ($9/$72 Pro, $12 Classroom). Legacy $5/$48 IDs are
-    // grandfathered for existing subscribers and rejected for new checkouts.
+    // plan: 'monthly' | 'annual' — server resolves live Stripe price IDs from
+    // env ($9/mo, $72/yr). Legacy $5/$48 IDs are grandfathered for existing
+    // subscribers and rejected for new checkouts.
     async function startStripeCheckout(plan) {
       if (!appState.currentUser) { showUpgradeModal(); return; }
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) { showMessage('Please sign in first', 'error'); return; }
-      const normalized = (plan === 'classroom' || plan === 'class' || plan === 'teacher')
-        ? 'classroom'
-        : ((plan === 'annual' || plan === 'year' || plan === 'yearly') ? 'annual' : 'monthly');
+      const normalized = (plan === 'annual' || plan === 'year' || plan === 'yearly') ? 'annual' : 'monthly';
       try {
         showMessage('Redirecting to checkout...', 'info');
         const res = await fetch('/api/stripe/create-checkout', {
@@ -11800,9 +11374,9 @@
       }
       if (authIndicator) {
         if (appState.currentUser) {
-          const tierLabel = appState.classroomUnlocked ? ' (Classroom)' : (appState.proUnlocked ? ' (Pro)' : '');
+          const tierLabel = appState.proUnlocked ? ' (Pro)' : '';
           authIndicator.textContent = appState.currentUser.email + tierLabel;
-          authIndicator.style.color = (appState.proUnlocked || appState.classroomUnlocked) ? '#F97316' : '#8a9bb0';
+          authIndicator.style.color = appState.proUnlocked ? '#F97316' : '#8a9bb0';
         } else {
           authIndicator.textContent = '';
         }
@@ -11811,7 +11385,7 @@
       // "Manage subscription" button that 404s is worse than not seeing one.
       const billingBtn = document.getElementById('manageBillingBtn');
       if (billingBtn) {
-        const subscribed = !!(appState.currentUser && (appState.proUnlocked || appState.classroomUnlocked));
+        const subscribed = !!(appState.currentUser && appState.proUnlocked);
         billingBtn.style.display = subscribed ? '' : 'none';
       }
 
@@ -11822,9 +11396,9 @@
       if (acct) {
         if (appState.currentUser) {
           const initial = ((appState.currentUser.email || '?').trim().charAt(0) || '?').toUpperCase();
-          const label = appState.currentUser.email + (appState.classroomUnlocked ? ' (Classroom)' : (appState.proUnlocked ? ' (Pro)' : ''));
+          const label = appState.currentUser.email + (appState.proUnlocked ? ' (Pro)' : '');
           acct.textContent = initial;
-          acct.classList.toggle('is-pro', !!(appState.proUnlocked || appState.classroomUnlocked));
+          acct.classList.toggle('is-pro', !!appState.proUnlocked);
           acct.setAttribute('aria-label', 'Account — ' + label);
           acct.title = label;
         } else {
@@ -12057,8 +11631,7 @@
     // ── Shared capture helper ────────────────────────────────────
     // Sole export capture entry (cartographer tribal knowledge). Optional
     // options.aspect: 'landscape' | 'square' | 'portrait' | 'story'.
-    // Default landscape keeps Classroom worksheet packs and legacy callers
-    // on the map frame (1010:710). Square/portrait/story letterbox the
+    // Default landscape keeps legacy callers on the map frame (1010:710). Square/portrait/story letterbox the
     // map via SVG preserveAspectRatio="xMidYMid meet" inside a taller frame.
     const EXPORT_ASPECT_RATIOS = {
       landscape: 1010 / 710, // ~1.4225 — native map viewBox
@@ -14666,8 +14239,6 @@
       if (monthlyBtn) monthlyBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('monthly'); });
       const annualBtn = document.getElementById('upgradeAnnualBtn');
       if (annualBtn) annualBtn.addEventListener('click', (e) => { e.stopPropagation(); startStripeCheckout('annual'); });
-      const classroomBtn = document.getElementById('upgradeClassroomBtn');
-      if (classroomBtn) classroomBtn.addEventListener('click', (e) => { e.stopPropagation(); startClassroomCheckout(); });
 
       // Close upgrade modal on overlay background click
       const upgradeOverlay = document.getElementById('upgradeModal');

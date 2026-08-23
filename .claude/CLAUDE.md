@@ -13,6 +13,26 @@ Part of **Mapparatus Organization** (mapparatus.org), the LLC umbrella over thre
 - **Mapzimus**: editorial brand for viral map posts (handles secured)
 - **Mapparatus** (mapparatus.org): future professional GIS workflow tool
 
+## What It Is Not — no school framing
+
+**Tappymaps is not a classroom or education tool. Do not add school-facing
+features, copy, or pricing.** A Classroom tier ($12/mo — class codes, printable
+worksheet packs, a `classroom_codes` table, a `/class/:code` route) was built and
+then removed in full on 2026-08-22 at the owner's direction: app surface, billing
+handlers, and database objects
+(`supabase/migrations/20260822_remove_classroom.sql`). There is exactly **one
+paid tier: Pro**.
+
+`scripts/checkout-plan-smoke.mjs` asserts that the words classroom / teacher /
+worksheet / class code do not reappear in `index.html` or the checkout handler.
+If that assertion fails, the tier is creeping back — remove it, don't relax the
+check.
+
+This does not restrict map *subject matter*: a Census dataset like
+"Bachelor's Degree+", or a GeoDraft category like "high school graduation rate",
+is ordinary demographic data and perfectly fine. The rule is about what the
+product is sold as, not what you can put on a map.
+
 ## Stack
 
 - Vanilla HTML/CSS/JS, no framework

@@ -135,14 +135,17 @@ await test('subscription deleted at Stripe (404) revokes and marks the row cance
   assert.ok(globalThis.__TEST.updates.some((u) => u.status === 'canceled'), 'row should be marked canceled');
 });
 
-await test('classroom price maps to the classroom tier', async () => {
-  process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID = 'price_class';
-  globalThis.__TEST.row = { user_id: 'u1', status: 'active', current_period_end: iso(10 * DAY), stripe_subscription_id: 'sub_1', price_id: 'price_class' };
+await test('a live subscription reports the pro tier and nothing else', async () => {
+  // There is exactly one paid tier. RLS reads user_subscriptions.tier, so a
+  // response that omits or invents a tier locks a paying user out at the
+  // database layer even though checkout succeeded.
+  globalThis.__TEST.row = { user_id: 'u1', status: 'active', current_period_end: iso(10 * DAY), stripe_subscription_id: 'sub_1', price_id: 'price_pro' };
   const { req, res } = makeReqRes();
   await verifyHandler(req, res);
-  assert.equal(res.body.isClassroom, true);
-  assert.equal(res.body.tier, 'classroom');
-  delete process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID;
+  assert.equal(res.body.isPro, true);
+  assert.equal(res.body.tier, 'pro');
+  assert.equal(res.body.subscription.tier, 'pro');
+  assert.equal('isClassroom' in res.body, false, 'the removed classroom tier must not reappear in the payload');
 });
 
 await test('missing bearer token is rejected', async () => {

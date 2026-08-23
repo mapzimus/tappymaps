@@ -2,6 +2,13 @@
 **Date:** 2026-08-21 · **Scope:** `index.html` (client gates), `api/**`, `supabase/migrations/**`
 **Method:** full read of every backend file + Playwright reproduction against the local dev server (`127.0.0.1:8123`, `/api/*` stubbed, Supabase unreachable). No production network calls were made. Scripts: `<SP>/work/money/p1..p8*.mjs`. Screenshots: `<SP>/shots/money-*.png`.
 
+> **Superseded in part, 2026-08-22.** Every finding here about the Classroom
+> tier — class codes, worksheet packs, `classroom_codes`, `has_subscription('classroom')`
+> — is moot: the tier was removed from the product on 2026-08-22 and dropped
+> from the database in `supabase/migrations/20260822_remove_classroom.sql`.
+> Tappymaps is not a school tool. The Pro-tier findings still stand except where
+> marked fixed.
+
 ## Verdict
 
 **No. This app cannot safely take money today.** Not because of one hole — because the paid product has no server-side enforcement anywhere, and the one tier that *is* server-enforced is broken by a typo.

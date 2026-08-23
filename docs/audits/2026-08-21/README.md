@@ -2,6 +2,13 @@
 
 Ten agents drove the live app in real browsers across eight domains. **169 findings: 13 P0, 46 P1, 71 P2, 39 P3.** Every finding was reproduced in a browser — anything that could only be inferred is marked `UNVERIFIED (static analysis)` in its report.
 
+> **Note added 2026-08-22 — the Classroom tier is gone.** Several findings below
+> concern the $12/mo Classroom tier (class codes, worksheet packs, the
+> `classroom_codes` table). That tier was removed from the product entirely on
+> 2026-08-22: Tappymaps is not a school tool. Those findings are retained as a
+> record of what the audit found, not as a to-do list. There is one paid tier
+> now — Pro.
+
 `00-summary.html` is the consolidated report (also published at
 https://claude.ai/code/artifact/d04d71d1-00d4-4860-9f91-f06294d28123).
 

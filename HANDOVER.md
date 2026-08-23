@@ -72,12 +72,15 @@ multi-session work.
 
 1. ~~Four tables do not exist in the live database.~~ **DONE** — schema v2
    (`supabase/migrations/20260822_schema_v2.sql`, PR #43) is applied to the live
-   project. `user_maps`, `map_reports`, `gallery_publish_counts` and
-   `classroom_codes` now exist with the audit's RLS holes closed, and
+   project. `user_maps`, `map_reports` and `gallery_publish_counts` now
+   exist with the audit's RLS holes closed, and
    entitlements are enforced in the database via `user_subscriptions.tier`
    rather than in the UI only. Verified adversarially with the real anon key.
    **If you touch billing code, keep writing `tier`** — RLS reads it, so a null
-   tier refuses a paying customer.
+   tier refuses a paying customer. There is exactly one paid tier: `pro`.
+   The Classroom tier was removed on 2026-08-22
+   (`supabase/migrations/20260822_remove_classroom.sql`) — Tappymaps is not a
+   school product, and nothing school-facing should come back into it.
 2. **No Terms of Service, Privacy Policy or refund policy** while charging money.
    The billing portal now exists; the policies do not. Still yours or a lawyer's.
 3. **Two P0s are product decisions, not bugs.** Client-side entitlements and

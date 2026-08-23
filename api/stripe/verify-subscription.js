@@ -36,10 +36,6 @@ function getCorsHeaders(req) {
   };
 }
 
-function classroomPriceId() {
-  return process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID || '';
-}
-
 // Statuses Stripe considers still-entitling. `past_due` is included for the
 // same reason as in the query below: the current period is already paid for.
 const ENTITLING = new Set(['active', 'trialing', 'past_due']);
@@ -87,7 +83,7 @@ async function reconcileWithStripe(row, userId) {
     patch.price_id = item.price.id;
     // Keep the tier RLS reads in step with the price on every repair, or a
     // reconciled row could grant the wrong feature set in the database.
-    patch.tier = item.price.id === process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID ? 'classroom' : 'pro';
+    patch.tier = 'pro';
   }
 
   const { error: repairError } = await supabase
@@ -179,9 +175,7 @@ export default async function handler(req, res) {
     }
 
     const isPro = entitled;
-    const classPrice = classroomPriceId();
-    const isClassroom = !!(entitled && classPrice && subscriptions && subscriptions.price_id === classPrice);
-    const tier = isClassroom ? 'classroom' : (isPro ? 'pro' : 'free');
+    const tier = isPro ? 'pro' : 'free';
     const subscription = (subscriptions && entitled)
       ? {
           id: subscriptions.stripe_subscription_id,
@@ -193,9 +187,7 @@ export default async function handler(req, res) {
       : null;
     if (staleReason) console.warn(`verify-subscription: ${staleReason} for user ${userId}, entitled=${entitled}`);
 
-    // Classroom includes every Pro entitlement; clients also read isClassroom
-    // for teacher-only tools (class code + worksheet pack).
-    res.status(200).json({ isPro, isClassroom, tier, subscription });
+    res.status(200).json({ isPro, tier, subscription });
   } catch (error) {
     console.error('Verification error:', error);
     res.status(500).json({ error: error.message });

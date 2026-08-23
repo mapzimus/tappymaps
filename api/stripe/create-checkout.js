@@ -16,8 +16,8 @@ const allowedOrigins = [
   'http://127.0.0.1:8000',
 ];
 
-// New Pro prices ($9/mo, $72/yr) + Classroom ($12/mo) — set in Vercel env
-// after creating the Prices in the Stripe Dashboard.
+// Pro prices ($9/mo, $72/yr) — set in Vercel env after creating the Prices
+// in the Stripe Dashboard.
 // Existing $5/$48 subscribers keep their Stripe Price forever; those legacy
 // IDs are intentionally NOT offered for new checkouts (grandfathering).
 const LEGACY_PRICE_IDS = {
@@ -29,12 +29,11 @@ function currentPriceIds() {
   return {
     monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || '',
     annual: process.env.STRIPE_PRO_ANNUAL_PRICE_ID || '',
-    classroom: process.env.STRIPE_CLASSROOM_MONTHLY_PRICE_ID || '',
   };
 }
 
 function resolvePriceId(body) {
-  const { monthly, annual, classroom } = currentPriceIds();
+  const { monthly, annual } = currentPriceIds();
   const plan = body && typeof body.plan === 'string' ? body.plan.trim().toLowerCase() : '';
   if (plan === 'monthly' || plan === 'month' || plan === 'pro' || plan === 'pro_monthly') {
     if (!monthly) return { error: 'Monthly Pro price is not configured (STRIPE_PRO_MONTHLY_PRICE_ID).' };
@@ -44,10 +43,6 @@ function resolvePriceId(body) {
     if (!annual) return { error: 'Annual Pro price is not configured (STRIPE_PRO_ANNUAL_PRICE_ID).' };
     return { priceId: annual, plan: 'annual' };
   }
-  if (plan === 'classroom' || plan === 'class' || plan === 'teacher') {
-    if (!classroom) return { error: 'Classroom price is not configured (STRIPE_CLASSROOM_MONTHLY_PRICE_ID).' };
-    return { priceId: classroom, plan: 'classroom' };
-  }
 
   // Backward-compatible: accept an explicit priceId only if it matches the
   // currently configured (new) prices. Legacy $5/$48 IDs are rejected so new
@@ -55,11 +50,10 @@ function resolvePriceId(body) {
   const priceId = body && typeof body.priceId === 'string' ? body.priceId.trim() : '';
   if (priceId && priceId === monthly) return { priceId, plan: 'monthly' };
   if (priceId && priceId === annual) return { priceId, plan: 'annual' };
-  if (priceId && priceId === classroom) return { priceId, plan: 'classroom' };
   if (priceId && (priceId === LEGACY_PRICE_IDS.monthly || priceId === LEGACY_PRICE_IDS.annual)) {
-    return { error: 'That price is no longer available for new subscriptions. Choose Pro or Classroom.' };
+    return { error: 'That price is no longer available for new subscriptions. Choose the monthly or annual Pro plan.' };
   }
-  return { error: 'Invalid plan. Use plan: "monthly", "annual", or "classroom".' };
+  return { error: 'Invalid plan. Use plan: "monthly" or "annual".' };
 }
 
 function getCorsHeaders(req) {

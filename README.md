@@ -25,7 +25,7 @@ Designed to be the fastest way to go from "I need a colored US map for my report
 | Map data | TopoJSON via `us-atlas@3` (Albers USA) | Pre-projected, small enough to ship inline. |
 | Hosting | Vercel + custom domain | Auto-deploy on push to `master`. |
 | Auth | Supabase (email/password, JS client via CDN) | RLS-secured `user_subscriptions` and `analytics` tables. |
-| Billing | Stripe Checkout + webhooks | Pro $9/mo or $72/yr; Classroom $12/mo (legacy $5/$48 grandfathered); plan-based checkout. |
+| Billing | Stripe Checkout + webhooks | Pro $9/mo or $72/yr (legacy $5/$48 grandfathered); plan-based checkout. |
 | Quota enforcement | Server-side (Vercel function + Supabase `export_counts`) | Anonymous: 1 export tracked in `localStorage`. Authed: 3/mo enforced by API with JWT. |
 
 ## Architecture
@@ -79,7 +79,7 @@ project and a Stripe test-mode account to exercise the paid-tier paths.
 
 ## About
 
-Tappymaps is an independent lightweight mapping product built by [Maxwell Howe](https://maxwellhowegis.com), a Web GIS developer and high-school math teacher. Experimental maps, tools, and games live separately at [Mapzimus](https://mapzimus.com).
+Tappymaps is an independent lightweight mapping product built by [Maxwell Howe](https://maxwellhowegis.com), a Web GIS developer. Experimental maps, tools, and games live separately at [Mapzimus](https://mapzimus.com).
 
 ## License
 
